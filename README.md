@@ -5,4 +5,4 @@ Information about the use of the API can be seen on the wiki.
 
 ## Test
 The testing solution found in [papago-api-test](../blob/master/papago-api-test) is using the [Google's C++ testing framework](https://github.com/google/googletest).
-For running the tests in Visual Studio you need to install the [GoogleTestAdapter](https://www.nuget.org/packages/GoogleTestAdapter/) nuget package.
+To run the tests in Visual Studio you need to install the [GoogleTestAdapter](https://www.nuget.org/packages/GoogleTestAdapter/) nuget package.
