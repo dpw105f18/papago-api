@@ -154,21 +154,22 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="api_enums.hpp" />
-    <ClInclude Include="buffer_resource.hpp" />
-    <ClInclude Include="command_buffer.hpp" />
-    <ClInclude Include="device.hpp" />
-    <ClInclude Include="fragment_shader.hpp" />
-    <ClInclude Include="graphics_queue.hpp" />
-    <ClInclude Include="image_resource.hpp" />
-    <ClInclude Include="resource.hpp" />
-    <ClInclude Include="shader.hpp" />
+    <ClInclude Include="src\api_enums.hpp" />
+    <ClInclude Include="src\buffer_resource.hpp" />
+    <ClInclude Include="src\command_buffer.hpp" />
+    <ClInclude Include="src\device.hpp" />
+    <ClInclude Include="src\fragment_shader.hpp" />
+    <ClInclude Include="src\graphics_queue.hpp" />
+    <ClInclude Include="src\image_resource.hpp" />
+    <ClInclude Include="src\resource.hpp" />
+    <ClInclude Include="src\shader.hpp" />
     <ClInclude Include="src\standard_header.hpp" />
-    <ClInclude Include="sub_command_buffer.hpp" />
-    <ClInclude Include="swap_chain.hpp" />
-    <ClInclude Include="vertex_shader.hpp" />
+    <ClInclude Include="src\sub_command_buffer.hpp" />
+    <ClInclude Include="src\swap_chain.hpp" />
+    <ClInclude Include="src\vertex_shader.hpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\device.cpp" />
     <ClCompile Include="src\main.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

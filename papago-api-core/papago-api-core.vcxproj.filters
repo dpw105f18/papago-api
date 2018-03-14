@@ -18,45 +18,48 @@
     <ClInclude Include="src\standard_header.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="device.hpp">
+    <ClInclude Include="src\api_enums.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="api_enums.hpp">
+    <ClInclude Include="src\buffer_resource.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="swap_chain.hpp">
+    <ClInclude Include="src\command_buffer.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="shader.hpp">
+    <ClInclude Include="src\device.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="fragment_shader.hpp">
+    <ClInclude Include="src\fragment_shader.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="image_resource.hpp">
+    <ClInclude Include="src\graphics_queue.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="vertex_shader.hpp">
+    <ClInclude Include="src\image_resource.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="buffer_resource.hpp">
+    <ClInclude Include="src\resource.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="resource.hpp">
+    <ClInclude Include="src\shader.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="graphics_queue.hpp">
+    <ClInclude Include="src\sub_command_buffer.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="command_buffer.hpp">
+    <ClInclude Include="src\swap_chain.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="sub_command_buffer.hpp">
+    <ClInclude Include="src\vertex_shader.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\device.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

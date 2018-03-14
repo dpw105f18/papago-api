@@ -4,7 +4,6 @@
 class CommandBuffer : public SubCommandBuffer
 {
 public:
-	typedef Usage SubCommandBuffer::Usage;
 
 	void begin(const RenderPass&) override;
 	void begin(const RenderPass&, SwapChain&) override;
