@@ -154,7 +154,19 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="api_enums.hpp" />
+    <ClInclude Include="buffer_resource.hpp" />
+    <ClInclude Include="command_buffer.hpp" />
+    <ClInclude Include="device.hpp" />
+    <ClInclude Include="fragment_shader.hpp" />
+    <ClInclude Include="graphics_queue.hpp" />
+    <ClInclude Include="image_resource.hpp" />
+    <ClInclude Include="resource.hpp" />
+    <ClInclude Include="shader.hpp" />
     <ClInclude Include="src\standard_header.hpp" />
+    <ClInclude Include="sub_command_buffer.hpp" />
+    <ClInclude Include="swap_chain.hpp" />
+    <ClInclude Include="vertex_shader.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp" />
