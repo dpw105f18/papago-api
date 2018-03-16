@@ -165,12 +165,14 @@
     <ClInclude Include="src\shader.hpp" />
     <ClInclude Include="src\standard_header.hpp" />
     <ClInclude Include="src\sub_command_buffer.hpp" />
+    <ClInclude Include="src\surface.hpp" />
     <ClInclude Include="src\swap_chain.hpp" />
     <ClInclude Include="src\vertex_shader.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\device.cpp" />
     <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\surface.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
