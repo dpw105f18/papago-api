@@ -4,7 +4,6 @@
 #include "api_enums.hpp"
 #include "shader.hpp"
 #include "command_buffer.hpp"
-#include "image_resource.hpp"
 //#include "surface.hpp"
 
 class VertexShader;
@@ -13,14 +12,15 @@ class BufferResource;
 class GraphicsQueue;
 class Surface;
 class SwapChain;
+class ImageResource;
 
 class Device {
 public:
 	static Surface createSurface(size_t width, size_t height, HWND&);
 	static std::vector<Device> enumerateDevices(Surface& surface, const vk::PhysicalDeviceFeatures &features, const std::vector<const char*> &extensions);
 
-	SwapChain createSwapChain(Format, size_t framebufferCount, SwapChainPresentMode, Surface&);
-	ImageResource createImageResource(size_t width, size_t height, TypeEnums, ImageResource::ImageType);
+	SwapChain createSwapChain(const Format&, size_t framebufferCount, SwapChainPresentMode, Surface&);
+	ImageResource createImageResource(size_t width, size_t height, TypeEnums, ImageType);	//<-- TODO: pick up here! [Texture Resource story]
 	BufferResource createBufferResource();
 	GraphicsQueue createGraphicsQueue(SwapChain);
 	CommandBuffer createCommandBuffer(CommandBuffer::Usage);

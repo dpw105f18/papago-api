@@ -93,7 +93,7 @@ std::vector<Device> Device::enumerateDevices(Surface& surface, const vk::Physica
 }
 
 // framebufferCount is a prefered minimum of buffers in the swapchain
-SwapChain Device::createSwapChain(Format format, size_t framebufferCount, SwapChainPresentMode preferredPresentMode, Surface& surface)
+SwapChain Device::createSwapChain(const Format& format, size_t framebufferCount, SwapChainPresentMode preferredPresentMode, Surface& surface)
 {
 
 
@@ -142,7 +142,7 @@ SwapChain Device::createSwapChain(Format format, size_t framebufferCount, SwapCh
 
 	auto swapChain = m_VkDevice.createSwapchainKHR(createInfo);
 
-	return SwapChain(m_VkDevice, swapChain, swapFormat.format);
+	return SwapChain(m_VkDevice, swapChain, swapFormat.format, extent);
 }
 
 Device::QueueFamilyIndices Device::findQueueFamilies(const vk::PhysicalDevice & device, Surface& surface)

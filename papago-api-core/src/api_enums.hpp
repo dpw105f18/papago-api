@@ -10,3 +10,7 @@ enum TypeEnums {
 enum DepthTest {
 	LESS
 };
+
+enum ImageType {
+	IMAGE_DEPTH_BUFFER
+};
