@@ -1,5 +1,6 @@
 #include "standard_header.hpp"
 #include "device.hpp"
+#include "swap_chain.hpp"
 #include "surface.hpp"
 #include <WinUser.h>
 
@@ -23,7 +24,7 @@ LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	}
 }
 
-HWND StartWindow()
+HWND StartWindow(size_t width, size_t height)
 {
 	//******************** CREATE WINDOW ***************************
 	auto hInstance = GetModuleHandle(nullptr);
@@ -55,7 +56,7 @@ HWND StartWindow()
 			windowName,
 			WS_OVERLAPPEDWINDOW,
 			CW_USEDEFAULT, CW_USEDEFAULT,
-			800, 600,
+			width, height,
 			nullptr, nullptr,
 			hInstance, nullptr);
 		if (!hwnd)
@@ -93,14 +94,17 @@ int main()
 
 	instance.destroy();
 	*/
-	
-	auto hwnd = StartWindow();
+	size_t winHeight = 800;
+	size_t winWidth = 600;
+	auto hwnd = StartWindow(winWidth, winHeight);
 
 
-	auto surface = Device::createSurface(hwnd);
+	auto surface = Device::createSurface(winWidth, winHeight, hwnd);
 	vk::PhysicalDeviceFeatures features = {};
 	features.samplerAnisotropy = VK_TRUE;
 	auto devices = Device::enumerateDevices(surface, features, { VK_KHR_SWAPCHAIN_EXTENSION_NAME });
+	auto device = devices[0];
+	auto swapChain = device.createSwapChain(Format::eR8G8B8Unorm, 3, SwapChainPresentMode::eMailbox, surface);
 
 	std::system("PAUSE");
 }
