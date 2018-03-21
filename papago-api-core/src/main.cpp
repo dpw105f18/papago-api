@@ -2,6 +2,7 @@
 #include "device.hpp"
 #include "swap_chain.hpp"
 #include "surface.hpp"
+#include "image_resource.hpp"
 #include <WinUser.h>
 
 LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -85,15 +86,6 @@ HWND StartWindow(size_t width, size_t height)
 
 int main()
 {
-	/*
-	std::cout << "Hello, world!" << std::endl;
-	auto instance = vk::createInstance(vk::InstanceCreateInfo());
-	std::cout << "Created a vulkan instance." << std::endl;
-	char ch;
-	std::cin >> ch;
-
-	instance.destroy();
-	*/
 	size_t winHeight = 800;
 	size_t winWidth = 600;
 	auto hwnd = StartWindow(winWidth, winHeight);
@@ -105,6 +97,7 @@ int main()
 	auto devices = Device::enumerateDevices(surface, features, { VK_KHR_SWAPCHAIN_EXTENSION_NAME });
 	auto device = devices[0];
 	auto swapChain = device.createSwapChain(Format::eR8G8B8Unorm, 3, SwapChainPresentMode::eMailbox, surface);
+
 
 	std::system("PAUSE");
 }

@@ -1,76 +1,74 @@
 #include "standard_header.hpp"
 #include "swap_chain.hpp"
+#include "image_resource.hpp"
 
-SwapChain::SwapChain(vk::Device& device, vk::SwapchainKHR& swapChain, Format format, vk::Extent2D extent) : m_VkSwapChain(swapChain), m_Format(format), m_VkExtent(extent)
+SwapChain::SwapChain(vk::Device &device, vk::SwapchainKHR &swapChain, std::vector<ImageResource>& colorResources, std::vector<ImageResource>& depthResources, vk::Extent2D extent) 
+	: m_VkSwapChain(swapChain), m_colorResources(colorResources), m_depthResources(depthResources)
 {
-	m_Images = device.getSwapchainImagesKHR(m_VkSwapChain);
-	auto framebufferCount = m_Images.size();
-	m_ImageViews.resize(framebufferCount);
 
-	for (auto i = 0; i < m_Images.size(); ++i) {
-		vk::ImageViewCreateInfo view_info = {};
-		view_info.image = m_Images[i];
-		view_info.viewType = vk::ImageViewType::e2D;
-		view_info.format = m_Format;
-		view_info.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
-		view_info.subresourceRange.baseMipLevel = 0;
-		view_info.subresourceRange.levelCount = 1;
-		view_info.subresourceRange.baseArrayLayer = 0;
-		view_info.subresourceRange.layerCount = 1;
+	// the vk::RenderPass set on the Framebuffers is a guideline for what RenderPass' are compatible with them
+	// this _may_ be error-prone...
+	auto renderPass = createDummyRenderPass(device);
 
-		vk::ImageView image_view = device.createImageView(view_info);
-		m_ImageViews[i] = image_view;
-	}
+	for (auto i = 0; i < colorResources.size(); ++i) {
+		std::vector<vk::ImageView> attachments = {
+			colorResources[i].m_VkImageView,
+			depthResources[i].m_VkImageView
+		};
 
-	m_Framebuffers.resize(framebufferCount);
+		vk::FramebufferCreateInfo framebufferCreateInfo = {};
+		framebufferCreateInfo.setRenderPass(renderPass)
+			.setAttachmentCount(attachments.size())
+			.setPAttachments(attachments.data())
+			.setWidth(extent.width)
+			.setHeight(extent.height)
+			.setLayers(1);
 
-	for (auto i = 0; i < framebufferCount; ++i) {
-		//vk::Image depthbuffer
-
-		//TODO: PICK UP HERE! [Frambuffer story]
+		m_Framebuffers.emplace_back(device.createFramebuffer(framebufferCreateInfo));
 	}
 }
 
-vk::Image SwapChain::createDepthImage(const vk::PhysicalDevice& physicalDevice, const vk::Device& device) const
+vk::RenderPass SwapChain::createDummyRenderPass(const vk::Device& device)
 {
-	std::vector<Format> formatCandidates = {
-		Format::eD32Sfloat, Format::eD32SfloatS8Uint, Format::eD24UnormS8Uint
-	};
+	vk::AttachmentDescription colorDesc = {};
+	colorDesc.setFormat(m_colorResources[0].m_Format)
+		.setLoadOp(vk::AttachmentLoadOp::eDontCare)
+		.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare)
+		.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare)
+		.setFinalLayout(vk::ImageLayout::ePresentSrcKHR);
 
-	auto format = findSupportedFormat(physicalDevice, formatCandidates, vk::ImageTiling::eOptimal, vk::FormatFeatureFlagBits::eDepthStencilAttachment);
+	vk::AttachmentDescription depthDesc = {};
+	depthDesc.setFormat(m_depthResources[0].m_Format)
+		.setLoadOp(vk::AttachmentLoadOp::eDontCare)
+		.setStoreOp(vk::AttachmentStoreOp::eDontCare)
+		.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare)
+		.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare)
+		.setFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
 
-	auto extent = vk::Extent3D().setWidth(m_VkExtent.width)
-		.setHeight(m_VkExtent.height)
-		.setDepth(1);
+	vk::AttachmentReference colorRef(0);
+	vk::AttachmentReference depthRef(1);
 
-	vk::ImageCreateInfo createInfo = {};
-	createInfo.setImageType(vk::ImageType::e2D)
-		.setExtent(extent)
-		.setMipLevels(1)
-		.setArrayLayers(1)
-		.setFormat(format)
-		.setTiling(vk::ImageTiling::eOptimal)
-		.setUsage(vk::ImageUsageFlagBits::eDepthStencilAttachment)
-		.setSamples(vk::SampleCountFlagBits::e1);
+	vk::SubpassDescription subpass = {};
+	subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics)
+		.setColorAttachmentCount(1)
+		.setPColorAttachments(&colorRef)
+		.setPDepthStencilAttachment(&depthRef);
 
-	vk::Image result = device.createImage(createInfo);
-	
+	vk::SubpassDependency subpassDependency(VK_SUBPASS_EXTERNAL); //TODO: find the "enum" in vulkan.hpp
+	subpassDependency.setSrcStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput)
+		.setSrcAccessMask(vk::AccessFlags())
+		.setDstStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput)
+		.setDstAccessMask(vk::AccessFlagBits::eColorAttachmentRead | vk::AccessFlagBits::eColorAttachmentWrite);
 
-	return vk::Image();
+	std::vector<vk::AttachmentDescription> attachments = { colorDesc, depthDesc };
+
+	vk::RenderPassCreateInfo renderPassCreateInfo = {};
+	renderPassCreateInfo.setAttachmentCount(attachments.size())
+		.setPAttachments(attachments.data())
+		.setSubpassCount(1)
+		.setPSubpasses(&subpass)
+		.setDependencyCount(1)
+		.setPDependencies(&subpassDependency);
+
+	return device.createRenderPass(renderPassCreateInfo);
 }
-
-Format SwapChain::findSupportedFormat(const vk::PhysicalDevice &physicalDevice, const std::vector<Format>& candidateFormats, vk::ImageTiling tiling, vk::FormatFeatureFlags features) const
-{
-	for (auto candidate : candidateFormats) {
-		auto properties = physicalDevice.getFormatProperties(candidate);
-
-		if (tiling == vk::ImageTiling::eLinear && (properties.linearTilingFeatures & features) == features
-			|| tiling == vk::ImageTiling::eOptimal && (properties.optimalTilingFeatures & features) == features)
-		{
-			return candidate;
-		}
-	}
-
-	PAPAGO_ERROR("failed to find supported format");
-}
-

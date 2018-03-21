@@ -5,6 +5,8 @@
 #include <set>
 #include <algorithm>
 #include "swap_chain.hpp"
+#include "image_resource.hpp"
+#include <memory>
 
 Surface Device::createSurface(size_t width, size_t height, HWND& hwnd)
 {
@@ -142,8 +144,25 @@ SwapChain Device::createSwapChain(const Format& format, size_t framebufferCount,
 
 	auto swapChain = m_VkDevice.createSwapchainKHR(createInfo);
 
-	return SwapChain(m_VkDevice, swapChain, swapFormat.format, extent);
+	// Get colorbuffer images
+	std::vector<vk::Image> images;
+	images = m_VkDevice.getSwapchainImagesKHR(swapChain);
+	auto actualFramebufferCount = images.size();
+
+	// Get image resources for framebuffers
+	std::vector<ImageResource> colorResources, depthResources;
+	std::vector<Format> formatCandidates = {
+		Format::eD32Sfloat, Format::eD32SfloatS8Uint, Format::eD24UnormS8Uint
+	};
+
+	for (auto i = 0; i < images.size(); ++i) {
+		colorResources.emplace_back(ImageResource::createColorResource(images[i], m_VkDevice, swapFormat.format));
+		depthResources.emplace_back(ImageResource::createDepthResource(m_VkPhysicalDevice, m_VkDevice, extent.width, extent.height, formatCandidates));
+	}
+
+	return SwapChain(m_VkDevice, swapChain, colorResources, depthResources, extent);
 }
+
 
 Device::QueueFamilyIndices Device::findQueueFamilies(const vk::PhysicalDevice & device, Surface& surface)
 {
