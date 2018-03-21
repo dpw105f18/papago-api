@@ -1,9 +1,16 @@
 #pragma once
 //TODO: move diz!
-enum TypeEnums {
-	S32FLOAT
+using Format = vk::Format;
+using SwapChainPresentMode = vk::PresentModeKHR;
+
+enum class TypeEnums {
+	eS32Float
 };
 
-enum DepthTest {
-	LESS
+enum class DepthTest {
+	eLess
+};
+
+enum class ImageType {
+	eImageDepthBuffer
 };

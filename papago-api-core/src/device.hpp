@@ -2,32 +2,56 @@
 #include "standard_header.hpp"
 #include <vector>
 #include "api_enums.hpp"
-#include "shader.hpp"
 #include "command_buffer.hpp"
-#include "image_resource.hpp"
 
-
-class SwapChain;
 class VertexShader;
 class FragmentShader;
 class BufferResource;
 class GraphicsQueue;
 class Surface;
+class SwapChain;
+class ImageResource;
 
 class Device {
 public:
-	static Surface createSurface(HWND&);
 	static std::vector<Device> enumerateDevices(Surface& surface, const vk::PhysicalDeviceFeatures &features, const std::vector<const char*> &extensions);
 
-	SwapChain createSwapChain(VertexShader, FragmentShader);
-	ImageResource createImageResource(size_t width, size_t height, TypeEnums, ImageResource::ImageType);
+	SwapChain createSwapChain(const Format&, size_t framebufferCount, SwapChainPresentMode, Surface&);
+	ImageResource createImageResource(size_t width, size_t height, TypeEnums, ImageType);	//<-- TODO: pick up here! [Texture Resource story]
 	BufferResource createBufferResource();
 	GraphicsQueue createGraphicsQueue(SwapChain);
 	CommandBuffer createCommandBuffer(CommandBuffer::Usage);
 	SubCommandBuffer createSubCommandBuffer(SubCommandBuffer::Usage);
 private:
-	Device(vk::PhysicalDevice physicalDevice, vk::Device device) : m_VkPhysicalDevice(physicalDevice), m_VkDevice(device) {};
-	static vk::Instance m_VkInstance;
-	vk::PhysicalDevice m_VkPhysicalDevice;
-	vk::Device m_VkDevice;
+
+	struct SwapChainSupportDetails
+	{
+		vk::SurfaceCapabilitiesKHR capabilities;
+		std::vector<vk::SurfaceFormatKHR> formats;
+		std::vector<vk::PresentModeKHR> presentmodes;
+	};
+
+	struct QueueFamilyIndices {
+		static constexpr int NOT_FOUND() { return -1; }
+
+		int graphicsFamily = NOT_FOUND();
+		int presentFamily = NOT_FOUND();
+
+		bool isComplete() const
+		{
+			return graphicsFamily != NOT_FOUND() && presentFamily != NOT_FOUND();
+		}
+	};
+
+	Device(vk::PhysicalDevice, vk::UniqueDevice&);
+
+	SwapChainSupportDetails querySwapChainSupport(Surface&) const;
+	
+	static QueueFamilyIndices findQueueFamilies(const vk::PhysicalDevice& device, Surface& surface);
+	static vk::SurfaceFormatKHR chooseSwapSurfaceFormat(Format,  std::vector<vk::SurfaceFormatKHR>& availableFormats);
+	static vk::PresentModeKHR chooseSwapPresentMode(SwapChainPresentMode&, const std::vector<vk::PresentModeKHR>& availablePresentModes);
+	static vk::Extent2D chooseSwapChainExtend(uint32_t width, uint32_t height, const vk::SurfaceCapabilitiesKHR& availableCapabilities);
+
+	vk::PhysicalDevice m_vkPhysicalDevice;
+	vk::UniqueDevice m_vkDevice;
 };

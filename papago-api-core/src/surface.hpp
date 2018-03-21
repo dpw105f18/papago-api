@@ -1,17 +1,19 @@
 #pragma once
-#include "standard_header.hpp"
 #include "device.hpp"
-#define WIN32_LEAN_AND_MEAN
-#include <Windows.h>
 
 class Surface
 {
 public:
-	operator vk::SurfaceKHR&();
-private:
-	//surface creation for Windows
-	Surface(vk::SurfaceKHR surfaceKHR) : m_VkSurfaceKHR(surfaceKHR) {};
-	vk::SurfaceKHR m_VkSurfaceKHR;
+	Surface(uint32_t width, uint32_t height, HWND hwnd);
+	
+	uint32_t width() const;
+	uint32_t height() const;
 
-	friend Surface Device::createSurface(HWND&);
+	explicit operator vk::SurfaceKHR&();
+private:
+	uint32_t m_width, m_height;
+	vk::UniqueInstance m_vkInstance;
+	vk::UniqueSurfaceKHR m_vkSurfaceKHR;
+
+	friend std::vector<Device> Device::enumerateDevices(Surface&, const vk::PhysicalDeviceFeatures &, const std::vector<const char*> &);
 };

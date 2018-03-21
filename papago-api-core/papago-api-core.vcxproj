@@ -161,7 +161,9 @@
     <ClInclude Include="src\fragment_shader.hpp" />
     <ClInclude Include="src\graphics_queue.hpp" />
     <ClInclude Include="src\image_resource.hpp" />
+    <ClInclude Include="src\render_pass.hpp" />
     <ClInclude Include="src\resource.hpp" />
+    <ClInclude Include="src\sampler.hpp" />
     <ClInclude Include="src\shader.hpp" />
     <ClInclude Include="src\standard_header.hpp" />
     <ClInclude Include="src\sub_command_buffer.hpp" />
@@ -170,9 +172,12 @@
     <ClInclude Include="src\vertex_shader.hpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\buffer_resource.cpp" />
     <ClCompile Include="src\device.cpp" />
+    <ClCompile Include="src\image_resource.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\surface.cpp" />
+    <ClCompile Include="src\swap_chain.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

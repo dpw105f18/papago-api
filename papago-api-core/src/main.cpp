@@ -1,7 +1,7 @@
 #include "standard_header.hpp"
 #include "device.hpp"
 #include "surface.hpp"
-#include <WinUser.h>
+#include "swap_chain.hpp"
 
 LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
@@ -10,7 +10,7 @@ LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	case WM_KEYDOWN:
 		if (wParam == VK_ESCAPE)
 		{
-			if (MessageBox(0, "Are you a quitter?", "QUEST: A true quitter", MB_YESNO | MB_ICONQUESTION) == IDYES)
+			if (MessageBox(nullptr, "Are you sure you want to quit?", "Quit", MB_YESNO | MB_ICONQUESTION) == IDYES)
 				DestroyWindow(hwnd);
 		}
 		return 0;
@@ -23,9 +23,8 @@ LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	}
 }
 
-HWND StartWindow()
+HWND StartWindow(size_t width, size_t height)
 {
-	//******************** CREATE WINDOW ***************************
 	auto hInstance = GetModuleHandle(nullptr);
 	auto windowName = "test window name";
 	auto windowClassName = "testWindowClassName";
@@ -47,60 +46,50 @@ HWND StartWindow()
 		throw std::runtime_error("Could not register window class");
 	}
 
-	HWND hwnd;
 	try {
-
-		hwnd = CreateWindowEx(0,
-			windowClassName,
-			windowName,
-			WS_OVERLAPPEDWINDOW,
-			CW_USEDEFAULT, CW_USEDEFAULT,
-			800, 600,
-			nullptr, nullptr,
-			hInstance, nullptr);
+		auto hwnd = CreateWindowEx(0,
+		                           windowClassName,
+		                           windowName,
+		                           WS_OVERLAPPEDWINDOW,
+		                           CW_USEDEFAULT, CW_USEDEFAULT,
+		                           width, height, nullptr, nullptr,
+		                           hInstance, nullptr);
 		if (!hwnd)
 		{
-			throw new std::runtime_error("Could not create window");
+			throw std::runtime_error("Could not create window");
 		}
+		//if everything went well, show the window.
+		ShowWindow(hwnd, true);
+		UpdateWindow(hwnd);
+
+		return hwnd;
 	}
 	catch (const std::runtime_error& e)
 	{
 		auto errorCode = GetLastError();
 		std::cout << "error code: " << errorCode << "\nWhat: " << e.what() << std::endl;
-		throw e;
+		throw;
 	}
 	catch (...)
 	{
 		auto errorCode = GetLastError();
 		std::cout << "error code: " << errorCode << "\nWhat: " << "..." << std::endl;
 	}
-
-	//if everything went well, show the window.
-	ShowWindow(hwnd, true);
-	UpdateWindow(hwnd);
-
-	return hwnd;
+	return nullptr;
 }
 
 int main()
 {
-	/*
-	std::cout << "Hello, world!" << std::endl;
-	auto instance = vk::createInstance(vk::InstanceCreateInfo());
-	std::cout << "Created a vulkan instance." << std::endl;
-	char ch;
-	std::cin >> ch;
+	size_t winHeight = 800;
+	size_t winWidth = 600;
+	auto hwnd = StartWindow(winWidth, winHeight);
 
-	instance.destroy();
-	*/
-	
-	auto hwnd = StartWindow();
-
-
-	auto surface = Device::createSurface(hwnd);
+	auto surface = Surface(winWidth, winHeight, hwnd);
 	vk::PhysicalDeviceFeatures features = {};
 	features.samplerAnisotropy = VK_TRUE;
 	auto devices = Device::enumerateDevices(surface, features, { VK_KHR_SWAPCHAIN_EXTENSION_NAME });
+	auto& device = devices[0];
+	auto swapChain = device.createSwapChain(Format::eR8G8B8Unorm, 3, SwapChainPresentMode::eMailbox, surface);
 
-	std::system("PAUSE");
+	system("PAUSE");
 }
