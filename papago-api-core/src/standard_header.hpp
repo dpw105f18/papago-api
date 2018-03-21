@@ -10,3 +10,4 @@
 #include <vulkan/vulkan.hpp>
 
 #define PAPAGO_ERROR(msg) throw new std::runtime_error(msg);
+#define ITERATE(collection) std::begin(collection), std::end(collection)
