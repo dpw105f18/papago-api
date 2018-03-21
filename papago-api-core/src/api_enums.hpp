@@ -3,14 +3,14 @@
 using Format = vk::Format;
 using SwapChainPresentMode = vk::PresentModeKHR;
 
-enum TypeEnums {
-	S32FLOAT
+enum class TypeEnums {
+	eS32Float
 };
 
-enum DepthTest {
-	LESS
+enum class DepthTest {
+	eLess
 };
 
-enum ImageType {
-	IMAGE_DEPTH_BUFFER
+enum class ImageType {
+	eImageDepthBuffer
 };
