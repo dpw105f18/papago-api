@@ -3,6 +3,7 @@
 #include <vector>
 #include "api_enums.hpp"
 #include "command_buffer.hpp"
+#include "buffer_resource.hpp"
 
 class VertexShader;
 class FragmentShader;
@@ -22,7 +23,11 @@ public:
 	GraphicsQueue createGraphicsQueue(SwapChain);
 	CommandBuffer createCommandBuffer(CommandBuffer::Usage);
 	SubCommandBuffer createSubCommandBuffer(SubCommandBuffer::Usage);
+
+	template<typename T>
+	BufferResource createVertexBuffer(const std::vector<T>& vertexData);
 private:
+	BufferResource createStagingBuffer(size_t size);
 
 	struct SwapChainSupportDetails
 	{
@@ -55,3 +60,20 @@ private:
 	vk::PhysicalDevice m_vkPhysicalDevice;
 	vk::UniqueDevice m_vkDevice;
 };
+
+template<typename T>
+BufferResource Device::createVertexBuffer(const Device& device, const std::vector<T>& vertexData)
+{
+	auto bufferSize = sizeof(T) * vertexData.size();
+
+	auto stagingBuffer = createStagingBuffer(bufferSize);
+
+	memcpy(stagingBuffer.map(), s_Vertices.data(), bufferSize);
+	stagingBuffer.unmap();
+
+	buffer_create_info.usage = vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer;
+
+	auto vertexBuffer = std::make_unique<Buffer>(m_PhysicalDevice, m_LogicalDevice, buffer_create_info, vk::MemoryPropertyFlagBits::eDeviceLocal);
+
+	copyBuffer(stagingBuffer.m_Buffer, vertexBuffer->m_Buffer, bufferSize);
+}

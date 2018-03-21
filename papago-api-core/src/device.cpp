@@ -101,6 +101,11 @@ SwapChain Device::createSwapChain(const Format& format, size_t framebufferCount,
 	return SwapChain(m_vkDevice, swapChain, swapFormat.format, extent);
 }
 
+BufferResource Device::createStagingBuffer(size_t size)
+{
+	
+}
+
 Device::QueueFamilyIndices Device::findQueueFamilies(const vk::PhysicalDevice & device, Surface& surface)
 {
 	int graphicsQueueFamily = QueueFamilyIndices::NOT_FOUND();
