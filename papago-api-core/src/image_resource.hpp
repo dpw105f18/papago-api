@@ -10,7 +10,7 @@ public:
 	// Inherited via Resource
 	void upload(std::vector<char> data) override;
 	void destroy() override;
-	void download() override;
+	void* download(void * buffer, size_t size, size_t offset) override;
 
 private:
 	ImageResource();

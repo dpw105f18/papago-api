@@ -1,5 +1,7 @@
 #pragma once
 
+#include <sstream>
+
 // include before Vulkan to make sure that max and min macros aren't defined
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX

@@ -25,9 +25,12 @@ public:
 	SubCommandBuffer createSubCommandBuffer(SubCommandBuffer::Usage);
 
 	template<typename T>
-	BufferResource createVertexBuffer(const std::vector<T>& vertexData);
+	BufferResource createVertexBuffer(const std::vector<T>& vertexData) const;
+	template<typename T>
+	BufferResource createIndexBuffer(const std::vector<T>& indexData) const;
+	template<size_t N>
+	BufferResource createUniformBuffer() const;
 private:
-	BufferResource createStagingBuffer(size_t size);
 
 	struct SwapChainSupportDetails
 	{
@@ -62,18 +65,46 @@ private:
 };
 
 template<typename T>
-BufferResource Device::createVertexBuffer(const Device& device, const std::vector<T>& vertexData)
+BufferResource Device::createVertexBuffer(const std::vector<T>& vertexData) const
 {
-	auto bufferSize = sizeof(T) * vertexData.size();
+	size_t bufferSize = sizeof(T) * vertexData.size();
+	auto buffer = BufferResource(
+		m_vkDevice,
+		m_vkPhysicalDevice,
+		bufferSize,
+		vk::BufferUsageFlagBits::eVertexBuffer,
+		// TODO: Convert to device local memory when command pool and buffers are ready
+		vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
 
-	auto stagingBuffer = createStagingBuffer(bufferSize);
+	auto data = reinterpret_cast<char const *>(vertexData.data());
+	buffer.upload(std::vector<char>(data, data + bufferSize));
+	return buffer;
+}
 
-	memcpy(stagingBuffer.map(), s_Vertices.data(), bufferSize);
-	stagingBuffer.unmap();
+template<typename T>
+BufferResource Device::createIndexBuffer(const std::vector<T>& indexData) const
+{
+	size_t bufferSize = sizeof(T) * indexData.size();
+	auto buffer = BufferResource(
+		m_vkDevice,
+		m_vkPhysicalDevice,
+		bufferSize,
+		vk::BufferUsageFlagBits::eIndexBuffer,
+		// TODO: Convert to device local memory when command pool and buffers are ready
+		vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
 
-	buffer_create_info.usage = vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer;
+	auto data = reinterpret_cast<char const *>(indexData.data());
+	buffer.upload(std::vector<char>(data, data + bufferSize));
+	return buffer;
+}
 
-	auto vertexBuffer = std::make_unique<Buffer>(m_PhysicalDevice, m_LogicalDevice, buffer_create_info, vk::MemoryPropertyFlagBits::eDeviceLocal);
-
-	copyBuffer(stagingBuffer.m_Buffer, vertexBuffer->m_Buffer, bufferSize);
+template<size_t N>
+BufferResource Device::createUniformBuffer() const
+{
+	return BufferResource(
+		m_vkDevice,
+		m_vkPhysicalDevice,
+		N,
+		vk::BufferUsageFlagBits::eUniformBuffer,
+		vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
 }

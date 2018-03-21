@@ -78,6 +78,8 @@ HWND StartWindow(size_t width, size_t height)
 	return nullptr;
 }
 
+struct UniformBufferObject{};
+
 int main()
 {
 	size_t winHeight = 800;
@@ -90,6 +92,15 @@ int main()
 	auto devices = Device::enumerateDevices(surface, features, { VK_KHR_SWAPCHAIN_EXTENSION_NAME });
 	auto& device = devices[0];
 	auto swapChain = device.createSwapChain(Format::eR8G8B8Unorm, 3, SwapChainPresentMode::eMailbox, surface);
+	auto vertexBuffer = device.createVertexBuffer(std::vector<float>{
+			 0.0f,  0.5f, 0.0f,
+			 0.5f, -0.4f, 0.0f,
+			-0.5f, -0.4f, 0.0f,
+	});
+	auto indexBuffer = device.createIndexBuffer(std::vector<uint16_t>{
+		0, 1, 2
+	});
+	auto uniformBuffer = device.createUniformBuffer<sizeof(UniformBufferObject)>();
 
 	system("PAUSE");
 }
