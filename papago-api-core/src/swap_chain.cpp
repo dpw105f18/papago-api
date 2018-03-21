@@ -1,11 +1,11 @@
 #include "standard_header.hpp"
 #include "swap_chain.hpp"
 
-SwapChain::SwapChain(vk::Device& device, vk::SwapchainKHR& swapChain, Format format, vk::Extent2D extent) : m_VkSwapChain(swapChain), m_Format(format), m_VkExtent(extent)
+SwapChain::SwapChain(vk::UniqueDevice& device, vk::UniqueSwapchainKHR& swapChain, Format format, vk::Extent2D extent) : m_VkSwapChain(swapChain), m_Format(format), m_VkExtent(extent)
 {
-	m_Images = device.getSwapchainImagesKHR(m_VkSwapChain);
+	m_Images = device->getSwapchainImagesKHR(*m_VkSwapChain);
 	auto framebufferCount = m_Images.size();
-	m_ImageViews.resize(framebufferCount);
+	m_ImageViews.reserve(framebufferCount);
 
 	for (auto i = 0; i < m_Images.size(); ++i) {
 		vk::ImageViewCreateInfo view_info = {};
@@ -18,8 +18,7 @@ SwapChain::SwapChain(vk::Device& device, vk::SwapchainKHR& swapChain, Format for
 		view_info.subresourceRange.baseArrayLayer = 0;
 		view_info.subresourceRange.layerCount = 1;
 
-		vk::ImageView image_view = device.createImageView(view_info);
-		m_ImageViews[i] = image_view;
+		m_ImageViews.push_back(device->createImageViewUnique(view_info));
 	}
 
 	m_Framebuffers.resize(framebufferCount);
@@ -31,7 +30,7 @@ SwapChain::SwapChain(vk::Device& device, vk::SwapchainKHR& swapChain, Format for
 	}
 }
 
-vk::Image SwapChain::createDepthImage(const vk::PhysicalDevice& physicalDevice, const vk::Device& device) const
+vk::UniqueImage SwapChain::createDepthImage(const vk::PhysicalDevice& physicalDevice, const vk::UniqueDevice& device) const
 {
 	std::vector<Format> formatCandidates = {
 		Format::eD32Sfloat, Format::eD32SfloatS8Uint, Format::eD24UnormS8Uint
@@ -53,13 +52,10 @@ vk::Image SwapChain::createDepthImage(const vk::PhysicalDevice& physicalDevice, 
 		.setUsage(vk::ImageUsageFlagBits::eDepthStencilAttachment)
 		.setSamples(vk::SampleCountFlagBits::e1);
 
-	vk::Image result = device.createImage(createInfo);
-	
-
-	return vk::Image();
+	return device->createImageUnique(createInfo);
 }
 
-Format SwapChain::findSupportedFormat(const vk::PhysicalDevice &physicalDevice, const std::vector<Format>& candidateFormats, vk::ImageTiling tiling, vk::FormatFeatureFlags features) const
+Format SwapChain::findSupportedFormat(const vk::PhysicalDevice &physicalDevice, const std::vector<Format>& candidateFormats, vk::ImageTiling tiling, vk::FormatFeatureFlags features)
 {
 	for (auto candidate : candidateFormats) {
 		auto properties = physicalDevice.getFormatProperties(candidate);

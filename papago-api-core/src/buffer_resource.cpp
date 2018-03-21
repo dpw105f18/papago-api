@@ -1,3 +1,4 @@
+#include "standard_header.hpp"
 #include "buffer_resource.hpp"
 
 void BufferResource::upload(std::vector<char> data)
