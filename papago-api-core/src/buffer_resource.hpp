@@ -8,7 +8,7 @@ public:
 	// Inherited via Resource
 	void upload(std::vector<char> data) override;
 	void destroy() override;
-	void* download(void * destination, size_t size, size_t offset) override;
+	std::vector<char> download() override;
 
 	size_t getSize() const { return m_size; }
 

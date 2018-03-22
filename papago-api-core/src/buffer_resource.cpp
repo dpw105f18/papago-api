@@ -13,12 +13,13 @@ void BufferResource::destroy()
 
 }
 
-void *BufferResource::download(void* buffer, size_t size, size_t offset)
+std::vector<char> BufferResource::download()
 {
-	auto mappedMemory = static_cast<char *>(m_vkDevice->mapMemory(*m_vkMemory, offset, size));
-	memcpy(buffer, mappedMemory, size);
+	std::vector<char> result(m_size);
+	auto mappedMemory = m_vkDevice->mapMemory(*m_vkMemory, 0, VK_WHOLE_SIZE);
+	memcpy(result.data(), mappedMemory, m_size);
 	m_vkDevice->unmapMemory(*m_vkMemory);
-	return buffer;
+	return result;
 }
 
 uint32_t BufferResource::findMemoryType(
