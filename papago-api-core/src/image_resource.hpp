@@ -2,7 +2,6 @@
 #include "standard_header.hpp"
 #include "resource.hpp"
 #include "device.hpp"
-#include "swap_chain.hpp"
 
 class ImageResource : public Resource
 {
@@ -29,10 +28,9 @@ private:
 	vk::Image m_VkImage;
 
 	vk::DeviceMemory m_VkMemory;
-	vk::ImageView m_VkImageView;
+	vk::ImageView m_vkImageView;
 	Format m_Format;
 
-	//friend ImageResource Device::createDepthResource(size_t width, size_t height, TypeEnums);
 	friend class SwapChain; //TODO: Figure out how to be friend of private constructor instead.
 	friend class Device;
 };

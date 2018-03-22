@@ -2,7 +2,6 @@
 #include "device.hpp"
 #include "swap_chain.hpp"
 #include "surface.hpp"
-#include "image_resource.hpp"
 #include <WinUser.h>
 
 LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -12,8 +11,10 @@ LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	case WM_KEYDOWN:
 		if (wParam == VK_ESCAPE)
 		{
-			if (MessageBox(0, "Are you a quitter?", "QUEST: A true quitter", MB_YESNO | MB_ICONQUESTION) == IDYES)
+			if (MessageBox(nullptr, "Are you sure you want to quit?", "Quit", MB_YESNO | MB_ICONQUESTION) == IDYES) 
+			{
 				DestroyWindow(hwnd);
+			}
 		}
 		return 0;
 
@@ -27,7 +28,6 @@ LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 HWND StartWindow(size_t width, size_t height)
 {
-	//******************** CREATE WINDOW ***************************
 	auto hInstance = GetModuleHandle(nullptr);
 	auto windowName = "test window name";
 	auto windowClassName = "testWindowClassName";
@@ -56,32 +56,31 @@ HWND StartWindow(size_t width, size_t height)
 			windowClassName,
 			windowName,
 			WS_OVERLAPPEDWINDOW,
-			CW_USEDEFAULT, CW_USEDEFAULT,
+			CW_USEDEFAULT, CW_USEDEFAULT, 
 			width, height,
 			nullptr, nullptr,
 			hInstance, nullptr);
-		if (!hwnd)
-		{
-			throw new std::runtime_error("Could not create window");
-		}
+
+		if (!hwnd) throw std::runtime_error("Could not create window");
+
+		//if everything went well, show the window.
+		ShowWindow(hwnd, true);
+		UpdateWindow(hwnd);
+
+		return hwnd;
 	}
 	catch (const std::runtime_error& e)
 	{
 		auto errorCode = GetLastError();
 		std::cout << "error code: " << errorCode << "\nWhat: " << e.what() << std::endl;
-		throw e;
+		throw;
 	}
 	catch (...)
 	{
 		auto errorCode = GetLastError();
 		std::cout << "error code: " << errorCode << "\nWhat: " << "..." << std::endl;
 	}
-
-	//if everything went well, show the window.
-	ShowWindow(hwnd, true);
-	UpdateWindow(hwnd);
-
-	return hwnd;
+	return nullptr;
 }
 
 int main()
@@ -97,7 +96,4 @@ int main()
 	auto devices = Device::enumerateDevices(surface, features, { VK_KHR_SWAPCHAIN_EXTENSION_NAME });
 	auto& device = devices[0];
 	auto swapChain = device.createSwapChain(Format::eR8G8B8Unorm, 3, SwapChainPresentMode::eMailbox, surface);
-
-
-	std::system("PAUSE");
 }

@@ -79,7 +79,7 @@ ImageResource::ImageResource(vk::ImageCreateInfo imageCreateInfo, const vk::Phys
 		.setFormat(m_Format)
 		.setSubresourceRange(subresourceRange);
 
-	m_VkImageView = device.get().createImageView(viewCreateInfo);
+	m_vkImageView = device->createImageView(viewCreateInfo);
 
 	//TODO: transition image (via command buffers)
 
@@ -119,5 +119,5 @@ void ImageResource::setImageView(const vk::UniqueDevice &device)
 		.setFormat(m_Format)
 		.setSubresourceRange(subresourceRange);
 
-	m_VkImageView = device.get().createImageView(viewCreateInfo);
+	m_vkImageView = device->createImageView(viewCreateInfo);
 }

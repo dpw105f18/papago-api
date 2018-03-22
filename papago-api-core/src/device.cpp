@@ -1,24 +1,16 @@
 #include "standard_header.hpp"
 #include "surface.hpp"
 #include "device.hpp"
-#include <iostream>
 #include <set>
-#include <algorithm>
 #include "swap_chain.hpp"
 #include "image_resource.hpp"
-#include <memory>
 
 //Provides a vector of devices with the given [features] and [extensions] enabled
 std::vector<Device> Device::enumerateDevices(Surface& surface, const vk::PhysicalDeviceFeatures &features, const std::vector<const char*> &extensions)
 {
-	//TODO: check to see that m_VkInstance is set
-
-
-	//*************************************************************************
-
 	std::vector<Device> result;
-
-	auto physicalDevices = surface.m_vkInstance.get().enumeratePhysicalDevices();
+	auto physicalDevices = surface.m_vkInstance->enumeratePhysicalDevices();
+	result.reserve(physicalDevices.size());
 
 	for (auto& device : physicalDevices) {
 		auto queueCreateInfos = std::vector<vk::DeviceQueueCreateInfo>();
@@ -37,26 +29,21 @@ std::vector<Device> Device::enumerateDevices(Surface& surface, const vk::Physica
 		for (auto qf : uniqueQueueFamilyIndicies) {
 			const float queuePriority = 1.0f;	//<-- TODO: should this be setable somehow?
 
-			vk::DeviceQueueCreateInfo dqci = {};
-			dqci.setQueueCount(1)					//<-- TODO: setable?
+			queueCreateInfos.push_back(vk::DeviceQueueCreateInfo()
+				.setQueueCount(1)					//<-- TODO: setable?
 				.setPQueuePriorities(&queuePriority)
-				.setQueueFamilyIndex(qf);
-
-			queueCreateInfos.push_back(dqci);
+				.setQueueFamilyIndex(qf));
 		}
-		
 
-		vk::DeviceCreateInfo dci = {};
-		dci.setEnabledExtensionCount(extensions.size())
+		auto logicalDevice = device.createDeviceUnique(vk::DeviceCreateInfo()
+			.setEnabledExtensionCount(extensions.size())
 			.setPpEnabledExtensionNames(extensions.data())
 			.setPEnabledFeatures(&features)
 			.setEnabledLayerCount(0)
 			.setQueueCreateInfoCount(queueCreateInfos.size())
-			.setPQueueCreateInfos(queueCreateInfos.data());
+			.setPQueueCreateInfos(queueCreateInfos.data()));
 
-		auto logicalDevice = device.createDeviceUnique(dci);
-
-		result.emplace_back(Device(device, logicalDevice));
+		result.push_back(Device(device, logicalDevice));
 	}
 
 	return result;
@@ -65,8 +52,6 @@ std::vector<Device> Device::enumerateDevices(Surface& surface, const vk::Physica
 // framebufferCount is a prefered minimum of buffers in the swapchain
 SwapChain Device::createSwapChain(const Format& format, size_t framebufferCount, SwapChainPresentMode preferredPresentMode, Surface& surface)
 {
-
-
 	auto details = querySwapChainSupport(surface);
 
 	auto swapFormat = chooseSwapSurfaceFormat(format, details.formats);
@@ -89,7 +74,7 @@ SwapChain Device::createSwapChain(const Format& format, size_t framebufferCount,
 	createInfo.imageArrayLayers = 1;
 	createInfo.imageUsage = vk::ImageUsageFlagBits::eColorAttachment;
 
-	QueueFamilyIndices indices = Device::findQueueFamilies(m_VkPhysicalDevice, surface);
+	auto indices = findQueueFamilies(m_vkPhysicalDevice, surface);
 	uint32_t queueFamilyIndices[] = {
 		indices.graphicsFamily, indices.presentFamily
 	};
@@ -110,32 +95,41 @@ SwapChain Device::createSwapChain(const Format& format, size_t framebufferCount,
 	createInfo.presentMode = presentMode;
 	createInfo.clipped = VK_TRUE;
 
-	auto swapChain =  m_VkDevice.get().createSwapchainKHR(createInfo);
+	auto swapChain =  m_vkDevice->createSwapchainKHRUnique(createInfo);
 
 	// Get colorbuffer images
-	std::vector<vk::Image> images;
-	images = m_VkDevice.get().getSwapchainImagesKHR(swapChain);
-	auto actualFramebufferCount = images.size();
+	auto images = m_vkDevice->getSwapchainImagesKHR(*swapChain);
 
 	// Get image resources for framebuffers
 	std::vector<ImageResource> colorResources, depthResources;
 	std::vector<Format> formatCandidates = {
-		Format::eD32Sfloat, Format::eD32SfloatS8Uint, Format::eD24UnormS8Uint
+		Format::eD32Sfloat, 
+		Format::eD32SfloatS8Uint, 
+		Format::eD24UnormS8Uint
 	};
 
 	for (auto i = 0; i < images.size(); ++i) {
-		colorResources.emplace_back(ImageResource::createColorResource(images[i], m_VkDevice, swapFormat.format));
-		depthResources.emplace_back(ImageResource::createDepthResource(m_VkPhysicalDevice, m_VkDevice, extent.width, extent.height, formatCandidates));
+		colorResources.emplace_back(
+			ImageResource::createColorResource(
+				images[i], 
+				m_vkDevice, 
+				swapFormat.format));
+
+		depthResources.emplace_back(
+			ImageResource::createDepthResource(
+				m_vkPhysicalDevice, m_vkDevice, 
+				extent.width, extent.height, 
+				formatCandidates));
 	}
 
-	return SwapChain(m_VkDevice, swapChain, colorResources, depthResources, extent);
+	return SwapChain(m_vkDevice, swapChain, colorResources, depthResources, extent);
 }
 
 
 Device::QueueFamilyIndices Device::findQueueFamilies(const vk::PhysicalDevice & device, Surface& surface)
 {
-	int graphicsQueueFamily = -1;
-	int presentQueueFamily = -1;
+	int graphicsQueueFamily = QueueFamilyIndices::NOT_FOUND();
+	int presentQueueFamily = QueueFamilyIndices::NOT_FOUND();
 
 	auto queueFamilies = device.getQueueFamilyProperties();
 
@@ -143,12 +137,16 @@ Device::QueueFamilyIndices Device::findQueueFamilies(const vk::PhysicalDevice & 
 		auto queueFamily = queueFamilies.at(i);
 
 		if (queueFamily.queueCount > 0) {
-			if ((graphicsQueueFamily == -1 || graphicsQueueFamily == presentQueueFamily) && queueFamily.queueFlags & vk::QueueFlagBits::eGraphics)
+			if ((graphicsQueueFamily == QueueFamilyIndices::NOT_FOUND() || 
+				graphicsQueueFamily == presentQueueFamily) && 
+				queueFamily.queueFlags & vk::QueueFlagBits::eGraphics)
 			{
 				graphicsQueueFamily = i;
 			}
 
-			if ((presentQueueFamily == -1 || presentQueueFamily == graphicsQueueFamily) && device.getSurfaceSupportKHR(i, static_cast<vk::SurfaceKHR>( surface))) {
+			if ((presentQueueFamily == QueueFamilyIndices::NOT_FOUND() || 
+				presentQueueFamily == graphicsQueueFamily) &&
+				device.getSurfaceSupportKHR(i, static_cast<vk::SurfaceKHR>( surface))) {
 				presentQueueFamily = i;
 			}
 		}
@@ -158,19 +156,19 @@ Device::QueueFamilyIndices Device::findQueueFamilies(const vk::PhysicalDevice & 
 	return { graphicsQueueFamily, presentQueueFamily };
 }
 
-Device::Device(vk::PhysicalDevice physicalDevice, vk::UniqueDevice &device) : m_VkPhysicalDevice(physicalDevice), m_VkDevice(std::move(device))
+Device::Device(vk::PhysicalDevice physicalDevice, vk::UniqueDevice &device) : m_vkPhysicalDevice(physicalDevice), m_vkDevice(std::move(device))
 {
 
 }
 
 Device::SwapChainSupportDetails Device::querySwapChainSupport(Surface& surface) const
 {
+	auto innerSurface = static_cast<vk::SurfaceKHR>(surface);
+
 	SwapChainSupportDetails details;
-	details.capabilities = m_VkPhysicalDevice.getSurfaceCapabilitiesKHR( static_cast<vk::SurfaceKHR>(surface));
-
-	details.formats = m_VkPhysicalDevice.getSurfaceFormatsKHR(static_cast<vk::SurfaceKHR>(surface));
-
-	details.presentmodes = m_VkPhysicalDevice.getSurfacePresentModesKHR(static_cast<vk::SurfaceKHR>(surface));
+	details.capabilities = m_vkPhysicalDevice.getSurfaceCapabilitiesKHR(innerSurface);
+	details.formats = m_vkPhysicalDevice.getSurfaceFormatsKHR(innerSurface);
+	details.presentmodes = m_vkPhysicalDevice.getSurfacePresentModesKHR(innerSurface);
 
 	return details;
 }
@@ -196,7 +194,8 @@ vk::SurfaceFormatKHR Device::chooseSwapSurfaceFormat(Format preferredFormat, std
 
 vk::PresentModeKHR Device::chooseSwapPresentMode(SwapChainPresentMode &preferredPresentMode, const std::vector<vk::PresentModeKHR>& availablePresentModes)
 {
-	vk::PresentModeKHR bestMode = preferredPresentMode;
+	// FIFO is guarrenteed to be supported according to the Vulkan Specification
+	auto bestMode = vk::PresentModeKHR::eFifo;
 
 	for (const auto& availablePresentMode : availablePresentModes) {
 
@@ -218,18 +217,23 @@ vk::PresentModeKHR Device::chooseSwapPresentMode(SwapChainPresentMode &preferred
 vk::Extent2D Device::chooseSwapChainExtend(uint32_t width, uint32_t height, const vk::SurfaceCapabilitiesKHR & capabilities)
 {
 
-	if (capabilities.currentExtent.width != UINT32_MAX) {
+	if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
 		return capabilities.currentExtent;
 	}
 
 	vk::Extent2D actualExtent = { width, height };
 
-	//replacement for std::max(... , std::min(..., ...)) because macros
-	auto minMaxImageExtendWidth = capabilities.maxImageExtent.width < actualExtent.width ? capabilities.maxImageExtent.width : actualExtent.width;
-	actualExtent.width = capabilities.minImageExtent.width > minMaxImageExtendWidth ? capabilities.minImageExtent.width : minMaxImageExtendWidth;
-		
-	auto minMaxImageExtendHeight = capabilities.maxImageExtent.height < actualExtent.height ? capabilities.maxImageExtent.height : actualExtent.height;
-	actualExtent.height = capabilities.minImageExtent.height > minMaxImageExtendHeight ? capabilities.minImageExtent.height : minMaxImageExtendHeight;
+	actualExtent.width = std::max(
+		capabilities.minImageExtent.width,
+		std::min(
+			capabilities.maxImageExtent.width,
+			actualExtent.width));
+
+	actualExtent.height = std::max(
+		capabilities.minImageExtent.height,
+		std::min(
+			capabilities.maxImageExtent.height,
+			actualExtent.height));
 
 	return actualExtent;
 }
