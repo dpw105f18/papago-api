@@ -2,7 +2,7 @@
 #include "swap_chain.hpp"
 #include "image_resource.hpp"
 
-SwapChain::SwapChain(vk::Device &device, vk::SwapchainKHR &swapChain, std::vector<ImageResource>& colorResources, std::vector<ImageResource>& depthResources, vk::Extent2D extent) 
+SwapChain::SwapChain(vk::UniqueDevice &device, vk::SwapchainKHR &swapChain, std::vector<ImageResource>& colorResources, std::vector<ImageResource>& depthResources, vk::Extent2D extent) 
 	: m_VkSwapChain(swapChain), m_colorResources(colorResources), m_depthResources(depthResources)
 {
 
@@ -24,11 +24,11 @@ SwapChain::SwapChain(vk::Device &device, vk::SwapchainKHR &swapChain, std::vecto
 			.setHeight(extent.height)
 			.setLayers(1);
 
-		m_Framebuffers.emplace_back(device.createFramebuffer(framebufferCreateInfo));
+		m_Framebuffers.emplace_back(device.get().createFramebuffer(framebufferCreateInfo));
 	}
 }
 
-vk::RenderPass SwapChain::createDummyRenderPass(const vk::Device& device)
+vk::RenderPass SwapChain::createDummyRenderPass(const vk::UniqueDevice& device)
 {
 	vk::AttachmentDescription colorDesc = {};
 	colorDesc.setFormat(m_colorResources[0].m_Format)
@@ -70,5 +70,5 @@ vk::RenderPass SwapChain::createDummyRenderPass(const vk::Device& device)
 		.setDependencyCount(1)
 		.setPDependencies(&subpassDependency);
 
-	return device.createRenderPass(renderPassCreateInfo);
+	return device.get().createRenderPass(renderPassCreateInfo);
 }

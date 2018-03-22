@@ -91,11 +91,11 @@ int main()
 	auto hwnd = StartWindow(winWidth, winHeight);
 
 
-	auto surface = Device::createSurface(winWidth, winHeight, hwnd);
+	auto surface = Surface(winWidth, winHeight, hwnd);
 	vk::PhysicalDeviceFeatures features = {};
 	features.samplerAnisotropy = VK_TRUE;
 	auto devices = Device::enumerateDevices(surface, features, { VK_KHR_SWAPCHAIN_EXTENSION_NAME });
-	auto device = devices[0];
+	auto& device = devices[0];
 	auto swapChain = device.createSwapChain(Format::eR8G8B8Unorm, 3, SwapChainPresentMode::eMailbox, surface);
 
 

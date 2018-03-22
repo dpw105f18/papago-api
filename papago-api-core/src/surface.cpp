@@ -6,11 +6,11 @@ Surface::operator vk::SurfaceKHR&()
 	return *m_vkSurfaceKHR;
 }
 
-uint32_t Surface::width() const {
+uint32_t Surface::getWidth() const {
 	return m_width;
 }
 
-uint32_t Surface::height() const {
+uint32_t Surface::getHeight() const {
 	return m_height;
 }
 

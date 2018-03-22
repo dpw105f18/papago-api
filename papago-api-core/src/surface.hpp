@@ -6,8 +6,8 @@ class Surface
 public:
 	Surface(uint32_t width, uint32_t height, HWND hwnd);
 	
-	uint32_t width() const;
-	uint32_t height() const;
+	uint32_t getWidth() const;
+	uint32_t getHeight() const;
 
 	explicit operator vk::SurfaceKHR&();
 private:

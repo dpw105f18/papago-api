@@ -15,18 +15,19 @@ public:
 
 
 private:
-	static ImageResource createDepthResource(const vk::PhysicalDevice &physicalDevice, const vk::Device &device, size_t width, size_t height, const std::vector<Format>& formatCandidates);
-	static ImageResource createColorResource(vk::Image, const vk::Device&, Format format);
+	static ImageResource createDepthResource(const vk::PhysicalDevice &physicalDevice, const vk::UniqueDevice &device, size_t width, size_t height, const std::vector<Format>& formatCandidates);
+	static ImageResource createColorResource(vk::Image, const vk::UniqueDevice&, Format format);
 	static ImageResource createTextureResource();
 
-	ImageResource(vk::ImageCreateInfo, const vk::PhysicalDevice&, const vk::Device&);
-	ImageResource(vk::Image, const vk::Device&, Format format);
+	ImageResource(vk::ImageCreateInfo, const vk::PhysicalDevice&, const vk::UniqueDevice&);
+	ImageResource(vk::Image, const vk::UniqueDevice&, Format format);
 
 	static Format findSupportedFormat(const vk::PhysicalDevice&, const std::vector<Format>&, vk::ImageTiling, vk::FormatFeatureFlags);
-	void setImageView(const vk::Device&);
+	void setImageView(const vk::UniqueDevice&);
 
 	vk::ImageCreateInfo m_VkCreateInfo;
 	vk::Image m_VkImage;
+
 	vk::DeviceMemory m_VkMemory;
 	vk::ImageView m_VkImageView;
 	Format m_Format;

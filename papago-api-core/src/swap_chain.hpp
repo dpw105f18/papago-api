@@ -11,9 +11,9 @@ private:
 	std::vector<ImageResource> m_depthResources;
 	std::vector<vk::Framebuffer> m_Framebuffers;
 	
-	SwapChain(vk::Device&, vk::SwapchainKHR&, std::vector<ImageResource>& colorResources, std::vector<ImageResource>& depthResources, vk::Extent2D);
+	SwapChain(vk::UniqueDevice&, vk::SwapchainKHR&, std::vector<ImageResource>& colorResources, std::vector<ImageResource>& depthResources, vk::Extent2D);
 	
-	vk::RenderPass createDummyRenderPass(const vk::Device& device); //<-- TODO: use proper RenderPass
+	vk::RenderPass createDummyRenderPass(const vk::UniqueDevice& device); //<-- TODO: use proper RenderPass
 
 	//TODO: finish diz (use ImageResource when it's done?):
 	friend SwapChain Device::createSwapChain(const Format& , size_t ,SwapChainPresentMode, Surface&);

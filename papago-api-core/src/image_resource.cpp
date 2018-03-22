@@ -13,7 +13,7 @@ void ImageResource::download()
 {
 }
 
-ImageResource ImageResource::createDepthResource(const vk::PhysicalDevice &physicalDevice, const vk::Device &device, size_t width, size_t height, const std::vector<Format>& formatCandidates)
+ImageResource ImageResource::createDepthResource(const vk::PhysicalDevice &physicalDevice, const vk::UniqueDevice &device, size_t width, size_t height, const std::vector<Format>& formatCandidates)
 {
 	auto format = ImageResource::findSupportedFormat(physicalDevice, formatCandidates, vk::ImageTiling::eOptimal, vk::FormatFeatureFlagBits::eDepthStencilAttachment);
 
@@ -35,17 +35,17 @@ ImageResource ImageResource::createDepthResource(const vk::PhysicalDevice &physi
 	return ImageResource(createInfo, physicalDevice, device);
 }
 
-ImageResource ImageResource::createColorResource(vk::Image image, const vk::Device &device, Format format)
+ImageResource ImageResource::createColorResource(vk::Image image, const vk::UniqueDevice &device, Format format)
 {
 	return ImageResource(image, device, format);
 }
 
-ImageResource::ImageResource(vk::ImageCreateInfo imageCreateInfo, const vk::PhysicalDevice& physicalDevice, const vk::Device& device) 
+ImageResource::ImageResource(vk::ImageCreateInfo imageCreateInfo, const vk::PhysicalDevice& physicalDevice, const vk::UniqueDevice& device) 
 	: m_VkCreateInfo(imageCreateInfo), m_Format(imageCreateInfo.format)
 {
-	m_VkImage = device.createImage(imageCreateInfo);
+	m_VkImage = device.get().createImage(imageCreateInfo);
 
-	vk::MemoryRequirements memoryRequirements = device.getImageMemoryRequirements(m_VkImage);
+	vk::MemoryRequirements memoryRequirements = device.get().getImageMemoryRequirements(m_VkImage);
 
 	uint32_t memoryType;
 
@@ -62,9 +62,9 @@ ImageResource::ImageResource(vk::ImageCreateInfo imageCreateInfo, const vk::Phys
 	allocateInfo.setAllocationSize(memoryRequirements.size)
 		.setMemoryTypeIndex(memoryType);
 
-	m_VkMemory = device.allocateMemory(allocateInfo);
+	m_VkMemory = device.get().allocateMemory(allocateInfo);
 
-	device.bindImageMemory(m_VkImage, m_VkMemory, 0);
+	device.get().bindImageMemory(m_VkImage, m_VkMemory, 0);
 
 	vk::ImageSubresourceRange subresourceRange;
 	subresourceRange.setAspectMask(vk::ImageAspectFlagBits::eColor)
@@ -79,13 +79,13 @@ ImageResource::ImageResource(vk::ImageCreateInfo imageCreateInfo, const vk::Phys
 		.setFormat(m_Format)
 		.setSubresourceRange(subresourceRange);
 
-	m_VkImageView = device.createImageView(viewCreateInfo);
+	m_VkImageView = device.get().createImageView(viewCreateInfo);
 
 	//TODO: transition image (via command buffers)
 
 }
 
-ImageResource::ImageResource(vk::Image image, const vk::Device &device, Format format): m_VkImage(image), m_Format(format)
+ImageResource::ImageResource(vk::Image image, const vk::UniqueDevice &device, Format format): m_VkImage(image), m_Format(format)
 {
 	setImageView(device);
 }
@@ -105,7 +105,7 @@ Format ImageResource::findSupportedFormat(const vk::PhysicalDevice & physicalDev
 	PAPAGO_ERROR("failed to find supported format");
 }
 
-void ImageResource::setImageView(const vk::Device &device)
+void ImageResource::setImageView(const vk::UniqueDevice &device)
 {
 	vk::ImageSubresourceRange subresourceRange;
 	subresourceRange.setAspectMask(vk::ImageAspectFlagBits::eColor)
@@ -119,5 +119,5 @@ void ImageResource::setImageView(const vk::Device &device)
 		.setFormat(m_Format)
 		.setSubresourceRange(subresourceRange);
 
-	m_VkImageView = device.createImageView(viewCreateInfo);
+	m_VkImageView = device.get().createImageView(viewCreateInfo);
 }

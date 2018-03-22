@@ -8,38 +8,6 @@
 #include "image_resource.hpp"
 #include <memory>
 
-Surface Device::createSurface(size_t width, size_t height, HWND& hwnd)
-{
-	vk::ApplicationInfo appInfo("PapaGo-api", VK_MAKE_VERSION(1, 0, 0), "No Engine", VK_MAKE_VERSION(1, 0, 0), VK_API_VERSION_1_0);
-
-	std::vector<const char*> surfaceExtensions = {
-		VK_KHR_SURFACE_EXTENSION_NAME,
-		VK_KHR_WIN32_SURFACE_EXTENSION_NAME
-	};
-
-	vk::InstanceCreateInfo info;
-	info.setPApplicationInfo(&appInfo)
-		.setEnabledExtensionCount(surfaceExtensions.size())
-		.setPpEnabledExtensionNames(surfaceExtensions.data());
-
-	s_VkInstance = vk::createInstance(info);
-
-	vk::SurfaceKHR surface;
-
-	vk::Win32SurfaceCreateInfoKHR surfaceCreateInfo = {};
-	surfaceCreateInfo.setHwnd(hwnd)
-		.setHinstance(GetModuleHandle(nullptr));
-
-	auto CreateWin32SurfaceKHR = reinterpret_cast<PFN_vkCreateWin32SurfaceKHR>(s_VkInstance.getProcAddr("vkCreateWin32SurfaceKHR"));
-
-	if (!CreateWin32SurfaceKHR || CreateWin32SurfaceKHR(static_cast<VkInstance>(s_VkInstance), reinterpret_cast<VkWin32SurfaceCreateInfoKHR*>(&surfaceCreateInfo), nullptr, reinterpret_cast<VkSurfaceKHR*>(&surface)))
-	{
-		throw new std::runtime_error("Could not create Win32 surface");
-	}
-
-	return Surface(width, height, surface);
-}
-
 //Provides a vector of devices with the given [features] and [extensions] enabled
 std::vector<Device> Device::enumerateDevices(Surface& surface, const vk::PhysicalDeviceFeatures &features, const std::vector<const char*> &extensions)
 {
@@ -50,7 +18,7 @@ std::vector<Device> Device::enumerateDevices(Surface& surface, const vk::Physica
 
 	std::vector<Device> result;
 
-	auto physicalDevices = s_VkInstance.enumeratePhysicalDevices();
+	auto physicalDevices = surface.m_vkInstance.get().enumeratePhysicalDevices();
 
 	for (auto& device : physicalDevices) {
 		auto queueCreateInfos = std::vector<vk::DeviceQueueCreateInfo>();
@@ -86,7 +54,7 @@ std::vector<Device> Device::enumerateDevices(Surface& surface, const vk::Physica
 			.setQueueCreateInfoCount(queueCreateInfos.size())
 			.setPQueueCreateInfos(queueCreateInfos.data());
 
-		auto logicalDevice = device.createDevice(dci);
+		auto logicalDevice = device.createDeviceUnique(dci);
 
 		result.emplace_back(Device(device, logicalDevice));
 	}
@@ -113,7 +81,7 @@ SwapChain Device::createSwapChain(const Format& format, size_t framebufferCount,
 	}
 
 	vk::SwapchainCreateInfoKHR createInfo = {};
-	createInfo.surface = surface;
+	createInfo.surface = static_cast<vk::SurfaceKHR>(surface);
 	createInfo.minImageCount = framebufferCount;
 	createInfo.imageFormat = swapFormat.format;
 	createInfo.imageColorSpace = swapFormat.colorSpace;
@@ -142,11 +110,11 @@ SwapChain Device::createSwapChain(const Format& format, size_t framebufferCount,
 	createInfo.presentMode = presentMode;
 	createInfo.clipped = VK_TRUE;
 
-	auto swapChain = m_VkDevice.createSwapchainKHR(createInfo);
+	auto swapChain =  m_VkDevice.get().createSwapchainKHR(createInfo);
 
 	// Get colorbuffer images
 	std::vector<vk::Image> images;
-	images = m_VkDevice.getSwapchainImagesKHR(swapChain);
+	images = m_VkDevice.get().getSwapchainImagesKHR(swapChain);
 	auto actualFramebufferCount = images.size();
 
 	// Get image resources for framebuffers
@@ -180,7 +148,7 @@ Device::QueueFamilyIndices Device::findQueueFamilies(const vk::PhysicalDevice & 
 				graphicsQueueFamily = i;
 			}
 
-			if ((presentQueueFamily == -1 || presentQueueFamily == graphicsQueueFamily) && device.getSurfaceSupportKHR(i, surface)) {
+			if ((presentQueueFamily == -1 || presentQueueFamily == graphicsQueueFamily) && device.getSurfaceSupportKHR(i, static_cast<vk::SurfaceKHR>( surface))) {
 				presentQueueFamily = i;
 			}
 		}
@@ -190,14 +158,19 @@ Device::QueueFamilyIndices Device::findQueueFamilies(const vk::PhysicalDevice & 
 	return { graphicsQueueFamily, presentQueueFamily };
 }
 
-Device::SwapChainSupportDetails Device::querySwapChainSupport(Surface& surface)
+Device::Device(vk::PhysicalDevice physicalDevice, vk::UniqueDevice &device) : m_VkPhysicalDevice(physicalDevice), m_VkDevice(std::move(device))
+{
+
+}
+
+Device::SwapChainSupportDetails Device::querySwapChainSupport(Surface& surface) const
 {
 	SwapChainSupportDetails details;
-	details.capabilities = m_VkPhysicalDevice.getSurfaceCapabilitiesKHR(surface);
+	details.capabilities = m_VkPhysicalDevice.getSurfaceCapabilitiesKHR( static_cast<vk::SurfaceKHR>(surface));
 
-	details.formats = m_VkPhysicalDevice.getSurfaceFormatsKHR(surface);
+	details.formats = m_VkPhysicalDevice.getSurfaceFormatsKHR(static_cast<vk::SurfaceKHR>(surface));
 
-	details.presentmodes = m_VkPhysicalDevice.getSurfacePresentModesKHR(surface);
+	details.presentmodes = m_VkPhysicalDevice.getSurfacePresentModesKHR(static_cast<vk::SurfaceKHR>(surface));
 
 	return details;
 }
@@ -260,6 +233,4 @@ vk::Extent2D Device::chooseSwapChainExtend(uint32_t width, uint32_t height, cons
 
 	return actualExtent;
 }
-
-vk::Instance Device::s_VkInstance;
 

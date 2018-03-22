@@ -50,6 +50,6 @@ private:
 	static vk::PresentModeKHR chooseSwapPresentMode(SwapChainPresentMode&, const std::vector<vk::PresentModeKHR>& availablePresentModes);
 	static vk::Extent2D chooseSwapChainExtend(uint32_t width, uint32_t height, const vk::SurfaceCapabilitiesKHR& availableCapabilities);
 
-	vk::PhysicalDevice m_vkPhysicalDevice;
-	vk::UniqueDevice m_vkDevice;
+	vk::PhysicalDevice m_VkPhysicalDevice;
+	vk::UniqueDevice m_VkDevice;
 };
