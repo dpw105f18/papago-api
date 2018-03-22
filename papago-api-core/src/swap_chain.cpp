@@ -1,7 +1,10 @@
 #include "standard_header.hpp"
 #include "swap_chain.hpp"
 
-SwapChain::SwapChain(vk::UniqueDevice& device, vk::UniqueSwapchainKHR& swapChain, Format format, vk::Extent2D extent) : m_VkSwapChain(swapChain), m_Format(format), m_VkExtent(extent)
+SwapChain::SwapChain(vk::UniqueDevice& device, vk::UniqueSwapchainKHR& swapChain, Format format, vk::Extent2D extent) 
+	: m_VkSwapChain(std::move(swapChain))
+	, m_VkExtent(extent)
+	, m_Format(format)
 {
 	m_Images = device->getSwapchainImagesKHR(*m_VkSwapChain);
 	auto framebufferCount = m_Images.size();

@@ -6,7 +6,7 @@ class SwapChain {
 public:
 	void present();
 private:
-	vk::UniqueSwapchainKHR& m_VkSwapChain;
+	vk::UniqueSwapchainKHR m_VkSwapChain;
 	vk::Extent2D m_VkExtent;
 	Format& m_Format;
 	std::vector<vk::Image> m_Images;
