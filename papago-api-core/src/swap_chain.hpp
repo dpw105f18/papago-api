@@ -1,25 +1,21 @@
 #pragma once
 #include "standard_header.hpp"
 #include "device.hpp"
+#include "image_resource.hpp"
 
 class SwapChain {
 public:
 	void present();
 private:
-	vk::UniqueSwapchainKHR m_VkSwapChain;
-	vk::Extent2D m_VkExtent;
-	Format& m_Format;
-	std::vector<vk::Image> m_Images;
-	std::vector<vk::UniqueImageView> m_ImageViews;
-	std::vector<vk::UniqueFramebuffer> m_Framebuffers;
+	vk::UniqueSwapchainKHR m_vkSwapChain;
+	std::vector<ImageResource> m_colorResources;
+	std::vector<ImageResource> m_depthResources;
+	std::vector<vk::Framebuffer> m_framebuffers;
 	
-	SwapChain(vk::UniqueDevice&, vk::UniqueSwapchainKHR&, Format, vk::Extent2D);
+	SwapChain(vk::UniqueDevice&, vk::UniqueSwapchainKHR&, std::vector<ImageResource>& colorResources, std::vector<ImageResource>& depthResources, vk::Extent2D);
 	
+	vk::RenderPass createDummyRenderPass(const vk::UniqueDevice& device); //<-- TODO: use proper RenderPass
 
-	//TODO: finish diz (use ImageResource when it's done?):
-	vk::UniqueImage createDepthImage(const vk::PhysicalDevice&, const vk::UniqueDevice&) const;
-
-	static Format findSupportedFormat(const vk::PhysicalDevice&, const std::vector<Format>& candidateFormats, vk::ImageTiling, vk::FormatFeatureFlags);
-	
-	friend SwapChain Device::createSwapChain(const Format& , size_t ,SwapChainPresentMode, Surface&);
+	//TODO: use ImageResource when it's done?
+	friend SwapChain Device::createSwapChain(const Format&, size_t, SwapChainPresentMode, Surface&);
 };

@@ -3,41 +3,39 @@
 #include "device.hpp"
 #include <set>
 #include "swap_chain.hpp"
+#include "image_resource.hpp"
 
 //Provides a vector of devices with the given [features] and [extensions] enabled
 std::vector<Device> Device::enumerateDevices(Surface& surface, const vk::PhysicalDeviceFeatures &features, const std::vector<const char*> &extensions)
 {
-	auto physicalDevices = surface.m_vkInstance->enumeratePhysicalDevices();
 	std::vector<Device> result;
+	auto physicalDevices = surface.m_vkInstance->enumeratePhysicalDevices();
 	result.reserve(physicalDevices.size());
 
-	for (auto& physicalDevice : physicalDevices) 
-	{
+	for (auto& device : physicalDevices) {
 		auto queueCreateInfos = std::vector<vk::DeviceQueueCreateInfo>();
 
-		auto queueFamilyIndicies = findQueueFamilies(physicalDevice, surface);
+		auto queueFamilyIndicies = findQueueFamilies(device, surface);
 
 		std::set<int> uniqueQueueFamilyIndicies;
-		if (queueFamilyIndicies.graphicsFamily != -1)
-		{
+		if (queueFamilyIndicies.graphicsFamily != -1) {
 			uniqueQueueFamilyIndicies.emplace(queueFamilyIndicies.graphicsFamily);
 		}
 
-		if (queueFamilyIndicies.presentFamily != -1) 
-		{
+		if (queueFamilyIndicies.presentFamily != -1) {
 			uniqueQueueFamilyIndicies.emplace(queueFamilyIndicies.presentFamily);
 		}
 
-		const float queuePriority = 1.0f;	//<-- TODO: should this be setable somehow?
-		for (auto qf : uniqueQueueFamilyIndicies) 
-		{
+		for (auto qf : uniqueQueueFamilyIndicies) {
+			const float queuePriority = 1.0f;	//<-- TODO: should this be setable somehow?
+
 			queueCreateInfos.push_back(vk::DeviceQueueCreateInfo()
 				.setQueueCount(1)					//<-- TODO: setable?
 				.setPQueuePriorities(&queuePriority)
 				.setQueueFamilyIndex(qf));
 		}
 
-		auto logicalDevice = physicalDevice.createDeviceUnique(vk::DeviceCreateInfo()
+		auto logicalDevice = device.createDeviceUnique(vk::DeviceCreateInfo()
 			.setEnabledExtensionCount(extensions.size())
 			.setPpEnabledExtensionNames(extensions.data())
 			.setPEnabledFeatures(&features)
@@ -45,8 +43,9 @@ std::vector<Device> Device::enumerateDevices(Surface& surface, const vk::Physica
 			.setQueueCreateInfoCount(queueCreateInfos.size())
 			.setPQueueCreateInfos(queueCreateInfos.data()));
 
-		result.push_back(Device(physicalDevice, logicalDevice));
+		result.push_back(Device(device, logicalDevice));
 	}
+
 	return result;
 }
 
@@ -59,7 +58,7 @@ SwapChain Device::createSwapChain(const Format& format, size_t framebufferCount,
 
 	auto presentMode = chooseSwapPresentMode(preferredPresentMode, details.presentmodes); 
 
-	auto extent = chooseSwapChainExtend(surface.width(), surface.height(), details.capabilities);
+	auto extent = chooseSwapChainExtend(surface.getWidth(), surface.getHeight(), details.capabilities);
 
 	if (details.capabilities.maxImageCount > 0 &&
 		framebufferCount > details.capabilities.maxImageCount) {
@@ -75,7 +74,7 @@ SwapChain Device::createSwapChain(const Format& format, size_t framebufferCount,
 	createInfo.imageArrayLayers = 1;
 	createInfo.imageUsage = vk::ImageUsageFlagBits::eColorAttachment;
 
-	QueueFamilyIndices indices = findQueueFamilies(m_vkPhysicalDevice, surface);
+	auto indices = findQueueFamilies(m_vkPhysicalDevice, surface);
 	uint32_t queueFamilyIndices[] = {
 		indices.graphicsFamily, indices.presentFamily
 	};
@@ -96,10 +95,36 @@ SwapChain Device::createSwapChain(const Format& format, size_t framebufferCount,
 	createInfo.presentMode = presentMode;
 	createInfo.clipped = VK_TRUE;
 
-	auto swapChain = m_vkDevice->createSwapchainKHRUnique(createInfo);
+	auto swapChain =  m_vkDevice->createSwapchainKHRUnique(createInfo);
 
-	return std::move(SwapChain(m_vkDevice, swapChain, swapFormat.format, extent));
+	// Get colorbuffer images
+	auto images = m_vkDevice->getSwapchainImagesKHR(*swapChain);
+
+	// Get image resources for framebuffers
+	std::vector<ImageResource> colorResources, depthResources;
+	std::vector<Format> formatCandidates = {
+		Format::eD32Sfloat, 
+		Format::eD32SfloatS8Uint, 
+		Format::eD24UnormS8Uint
+	};
+
+	for (auto i = 0; i < images.size(); ++i) {
+		colorResources.emplace_back(
+			ImageResource::createColorResource(
+				images[i], 
+				m_vkDevice, 
+				swapFormat.format));
+
+		depthResources.emplace_back(
+			ImageResource::createDepthResource(
+				m_vkPhysicalDevice, m_vkDevice, 
+				extent.width, extent.height, 
+				formatCandidates));
+	}
+
+	return std::move(SwapChain(m_vkDevice, swapChain, colorResources, depthResources, extent));
 }
+
 
 Device::QueueFamilyIndices Device::findQueueFamilies(const vk::PhysicalDevice & device, Surface& surface)
 {
@@ -120,9 +145,8 @@ Device::QueueFamilyIndices Device::findQueueFamilies(const vk::PhysicalDevice & 
 			}
 
 			if ((presentQueueFamily == QueueFamilyIndices::NOT_FOUND() || 
-				presentQueueFamily == graphicsQueueFamily) && 
-				device.getSurfaceSupportKHR(i, static_cast<vk::SurfaceKHR>(surface)))
-			{
+				presentQueueFamily == graphicsQueueFamily) &&
+				device.getSurfaceSupportKHR(i, static_cast<vk::SurfaceKHR>( surface))) {
 				presentQueueFamily = i;
 			}
 		}
@@ -132,7 +156,10 @@ Device::QueueFamilyIndices Device::findQueueFamilies(const vk::PhysicalDevice & 
 	return { graphicsQueueFamily, presentQueueFamily };
 }
 
-Device::Device(vk::PhysicalDevice physicalDevice, vk::UniqueDevice& device): m_vkPhysicalDevice(physicalDevice), m_vkDevice(std::move(device)) {}
+Device::Device(vk::PhysicalDevice physicalDevice, vk::UniqueDevice &device) : m_vkPhysicalDevice(physicalDevice), m_vkDevice(std::move(device))
+{
+
+}
 
 Device::SwapChainSupportDetails Device::querySwapChainSupport(Surface& surface) const
 {
@@ -167,6 +194,7 @@ vk::SurfaceFormatKHR Device::chooseSwapSurfaceFormat(Format preferredFormat, std
 
 vk::PresentModeKHR Device::chooseSwapPresentMode(SwapChainPresentMode &preferredPresentMode, const std::vector<vk::PresentModeKHR>& availablePresentModes)
 {
+	// FIFO is guarrenteed to be supported according to the Vulkan Specification
 	auto bestMode = vk::PresentModeKHR::eFifo;
 
 	for (const auto& availablePresentMode : availablePresentModes) {
@@ -196,16 +224,17 @@ vk::Extent2D Device::chooseSwapChainExtend(uint32_t width, uint32_t height, cons
 	vk::Extent2D actualExtent = { width, height };
 
 	actualExtent.width = std::max(
-		capabilities.minImageExtent.width, 
+		capabilities.minImageExtent.width,
 		std::min(
-			capabilities.maxImageExtent.width, 
+			capabilities.maxImageExtent.width,
 			actualExtent.width));
-	
+
 	actualExtent.height = std::max(
-		capabilities.minImageExtent.height, 
+		capabilities.minImageExtent.height,
 		std::min(
-			capabilities.maxImageExtent.height, 
+			capabilities.maxImageExtent.height,
 			actualExtent.height));
 
 	return actualExtent;
 }
+

@@ -18,7 +18,6 @@ public:
 	static std::vector<Device> enumerateDevices(Surface& surface, const vk::PhysicalDeviceFeatures &features, const std::vector<const char*> &extensions);
 
 	SwapChain createSwapChain(const Format&, size_t framebufferCount, SwapChainPresentMode, Surface&);
-	ImageResource createImageResource(size_t width, size_t height, TypeEnums, ImageType);	//<-- TODO: pick up here! [Texture Resource story]
 	BufferResource createBufferResource();
 	GraphicsQueue createGraphicsQueue(SwapChain);
 	CommandBuffer createCommandBuffer(CommandBuffer::Usage);
@@ -31,7 +30,6 @@ public:
 	template<size_t N>
 	BufferResource createUniformBuffer() const;
 private:
-
 	struct SwapChainSupportDetails
 	{
 		vk::SurfaceCapabilitiesKHR capabilities;
