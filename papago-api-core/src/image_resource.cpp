@@ -9,7 +9,7 @@ void ImageResource::destroy()
 {
 }
 
-void* ImageResource::download(void * buffer, size_t size, size_t offset)
+std::vector<char> ImageResource::download()
 {
-	return nullptr;
+	return {};
 }

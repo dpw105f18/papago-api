@@ -16,7 +16,6 @@ private:
 	vk::UniqueBuffer m_vkBuffer;
 	vk::UniqueDeviceMemory m_vkMemory;
 	const vk::UniqueDevice& m_vkDevice;
-	const vk::PhysicalDevice& m_vkPhysicalDevice;
 	size_t m_size;
 
 	static uint32_t findMemoryType(
@@ -26,7 +25,7 @@ private:
 
 	BufferResource(
 		const vk::UniqueDevice&,
-		vk::PhysicalDevice,
+		const vk::PhysicalDevice&,
 		size_t,
 		vk::BufferUsageFlags,
 		vk::MemoryPropertyFlags);

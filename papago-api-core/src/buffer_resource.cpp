@@ -36,6 +36,8 @@ uint32_t BufferResource::findMemoryType(
 			return i;
 		}
 	}
+	
+	//If successful, then we have returned by now
 
 	std::stringstream errorStream;
 	errorStream << "Failed to find memory with the properties: ";
@@ -61,12 +63,12 @@ uint32_t BufferResource::findMemoryType(
 		errorStream << "LAZILY_ALLOCATED ";
 	}
 
-	throw std::runtime_error(errorStream.str());
+	PAPAGO_ERROR(errorStream.str());
 }
 
 BufferResource::BufferResource(
 	const vk::UniqueDevice& device,
-	vk::PhysicalDevice		physicalDevice,
+	const vk::PhysicalDevice& physicalDevice,
 	size_t					size,
 	vk::BufferUsageFlags	usageFlags,
 	vk::MemoryPropertyFlags memoryFlags)
@@ -74,7 +76,6 @@ BufferResource::BufferResource(
 		.setSize(size)
 		.setUsage(usageFlags | vk::BufferUsageFlagBits::eTransferDst))) // IMPROVEMENT : All buffers are currently assumed to be able to be uploaded to
 	, m_vkDevice(device)
-	, m_vkPhysicalDevice(physicalDevice)
 	, m_size(size)
 {
 	auto memoryRequirements = device->getBufferMemoryRequirements(*m_vkBuffer);
@@ -85,7 +86,8 @@ BufferResource::BufferResource(
 			findMemoryType(
 				physicalDevice,
 				memoryRequirements.memoryTypeBits,
-				memoryFlags))
+				memoryFlags)
+		)
 	);
 
 	device->bindBufferMemory(*m_vkBuffer, *m_vkMemory, 0);
