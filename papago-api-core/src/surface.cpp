@@ -83,18 +83,19 @@ VkBool32 VKAPI_CALL VkDebugCallback(
 void Surface::checkInstanceLayers(std::vector<const char*> requiredLayers)
 {
 	auto layers = vk::enumerateInstanceLayerProperties();
-	std::for_each(ITERATE(requiredLayers), [&layers](const std::string& layer_name)
+	
+	for(std::string layerName : requiredLayers)
 	{
-		if (!std::any_of(ITERATE(layers), [&layer_name](const vk::LayerProperties& layer_properties)
+		if (!std::any_of(ITERATE(layers), [&layerName](const vk::LayerProperties& layerProperties)
 		{
-			return layer_name == layer_properties.layerName;
+			return layerName == layerProperties.layerName;
 		}))
 		{
 			std::stringstream stream;
-			stream << "Required layer not supported: \"" << layer_name << "\"";
-			throw std::runtime_error(stream.str());
+			stream << "Required layer not supported: \"" << layerName << "\"";
+			PAPAGO_ERROR(stream.str());
 		}
-	});
+	}
 }
 
 Surface::Surface(uint32_t width, uint32_t height, HWND hwnd) : m_width(width), m_height(height)
