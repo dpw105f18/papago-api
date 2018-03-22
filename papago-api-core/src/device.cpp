@@ -122,7 +122,7 @@ SwapChain Device::createSwapChain(const Format& format, size_t framebufferCount,
 				formatCandidates));
 	}
 
-	return SwapChain(m_vkDevice, swapChain, colorResources, depthResources, extent);
+	return std::move(SwapChain(m_vkDevice, swapChain, colorResources, depthResources, extent));
 }
 
 

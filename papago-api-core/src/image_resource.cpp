@@ -1,7 +1,7 @@
 #include "standard_header.hpp"
 #include "image_resource.hpp"
 
-void ImageResource::upload(std::vector<char> data)
+void ImageResource::upload(const std::vector<char>& data)
 {
 }
 
@@ -9,13 +9,14 @@ void ImageResource::destroy()
 {
 }
 
-void ImageResource::download()
+std::vector<char> ImageResource::download()
 {
+	return {};
 }
 
 ImageResource ImageResource::createDepthResource(const vk::PhysicalDevice &physicalDevice, const vk::UniqueDevice &device, size_t width, size_t height, const std::vector<Format>& formatCandidates)
 {
-	auto format = ImageResource::findSupportedFormat(physicalDevice, formatCandidates, vk::ImageTiling::eOptimal, vk::FormatFeatureFlagBits::eDepthStencilAttachment);
+	auto format = findSupportedFormat(physicalDevice, formatCandidates, vk::ImageTiling::eOptimal, vk::FormatFeatureFlagBits::eDepthStencilAttachment);
 
 	auto extent = vk::Extent3D().setWidth(width)
 		.setHeight(height)
@@ -32,7 +33,7 @@ ImageResource ImageResource::createDepthResource(const vk::PhysicalDevice &physi
 		.setSamples(vk::SampleCountFlagBits::e1);
 
 
-	return ImageResource(createInfo, physicalDevice, device);
+	return ImageResource(createInfo, physicalDevice, device, vk::ImageAspectFlagBits::eDepth);
 }
 
 ImageResource ImageResource::createColorResource(vk::Image image, const vk::UniqueDevice &device, Format format)
@@ -40,7 +41,7 @@ ImageResource ImageResource::createColorResource(vk::Image image, const vk::Uniq
 	return ImageResource(image, device, format);
 }
 
-ImageResource::ImageResource(vk::ImageCreateInfo imageCreateInfo, const vk::PhysicalDevice& physicalDevice, const vk::UniqueDevice& device) 
+ImageResource::ImageResource(vk::ImageCreateInfo imageCreateInfo, const vk::PhysicalDevice& physicalDevice, const vk::UniqueDevice& device, vk::ImageAspectFlags aspectFlags) 
 	: m_VkCreateInfo(imageCreateInfo), m_Format(imageCreateInfo.format)
 {
 	m_VkImage = device.get().createImage(imageCreateInfo);
@@ -67,7 +68,7 @@ ImageResource::ImageResource(vk::ImageCreateInfo imageCreateInfo, const vk::Phys
 	device.get().bindImageMemory(m_VkImage, m_VkMemory, 0);
 
 	vk::ImageSubresourceRange subresourceRange;
-	subresourceRange.setAspectMask(vk::ImageAspectFlagBits::eColor)
+	subresourceRange.setAspectMask(aspectFlags)
 		.setLevelCount(1)
 		.setLayerCount(1);
 

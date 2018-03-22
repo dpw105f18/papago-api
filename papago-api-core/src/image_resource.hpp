@@ -8,9 +8,9 @@ class ImageResource : public Resource
 public:
 
 	// Inherited via Resource
-	void upload(std::vector<char> data) override;
+	void upload(const std::vector<char>& data) override;
 	void destroy() override;
-	void download() override;
+	std::vector<char> download() override;
 
 
 private:
@@ -18,7 +18,7 @@ private:
 	static ImageResource createColorResource(vk::Image, const vk::UniqueDevice&, Format format);
 	static ImageResource createTextureResource();
 
-	ImageResource(vk::ImageCreateInfo, const vk::PhysicalDevice&, const vk::UniqueDevice&);
+	ImageResource(vk::ImageCreateInfo, const vk::PhysicalDevice&, const vk::UniqueDevice&, vk::ImageAspectFlags);
 	ImageResource(vk::Image, const vk::UniqueDevice&, Format format);
 
 	static Format findSupportedFormat(const vk::PhysicalDevice&, const std::vector<Format>&, vk::ImageTiling, vk::FormatFeatureFlags);

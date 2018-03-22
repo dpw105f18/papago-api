@@ -113,6 +113,7 @@
       <AdditionalIncludeDirectories>$(VulkanSDKDir)\include;$(ProjectDir)include</AdditionalIncludeDirectories>
       <PrecompiledHeader>Create</PrecompiledHeader>
       <PrecompiledHeaderFile>standard_header.hpp</PrecompiledHeaderFile>
+      <PreprocessorDefinitions>PAPAGO_USE_VALIDATION_LAYERS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link />
     <Link>

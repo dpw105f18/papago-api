@@ -52,8 +52,8 @@ vk::RenderPass SwapChain::createDummyRenderPass(const vk::UniqueDevice& device)
 		.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare)
 		.setFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
 
-	vk::AttachmentReference colorRef(0);
-	vk::AttachmentReference depthRef(1);
+	vk::AttachmentReference colorRef(0, vk::ImageLayout::eColorAttachmentOptimal);
+	vk::AttachmentReference depthRef(1, vk::ImageLayout::eDepthStencilAttachmentOptimal);
 
 	vk::SubpassDescription subpass = {};
 	subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics)
