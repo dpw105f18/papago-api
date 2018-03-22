@@ -8,9 +8,9 @@ class ImageResource : public Resource
 public:
 
 	// Inherited via Resource
-	void upload(std::vector<char> data) override;
+	void upload(const std::vector<char>& data) override;
 	void destroy() override;
-	void download() override;
+	std::vector<char> download() override;
 
 private:
 	ImageResource();

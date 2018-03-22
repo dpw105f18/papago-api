@@ -3,6 +3,7 @@
 #include <vector>
 #include "api_enums.hpp"
 #include "command_buffer.hpp"
+#include "buffer_resource.hpp"
 
 class VertexShader;
 class FragmentShader;
@@ -22,6 +23,13 @@ public:
 	GraphicsQueue createGraphicsQueue(SwapChain);
 	CommandBuffer createCommandBuffer(CommandBuffer::Usage);
 	SubCommandBuffer createSubCommandBuffer(SubCommandBuffer::Usage);
+
+	template<typename T>
+	BufferResource createVertexBuffer(const std::vector<T>& vertexData) const;
+	template<typename T>
+	BufferResource createIndexBuffer(const std::vector<T>& indexData) const;
+	template<size_t N>
+	BufferResource createUniformBuffer() const;
 private:
 
 	struct SwapChainSupportDetails
@@ -55,3 +63,48 @@ private:
 	vk::PhysicalDevice m_vkPhysicalDevice;
 	vk::UniqueDevice m_vkDevice;
 };
+
+template<typename T>
+BufferResource Device::createVertexBuffer(const std::vector<T>& vertexData) const
+{
+	size_t bufferSize = sizeof(T) * vertexData.size();
+	auto buffer = BufferResource(
+		m_vkDevice,
+		m_vkPhysicalDevice,
+		bufferSize,
+		vk::BufferUsageFlagBits::eVertexBuffer,
+		// TODO: Convert to device local memory when command pool and buffers are ready
+		vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+
+	auto data = reinterpret_cast<char const *>(vertexData.data());
+	buffer.upload(std::vector<char>(data, data + bufferSize));
+	return buffer;
+}
+
+template<typename T>
+BufferResource Device::createIndexBuffer(const std::vector<T>& indexData) const
+{
+	size_t bufferSize = sizeof(T) * indexData.size();
+	auto buffer = BufferResource(
+		m_vkDevice,
+		m_vkPhysicalDevice,
+		bufferSize,
+		vk::BufferUsageFlagBits::eIndexBuffer,
+		// TODO: Convert to device local memory when command pool and buffers are ready
+		vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+
+	auto data = reinterpret_cast<char const *>(indexData.data());
+	buffer.upload(std::vector<char>(data, data + bufferSize));
+	return buffer;
+}
+
+template<size_t N>
+BufferResource Device::createUniformBuffer() const
+{
+	return BufferResource(
+		m_vkDevice,
+		m_vkPhysicalDevice,
+		N,
+		vk::BufferUsageFlagBits::eUniformBuffer,
+		vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+}
