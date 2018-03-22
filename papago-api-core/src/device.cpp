@@ -98,7 +98,7 @@ SwapChain Device::createSwapChain(const Format& format, size_t framebufferCount,
 
 	auto swapChain = m_vkDevice->createSwapchainKHRUnique(createInfo);
 
-	return SwapChain(m_vkDevice, swapChain, swapFormat.format, extent);
+	return std::move(SwapChain(m_vkDevice, swapChain, swapFormat.format, extent));
 }
 
 Device::QueueFamilyIndices Device::findQueueFamilies(const vk::PhysicalDevice & device, Surface& surface)

@@ -1,7 +1,7 @@
 #include "standard_header.hpp"
 #include "buffer_resource.hpp"
 
-void BufferResource::upload(std::vector<char> data)
+void BufferResource::upload(const std::vector<char>& data)
 {
 	auto mappedMemory = m_vkDevice->mapMemory(*m_vkMemory, 0, VK_WHOLE_SIZE);
 	memcpy(mappedMemory, data.data(), data.size());
@@ -81,7 +81,7 @@ BufferResource::BufferResource(
 	auto memoryRequirements = device->getBufferMemoryRequirements(*m_vkBuffer);
 
 	m_vkMemory = device->allocateMemoryUnique(vk::MemoryAllocateInfo()
-		.setAllocationSize(size)
+		.setAllocationSize(memoryRequirements.size)
 		.setMemoryTypeIndex(
 			findMemoryType(
 				physicalDevice,

@@ -102,5 +102,16 @@ int main()
 	});
 	auto uniformBuffer = device.createUniformBuffer<sizeof(UniformBufferObject)>();
 
+	auto bigUniform = device.createUniformBuffer<1000>();
+
+	std::vector<char> bigData(1000);
+	for (auto i = 0; i < 1000; ++i) {
+		bigData[i] = i % 256;
+	}
+
+	bigUniform.upload(bigData);
+
+	auto dlData = bigUniform.download();
+
 	system("PAUSE");
 }

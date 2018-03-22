@@ -14,6 +14,11 @@ private:
 	uint32_t m_width, m_height;
 	vk::UniqueInstance m_vkInstance;
 	vk::UniqueSurfaceKHR m_vkSurfaceKHR;
+#ifdef PAPAGO_USE_VALIDATION_LAYERS
+	vk::UniqueDebugReportCallbackEXT m_DebugReportCallback;
+#endif
+
+	static void checkInstanceLayers(std::vector<const char*> requiredLayers);
 
 	friend std::vector<Device> Device::enumerateDevices(Surface&, const vk::PhysicalDeviceFeatures &, const std::vector<const char*> &);
 };
