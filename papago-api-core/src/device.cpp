@@ -13,12 +13,15 @@ std::vector<Device> Device::enumerateDevices(Surface& surface, const vk::Physica
 	std::vector<Device> result;
 	result.reserve(physicalDevices.size());
 
-	for (auto& device : physicalDevices) {
-		auto queueFamilyIndicies = findQueueFamilies(device, surface);
+	for (auto& physicalDevice : physicalDevices) {
+		if (! isPhysicalDeviceSuitable(physicalDevice, surface, extensions)) {
+			continue;
+		}
+
+		auto queueFamilyIndicies = findQueueFamilies(physicalDevice, surface);
 		auto queueCreateInfos = createQueueCreateInfos(queueFamilyIndicies);
-		//TODO: Make check on physical device to ensure that extensions are avaliable before enabeling 
-		
-		auto logicalDevice = device.createDeviceUnique(vk::DeviceCreateInfo()
+
+		auto logicalDevice = physicalDevice.createDeviceUnique(vk::DeviceCreateInfo()
 			.setEnabledExtensionCount(extensions.size())
 			.setPpEnabledExtensionNames(extensions.data())
 			.setPEnabledFeatures(&features)
@@ -26,9 +29,9 @@ std::vector<Device> Device::enumerateDevices(Surface& surface, const vk::Physica
 			.setQueueCreateInfoCount(queueCreateInfos.size())
 			.setPQueueCreateInfos(queueCreateInfos.data()));
 
-		result.push_back(Device(device, logicalDevice));
+		result.push_back(Device(physicalDevice, logicalDevice));
 	}
-
+	
 	return result;
 }
 
@@ -127,10 +130,38 @@ vk::SwapchainCreateInfoKHR Device::createSwapChainCreateInfo(
 	return createInfo;
 }
 
+bool Device::isPhysicalDeviceSuitable(const vk::PhysicalDevice & physicalDevice, Surface& surface, const std::vector<const char*>& extensions)
+{
+	auto queueFamilyIndicies = Device::findQueueFamilies(physicalDevice, surface);
+
+	bool extensionsSupported = Device::areExtensionsSupported(physicalDevice, extensions);
+
+	bool swapChainAdequate = false;
+	if (extensionsSupported) {
+		auto swapChainSupport = Device::querySwapChainSupport(physicalDevice, surface);
+		swapChainAdequate = !swapChainSupport.formats.empty() && !swapChainSupport.presentmodes.empty();
+	}
+
+	return queueFamilyIndicies.isComplete() && extensionsSupported && swapChainAdequate;
+}
+
+bool Device::areExtensionsSupported(const vk::PhysicalDevice & physicalDevice, const std::vector<const char*>& extensions)
+{
+	bool swapChainExtensionPresent = false;
+	std::set<std::string> requiredExtensions(ITERATE(extensions));
+
+	std::vector<vk::ExtensionProperties> avaliableExtensions = physicalDevice.enumerateDeviceExtensionProperties();
+	for (const auto& extension : avaliableExtensions) {
+		requiredExtensions.erase(extension.extensionName);
+		swapChainExtensionPresent |= std::strcmp(extension.extensionName, VK_KHR_SWAPCHAIN_EXTENSION_NAME) == 0;
+	}
+	return requiredExtensions.empty() && swapChainExtensionPresent;
+}
+
 // framebufferCount is a prefered minimum of buffers in the swapchain
 SwapChain Device::createSwapChain(const Format& format, size_t framebufferCount, SwapChainPresentMode preferredPresentMode, Surface& surface)
 {
-	auto details = querySwapChainSupport(surface);
+	auto details = Device::querySwapChainSupport(m_vkPhysicalDevice, surface);
 
 	auto swapFormat = chooseSwapSurfaceFormat(format, details.formats);
 
@@ -183,14 +214,14 @@ Device::Device(vk::PhysicalDevice physicalDevice, vk::UniqueDevice &device) : m_
 
 }
 
-Device::SwapChainSupportDetails Device::querySwapChainSupport(Surface& surface) const
+Device::SwapChainSupportDetails Device::querySwapChainSupport(const vk::PhysicalDevice& physicalDevice, Surface& surface) 
 {
 	auto innerSurface = static_cast<vk::SurfaceKHR>(surface);
 
 	SwapChainSupportDetails details;
-	details.capabilities = m_vkPhysicalDevice.getSurfaceCapabilitiesKHR(innerSurface);
-	details.formats = m_vkPhysicalDevice.getSurfaceFormatsKHR(innerSurface);
-	details.presentmodes = m_vkPhysicalDevice.getSurfacePresentModesKHR(innerSurface);
+	details.capabilities =physicalDevice.getSurfaceCapabilitiesKHR(innerSurface);
+	details.formats = physicalDevice.getSurfaceFormatsKHR(innerSurface);
+	details.presentmodes = physicalDevice.getSurfacePresentModesKHR(innerSurface);
 
 	return details;
 }
