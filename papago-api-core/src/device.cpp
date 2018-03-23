@@ -86,7 +86,46 @@ std::vector<vk::DeviceQueueCreateInfo> Device::createQueueCreateInfos(QueueFamil
 	return queueCreateInfos;
 }
 
+vk::SwapchainCreateInfoKHR Device::createSwapChainCreateInfo(
+	Surface &surface, 
+	const size_t &framebufferCount, 
+	const vk::SurfaceFormatKHR &swapFormat, 
+	const vk::Extent2D &extent,
+	const vk::SurfaceCapabilitiesKHR& capabilities, 
+	const vk::PresentModeKHR& presentMode) const
+{
+	vk::SwapchainCreateInfoKHR createInfo = {};
+	createInfo.setSurface(static_cast<vk::SurfaceKHR>(surface))
+		.setMinImageCount(framebufferCount)
+		.setImageFormat(swapFormat.format)
+		.setImageColorSpace(swapFormat.colorSpace)
+		.setImageExtent(extent)
+		.setImageArrayLayers(1)
+		.setImageUsage(vk::ImageUsageFlagBits::eColorAttachment);
 
+	auto indices = findQueueFamilies(m_vkPhysicalDevice, surface);
+	uint32_t queueFamilyIndices[] = {
+		indices.graphicsFamily, indices.presentFamily
+	};
+
+	if (indices.graphicsFamily != indices.presentFamily) {
+		createInfo.setImageSharingMode(vk::SharingMode::eConcurrent)
+			.setQueueFamilyIndexCount(2)
+			.setPQueueFamilyIndices(queueFamilyIndices);
+	}
+	else {
+		createInfo.setImageSharingMode(vk::SharingMode::eExclusive)
+			.setQueueFamilyIndexCount(0)
+			.setPQueueFamilyIndices(nullptr);
+	}
+
+	createInfo.setPreTransform(capabilities.currentTransform)
+		.setCompositeAlpha(vk::CompositeAlphaFlagBitsKHR::eOpaque)
+		.setPresentMode(presentMode)
+		.setClipped(VK_TRUE);
+
+	return createInfo;
+}
 
 // framebufferCount is a prefered minimum of buffers in the swapchain
 SwapChain Device::createSwapChain(const Format& format, size_t framebufferCount, SwapChainPresentMode preferredPresentMode, Surface& surface)
@@ -104,35 +143,7 @@ SwapChain Device::createSwapChain(const Format& format, size_t framebufferCount,
 		framebufferCount = details.capabilities.maxImageCount;
 	}
 
-	vk::SwapchainCreateInfoKHR createInfo = {};
-	createInfo.surface = static_cast<vk::SurfaceKHR>(surface);
-	createInfo.minImageCount = framebufferCount;
-	createInfo.imageFormat = swapFormat.format;
-	createInfo.imageColorSpace = swapFormat.colorSpace;
-	createInfo.imageExtent = extent;
-	createInfo.imageArrayLayers = 1;
-	createInfo.imageUsage = vk::ImageUsageFlagBits::eColorAttachment;
-
-	auto indices = findQueueFamilies(m_vkPhysicalDevice, surface);
-	uint32_t queueFamilyIndices[] = {
-		indices.graphicsFamily, indices.presentFamily
-	};
-
-	if (indices.graphicsFamily != indices.presentFamily) {
-		createInfo.imageSharingMode = vk::SharingMode::eConcurrent;
-		createInfo.queueFamilyIndexCount = 2;
-		createInfo.pQueueFamilyIndices = queueFamilyIndices;
-	}
-	else {
-		createInfo.imageSharingMode = vk::SharingMode::eExclusive;
-		createInfo.queueFamilyIndexCount = 0; //optional
-		createInfo.pQueueFamilyIndices = nullptr; // optional
-	}
-
-	createInfo.preTransform = details.capabilities.currentTransform;
-	createInfo.compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque;
-	createInfo.presentMode = presentMode;
-	createInfo.clipped = VK_TRUE;
+	auto createInfo = createSwapChainCreateInfo(surface, framebufferCount, swapFormat, extent, details.capabilities, presentMode);
 
 	auto swapChain =  m_vkDevice->createSwapchainKHRUnique(createInfo);
 
