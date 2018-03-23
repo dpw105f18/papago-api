@@ -8,33 +8,16 @@
 //Provides a vector of devices with the given [features] and [extensions] enabled
 std::vector<Device> Device::enumerateDevices(Surface& surface, const vk::PhysicalDeviceFeatures &features, const std::vector<const char*> &extensions)
 {
-	std::vector<Device> result;
 	auto physicalDevices = surface.m_vkInstance->enumeratePhysicalDevices();
+	
+	std::vector<Device> result;
 	result.reserve(physicalDevices.size());
 
 	for (auto& device : physicalDevices) {
-		auto queueCreateInfos = std::vector<vk::DeviceQueueCreateInfo>();
-
 		auto queueFamilyIndicies = findQueueFamilies(device, surface);
-
-		std::set<int> uniqueQueueFamilyIndicies;
-		if (queueFamilyIndicies.graphicsFamily != -1) {
-			uniqueQueueFamilyIndicies.emplace(queueFamilyIndicies.graphicsFamily);
-		}
-
-		if (queueFamilyIndicies.presentFamily != -1) {
-			uniqueQueueFamilyIndicies.emplace(queueFamilyIndicies.presentFamily);
-		}
-
-		for (auto qf : uniqueQueueFamilyIndicies) {
-			const float queuePriority = 1.0f;	//<-- TODO: should this be setable somehow?
-
-			queueCreateInfos.push_back(vk::DeviceQueueCreateInfo()
-				.setQueueCount(1)					//<-- TODO: setable?
-				.setPQueuePriorities(&queuePriority)
-				.setQueueFamilyIndex(qf));
-		}
-
+		auto queueCreateInfos = createQueueCreateInfos(queueFamilyIndicies);
+		//TODO: Make check on physical device to ensure that extensions are avaliable before enabeling 
+		
 		auto logicalDevice = device.createDeviceUnique(vk::DeviceCreateInfo()
 			.setEnabledExtensionCount(extensions.size())
 			.setPpEnabledExtensionNames(extensions.data())
@@ -48,6 +31,62 @@ std::vector<Device> Device::enumerateDevices(Surface& surface, const vk::Physica
 
 	return result;
 }
+
+// Tries to keep graphics and present families on separate physical queues
+Device::QueueFamilyIndices Device::findQueueFamilies(const vk::PhysicalDevice & device, Surface& surface)
+{
+	int graphicsQueueFamily = QueueFamilyIndices::NOT_FOUND();
+	int presentQueueFamily = QueueFamilyIndices::NOT_FOUND();
+
+	auto queueFamilies = device.getQueueFamilyProperties();
+
+	for (auto i = 0; i < queueFamilies.size(); ++i) {
+		auto queueFamily = queueFamilies.at(i);
+
+		if (queueFamily.queueCount > 0) {
+			if ((graphicsQueueFamily == QueueFamilyIndices::NOT_FOUND() ||
+				graphicsQueueFamily == presentQueueFamily) &&
+				queueFamily.queueFlags & vk::QueueFlagBits::eGraphics)
+			{
+				graphicsQueueFamily = i;
+			}
+
+			if ((presentQueueFamily == QueueFamilyIndices::NOT_FOUND() ||
+				presentQueueFamily == graphicsQueueFamily) &&
+				device.getSurfaceSupportKHR(i, static_cast<vk::SurfaceKHR>(surface))) {
+				presentQueueFamily = i;
+			}
+		}
+	}
+
+	return { graphicsQueueFamily, presentQueueFamily };
+}
+  
+std::vector<vk::DeviceQueueCreateInfo> Device::createQueueCreateInfos(QueueFamilyIndices queueFamilyIndices)
+{
+	std::set<int> uniqueQueueFamilyIndicies;
+	if (queueFamilyIndices.hasGraphicsFamily()) {
+		uniqueQueueFamilyIndicies.emplace(queueFamilyIndices.graphicsFamily);
+	}
+
+	if (queueFamilyIndices.hasPresentFamily()) {
+		uniqueQueueFamilyIndicies.emplace(queueFamilyIndices.presentFamily);
+	}
+
+	auto queueCreateInfos = std::vector<vk::DeviceQueueCreateInfo>();
+	for (auto queueFamilyIndex : uniqueQueueFamilyIndicies) {
+		const float queuePriority = 1.0f;	//<-- TODO: should this be setable somehow?
+
+		queueCreateInfos.push_back(vk::DeviceQueueCreateInfo()
+			.setQueueCount(1)					//<-- TODO: setable?
+			.setPQueuePriorities(&queuePriority)
+			.setQueueFamilyIndex(queueFamilyIndex));
+	}
+
+	return queueCreateInfos;
+}
+
+
 
 // framebufferCount is a prefered minimum of buffers in the swapchain
 SwapChain Device::createSwapChain(const Format& format, size_t framebufferCount, SwapChainPresentMode preferredPresentMode, Surface& surface)
@@ -126,35 +165,7 @@ SwapChain Device::createSwapChain(const Format& format, size_t framebufferCount,
 }
 
 
-Device::QueueFamilyIndices Device::findQueueFamilies(const vk::PhysicalDevice & device, Surface& surface)
-{
-	int graphicsQueueFamily = QueueFamilyIndices::NOT_FOUND();
-	int presentQueueFamily = QueueFamilyIndices::NOT_FOUND();
 
-	auto queueFamilies = device.getQueueFamilyProperties();
-
-	for (auto i = 0; i <  queueFamilies.size(); ++i) {
-		auto queueFamily = queueFamilies.at(i);
-
-		if (queueFamily.queueCount > 0) {
-			if ((graphicsQueueFamily == QueueFamilyIndices::NOT_FOUND() || 
-				graphicsQueueFamily == presentQueueFamily) && 
-				queueFamily.queueFlags & vk::QueueFlagBits::eGraphics)
-			{
-				graphicsQueueFamily = i;
-			}
-
-			if ((presentQueueFamily == QueueFamilyIndices::NOT_FOUND() || 
-				presentQueueFamily == graphicsQueueFamily) &&
-				device.getSurfaceSupportKHR(i, static_cast<vk::SurfaceKHR>( surface))) {
-				presentQueueFamily = i;
-			}
-		}
-	}
-
-
-	return { graphicsQueueFamily, presentQueueFamily };
-}
 
 Device::Device(vk::PhysicalDevice physicalDevice, vk::UniqueDevice &device) : m_vkPhysicalDevice(physicalDevice), m_vkDevice(std::move(device))
 {
@@ -237,4 +248,5 @@ vk::Extent2D Device::chooseSwapChainExtend(uint32_t width, uint32_t height, cons
 
 	return actualExtent;
 }
+
 

@@ -42,6 +42,14 @@ private:
 
 		int graphicsFamily = NOT_FOUND();
 		int presentFamily = NOT_FOUND();
+		
+		bool hasGraphicsFamily() const {
+			return graphicsFamily != NOT_FOUND();
+		}
+		
+		bool hasPresentFamily() const {
+			return presentFamily != NOT_FOUND();
+		}
 
 		bool isComplete() const
 		{
@@ -57,6 +65,7 @@ private:
 	static vk::SurfaceFormatKHR chooseSwapSurfaceFormat(Format,  std::vector<vk::SurfaceFormatKHR>& availableFormats);
 	static vk::PresentModeKHR chooseSwapPresentMode(SwapChainPresentMode&, const std::vector<vk::PresentModeKHR>& availablePresentModes);
 	static vk::Extent2D chooseSwapChainExtend(uint32_t width, uint32_t height, const vk::SurfaceCapabilitiesKHR& availableCapabilities);
+	static std::vector<vk::DeviceQueueCreateInfo> createQueueCreateInfos(QueueFamilyIndices);
 
 	vk::PhysicalDevice m_vkPhysicalDevice;
 	vk::UniqueDevice m_vkDevice;
