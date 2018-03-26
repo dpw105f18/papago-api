@@ -18,7 +18,6 @@ public:
 	static std::vector<Device> enumerateDevices(Surface& surface, const vk::PhysicalDeviceFeatures &features, const std::vector<const char*> &extensions);
 
 	SwapChain createSwapChain(const Format&, size_t framebufferCount, SwapChainPresentMode, Surface&);
-	BufferResource createBufferResource();
 	GraphicsQueue createGraphicsQueue(SwapChain);
 	CommandBuffer createCommandBuffer(CommandBuffer::Usage);
 	SubCommandBuffer createSubCommandBuffer(SubCommandBuffer::Usage);
@@ -66,9 +65,9 @@ template<typename T>
 BufferResource Device::createVertexBuffer(const std::vector<T>& vertexData) const
 {
 	size_t bufferSize = sizeof(T) * vertexData.size();
-	auto buffer = BufferResource(
-		m_vkDevice,
+	auto buffer = BufferResource::createBufferResource(
 		m_vkPhysicalDevice,
+		m_vkDevice,
 		bufferSize,
 		vk::BufferUsageFlagBits::eVertexBuffer,
 		// TODO: Convert to device local memory when command pool and buffers are ready
@@ -83,9 +82,9 @@ template<typename T>
 BufferResource Device::createIndexBuffer(const std::vector<T>& indexData) const
 {
 	size_t bufferSize = sizeof(T) * indexData.size();
-	auto buffer = BufferResource(
-		m_vkDevice,
+	auto buffer = BufferResource::createBufferResource(
 		m_vkPhysicalDevice,
+		m_vkDevice,
 		bufferSize,
 		vk::BufferUsageFlagBits::eIndexBuffer,
 		// TODO: Convert to device local memory when command pool and buffers are ready
@@ -93,15 +92,15 @@ BufferResource Device::createIndexBuffer(const std::vector<T>& indexData) const
 
 	auto data = reinterpret_cast<char const *>(indexData.data());
 	buffer.upload(std::vector<char>(data, data + bufferSize));
-	return buffer;
+	return std::move(buffer);
 }
 
 template<size_t N>
 BufferResource Device::createUniformBuffer() const
 {
-	return BufferResource(
-		m_vkDevice,
+	return BufferResource::createBufferResource(
 		m_vkPhysicalDevice,
+		m_vkDevice,
 		N,
 		vk::BufferUsageFlagBits::eUniformBuffer,
 		vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);

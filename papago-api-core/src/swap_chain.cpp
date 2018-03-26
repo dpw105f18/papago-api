@@ -9,18 +9,17 @@ SwapChain::SwapChain(
 	std::vector<ImageResource>& depthResources, 
 	vk::Extent2D				extent) 
 	: m_vkSwapChain(std::move(swapChain))
-	, m_colorResources(colorResources)
-	, m_depthResources(depthResources)
+	, m_colorResources(std::move(colorResources))
+	, m_depthResources(std::move(depthResources))
 {
-
 	// the vk::RenderPass set on the Framebuffers is a guideline for what RenderPass' are compatible with them
 	// this _may_ be error-prone...
 	auto renderPass = createDummyRenderPass(device);
 
 	for (auto i = 0; i < colorResources.size(); ++i) {
 		std::vector<vk::ImageView> attachments = {
-			colorResources[i].m_vkImageView,
-			depthResources[i].m_vkImageView
+			*colorResources[i].m_vkImageView,
+			*depthResources[i].m_vkImageView
 		};
 
 		vk::FramebufferCreateInfo framebufferCreateInfo = {};
@@ -38,14 +37,14 @@ SwapChain::SwapChain(
 vk::RenderPass SwapChain::createDummyRenderPass(const vk::UniqueDevice& device)
 {
 	vk::AttachmentDescription colorDesc = {};
-	colorDesc.setFormat(m_colorResources[0].m_Format)
+	colorDesc.setFormat(m_colorResources[0].m_format)
 		.setLoadOp(vk::AttachmentLoadOp::eDontCare)
 		.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare)
 		.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare)
 		.setFinalLayout(vk::ImageLayout::ePresentSrcKHR);
 
 	vk::AttachmentDescription depthDesc = {};
-	depthDesc.setFormat(m_depthResources[0].m_Format)
+	depthDesc.setFormat(m_depthResources[0].m_format)
 		.setLoadOp(vk::AttachmentLoadOp::eDontCare)
 		.setStoreOp(vk::AttachmentStoreOp::eDontCare)
 		.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare)

@@ -6,30 +6,51 @@
 class ImageResource : public Resource
 {
 public:
+	ImageResource(const ImageResource&) = delete;
+	ImageResource(ImageResource&& other) noexcept;
+	~ImageResource();
 
 	// Inherited via Resource
-	void upload(const std::vector<char>& data) override;
 	void destroy() override;
-	std::vector<char> download() override;
-
 
 private:
-	static ImageResource createDepthResource(const vk::PhysicalDevice &physicalDevice, const vk::UniqueDevice &device, size_t width, size_t height, const std::vector<Format>& formatCandidates);
-	static ImageResource createColorResource(vk::Image, const vk::UniqueDevice&, Format format);
-	static ImageResource createTextureResource();
+	static ImageResource createDepthResource(
+		const vk::PhysicalDevice&, 
+		const vk::UniqueDevice&, 
+		size_t width, size_t height, 
+		const std::vector<Format>& formatCandidates);
 
-	ImageResource(vk::ImageCreateInfo, const vk::PhysicalDevice&, const vk::UniqueDevice&, vk::ImageAspectFlags);
-	ImageResource(vk::Image, const vk::UniqueDevice&, Format format);
+	static ImageResource createColorResource(
+		vk::Image, 
+		const vk::UniqueDevice&,
+		Format);
 
-	static Format findSupportedFormat(const vk::PhysicalDevice&, const std::vector<Format>&, vk::ImageTiling, vk::FormatFeatureFlags);
-	void setImageView(const vk::UniqueDevice&);
+	ImageResource(
+		vk::Image&,
+		const vk::PhysicalDevice&,
+		const vk::UniqueDevice&,
+		vk::ImageAspectFlags,
+		Format,
+		vk::MemoryRequirements);
 
-	vk::ImageCreateInfo m_VkCreateInfo;
-	vk::Image m_VkImage;
+	ImageResource(
+		vk::Image&, 
+		const vk::UniqueDevice&, 
+		Format);
 
-	vk::DeviceMemory m_VkMemory;
-	vk::ImageView m_vkImageView;
-	Format m_Format;
+
+	static Format findSupportedFormat(
+		const vk::PhysicalDevice&, 
+		const std::vector<Format>&, 
+		vk::ImageTiling, 
+		vk::FormatFeatureFlags);
+	void setImageView(
+		const vk::UniqueDevice&, 
+		vk::ImageAspectFlags = vk::ImageAspectFlagBits::eColor);
+
+	vk::Image m_vkImage;
+	vk::UniqueImageView m_vkImageView;
+	Format m_format;
 
 	friend class SwapChain; //TODO: Figure out how to be friend of private constructor instead.
 	friend class Device;
