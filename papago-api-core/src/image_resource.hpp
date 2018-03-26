@@ -24,12 +24,12 @@ private:
 	static Format findSupportedFormat(const vk::PhysicalDevice&, const std::vector<Format>&, vk::ImageTiling, vk::FormatFeatureFlags);
 	void setImageView(const vk::UniqueDevice&);
 
-	vk::ImageCreateInfo m_vkCreateInfo;
-	vk::Image m_vkImage;
+	vk::ImageCreateInfo m_VkCreateInfo;
+	vk::Image m_VkImage;
 
-	vk::DeviceMemory m_vkMemory;
+	vk::DeviceMemory m_VkMemory;
 	vk::ImageView m_vkImageView;
-	Format m_format;
+	Format m_Format;
 
 	friend class SwapChain; //TODO: Figure out how to be friend of private constructor instead.
 	friend class Device;
