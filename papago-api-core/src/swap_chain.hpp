@@ -17,5 +17,5 @@ private:
 	vk::RenderPass createDummyRenderPass(const vk::UniqueDevice& device); //<-- TODO: use proper RenderPass
 
 	//TODO: use ImageResource when it's done?
-	friend SwapChain Device::createSwapChain(const Format&, size_t, SwapChainPresentMode, Surface&);
+	friend class Device;
 };

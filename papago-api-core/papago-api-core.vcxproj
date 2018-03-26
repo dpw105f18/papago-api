@@ -181,6 +181,7 @@
     <ClCompile Include="src\fragment_shader.cpp" />
     <ClCompile Include="src\image_resource.cpp" />
     <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\render_pass.cpp" />
     <ClCompile Include="src\shader.cpp" />
     <ClCompile Include="src\surface.cpp" />
     <ClCompile Include="src\swap_chain.cpp" />

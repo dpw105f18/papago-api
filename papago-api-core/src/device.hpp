@@ -24,6 +24,8 @@ public:
 	SubCommandBuffer createSubCommandBuffer(SubCommandBuffer::Usage);
 	VertexShader createVertexShader(const std::string& filePath, const std::string& entryPoint);
 	FragmentShader createFragmentShader(const std::string& filePath, const std::string& entryPoint);
+	RenderPass createRenderPass(VertexShader&, FragmentShader&, const SwapChain&);
+
 
 	template<typename T>
 	BufferResource createVertexBuffer(const std::vector<T>& vertexData) const;
