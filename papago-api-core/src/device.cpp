@@ -8,12 +8,9 @@
 //Provides a vector of devices with the given [features] and [extensions] enabled
 std::vector<Device> Device::enumerateDevices(Surface& surface, const vk::PhysicalDeviceFeatures &features, const std::vector<const char*> &extensions)
 {
-	auto physicalDevices = surface.m_vkInstance->enumeratePhysicalDevices();
-	
 	std::vector<Device> result;
-	result.reserve(physicalDevices.size());
 
-	for (auto& physicalDevice : physicalDevices) {
+	for (auto& physicalDevice : surface.m_vkInstance->enumeratePhysicalDevices()) {
 		if (! isPhysicalDeviceSuitable(physicalDevice, surface, extensions)) {
 			continue;
 		}
@@ -97,14 +94,18 @@ vk::SwapchainCreateInfoKHR Device::createSwapChainCreateInfo(
 	const vk::SurfaceCapabilitiesKHR& capabilities, 
 	const vk::PresentModeKHR& presentMode) const
 {
-	vk::SwapchainCreateInfoKHR createInfo = {};
-	createInfo.setSurface(static_cast<vk::SurfaceKHR>(surface))
+	auto createInfo = vk::SwapchainCreateInfoKHR()
+		.setSurface(static_cast<vk::SurfaceKHR>(surface))
 		.setMinImageCount(framebufferCount)
 		.setImageFormat(swapFormat.format)
 		.setImageColorSpace(swapFormat.colorSpace)
 		.setImageExtent(extent)
 		.setImageArrayLayers(1)
-		.setImageUsage(vk::ImageUsageFlagBits::eColorAttachment);
+		.setImageUsage(vk::ImageUsageFlagBits::eColorAttachment)
+		.setPreTransform(capabilities.currentTransform)
+		.setCompositeAlpha(vk::CompositeAlphaFlagBitsKHR::eOpaque)
+		.setPresentMode(presentMode)
+		.setClipped(VK_TRUE);
 
 	auto indices = findQueueFamilies(m_vkPhysicalDevice, surface);
 	uint32_t queueFamilyIndices[] = {
@@ -122,23 +123,18 @@ vk::SwapchainCreateInfoKHR Device::createSwapChainCreateInfo(
 			.setPQueueFamilyIndices(nullptr);
 	}
 
-	createInfo.setPreTransform(capabilities.currentTransform)
-		.setCompositeAlpha(vk::CompositeAlphaFlagBitsKHR::eOpaque)
-		.setPresentMode(presentMode)
-		.setClipped(VK_TRUE);
-
 	return createInfo;
 }
 
 bool Device::isPhysicalDeviceSuitable(const vk::PhysicalDevice & physicalDevice, Surface& surface, const std::vector<const char*>& extensions)
 {
-	auto queueFamilyIndicies = Device::findQueueFamilies(physicalDevice, surface);
+	auto queueFamilyIndicies = findQueueFamilies(physicalDevice, surface);
 
-	bool extensionsSupported = Device::areExtensionsSupported(physicalDevice, extensions);
+	bool extensionsSupported = areExtensionsSupported(physicalDevice, extensions);
 
 	bool swapChainAdequate = false;
 	if (extensionsSupported) {
-		auto swapChainSupport = Device::querySwapChainSupport(physicalDevice, surface);
+		auto swapChainSupport = querySwapChainSupport(physicalDevice, surface);
 		swapChainAdequate = !swapChainSupport.formats.empty() && !swapChainSupport.presentmodes.empty();
 	}
 
@@ -147,21 +143,19 @@ bool Device::isPhysicalDeviceSuitable(const vk::PhysicalDevice & physicalDevice,
 
 bool Device::areExtensionsSupported(const vk::PhysicalDevice & physicalDevice, const std::vector<const char*>& extensions)
 {
-	bool swapChainExtensionPresent = false;
 	std::set<std::string> requiredExtensions(ITERATE(extensions));
 
 	std::vector<vk::ExtensionProperties> avaliableExtensions = physicalDevice.enumerateDeviceExtensionProperties();
 	for (const auto& extension : avaliableExtensions) {
 		requiredExtensions.erase(extension.extensionName);
-		swapChainExtensionPresent |= std::strcmp(extension.extensionName, VK_KHR_SWAPCHAIN_EXTENSION_NAME) == 0;
 	}
-	return requiredExtensions.empty() && swapChainExtensionPresent;
+	return requiredExtensions.empty();
 }
 
 // framebufferCount is a prefered minimum of buffers in the swapchain
 SwapChain Device::createSwapChain(const Format& format, size_t framebufferCount, SwapChainPresentMode preferredPresentMode, Surface& surface)
 {
-	auto details = Device::querySwapChainSupport(m_vkPhysicalDevice, surface);
+	auto details = querySwapChainSupport(m_vkPhysicalDevice, surface);
 
 	auto swapFormat = chooseSwapSurfaceFormat(format, details.formats);
 
@@ -203,13 +197,15 @@ SwapChain Device::createSwapChain(const Format& format, size_t framebufferCount,
 				formatCandidates));
 	}
 
-	return std::move(SwapChain(m_vkDevice, swapChain, colorResources, depthResources, extent));
+	return SwapChain(m_vkDevice, swapChain, colorResources, depthResources, extent);
 }
 
 
 
 
-Device::Device(vk::PhysicalDevice physicalDevice, vk::UniqueDevice &device) : m_vkPhysicalDevice(physicalDevice), m_vkDevice(std::move(device))
+Device::Device(vk::PhysicalDevice physicalDevice, vk::UniqueDevice &device) 
+	: m_vkPhysicalDevice(physicalDevice)
+	, m_vkDevice(std::move(device))
 {
 
 }
@@ -219,7 +215,7 @@ Device::SwapChainSupportDetails Device::querySwapChainSupport(const vk::Physical
 	auto innerSurface = static_cast<vk::SurfaceKHR>(surface);
 
 	SwapChainSupportDetails details;
-	details.capabilities =physicalDevice.getSurfaceCapabilitiesKHR(innerSurface);
+	details.capabilities = physicalDevice.getSurfaceCapabilitiesKHR(innerSurface);
 	details.formats = physicalDevice.getSurfaceFormatsKHR(innerSurface);
 	details.presentmodes = physicalDevice.getSurfacePresentModesKHR(innerSurface);
 
