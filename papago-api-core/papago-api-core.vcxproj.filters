@@ -83,5 +83,25 @@
     <ClCompile Include="src\image_resource.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\shader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\vertex_shader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\fragment_shader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="shader\compile.bat">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="shader\shader.frag">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="shader\shader.vert">
+      <Filter>Resource Files</Filter>
+    </None>
   </ItemGroup>
 </Project>

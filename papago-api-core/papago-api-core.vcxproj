@@ -120,6 +120,9 @@
       <AdditionalLibraryDirectories>$(VulkanSDKDir)\Lib;$(ProjectDir)lib\$(Platform)</AdditionalLibraryDirectories>
       <AdditionalDependencies>vulkan-1.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PostBuildEvent>
+      <Command>./shader/compile.bat</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -175,10 +178,18 @@
   <ItemGroup>
     <ClCompile Include="src\buffer_resource.cpp" />
     <ClCompile Include="src\device.cpp" />
+    <ClCompile Include="src\fragment_shader.cpp" />
     <ClCompile Include="src\image_resource.cpp" />
     <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\shader.cpp" />
     <ClCompile Include="src\surface.cpp" />
     <ClCompile Include="src\swap_chain.cpp" />
+    <ClCompile Include="src\vertex_shader.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="shader\compile.bat" />
+    <None Include="shader\shader.frag" />
+    <None Include="shader\shader.vert" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

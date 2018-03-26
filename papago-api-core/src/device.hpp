@@ -22,6 +22,8 @@ public:
 	GraphicsQueue createGraphicsQueue(SwapChain);
 	CommandBuffer createCommandBuffer(CommandBuffer::Usage);
 	SubCommandBuffer createSubCommandBuffer(SubCommandBuffer::Usage);
+	VertexShader createVertexShader(const std::string& filePath, const std::string& entryPoint);
+	FragmentShader createFragmentShader(const std::string& filePath, const std::string& entryPoint);
 
 	template<typename T>
 	BufferResource createVertexBuffer(const std::vector<T>& vertexData) const;

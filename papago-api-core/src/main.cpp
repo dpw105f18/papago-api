@@ -2,6 +2,8 @@
 #include "device.hpp"
 #include "swap_chain.hpp"
 #include "surface.hpp"
+#include "vertex_shader.hpp"
+#include "fragment_shader.hpp"
 #include <WinUser.h>
 
 LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -118,4 +120,7 @@ int main()
 	bigUniform.upload(bigData);
 
 	auto dlData = bigUniform.download();
+
+	auto vertexShader = device.createVertexShader("shader/vert.spv", "main");
+	auto fragmentShader = device.createFragmentShader("shader/frag.spv", "main");
 }

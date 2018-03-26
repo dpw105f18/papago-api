@@ -1,10 +1,16 @@
 #pragma once
+#include "standard_header.hpp"
 #include <string>
 class Shader {
 public:
-	template<class T>
-	static T compileFromFile(const std::string& file);
-	Shader() = delete;
 	Shader(Shader&) = delete;
-	Shader(Shader&&) = delete;
+
+protected:
+	Shader(const vk::UniqueDevice& device, const std::string& filePath);
+	Shader(Shader&&) = default;
+	vk::UniqueShaderModule m_vkShader;
+	vk::PipelineShaderStageCreateInfo m_vkStageCreateInfo;	//<-- set by children
+
+private:
+	std::vector<char> readFile(const std::string& filePath);
 };
