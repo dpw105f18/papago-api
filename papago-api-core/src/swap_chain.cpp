@@ -38,14 +38,14 @@ SwapChain::SwapChain(
 vk::RenderPass SwapChain::createDummyRenderPass(const vk::UniqueDevice& device)
 {
 	vk::AttachmentDescription colorDesc = {};
-	colorDesc.setFormat(m_colorResources[0].m_Format)
+	colorDesc.setFormat(m_colorResources[0].m_format)
 		.setLoadOp(vk::AttachmentLoadOp::eDontCare)
 		.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare)
 		.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare)
 		.setFinalLayout(vk::ImageLayout::ePresentSrcKHR);
 
 	vk::AttachmentDescription depthDesc = {};
-	depthDesc.setFormat(m_depthResources[0].m_Format)
+	depthDesc.setFormat(m_depthResources[0].m_format)
 		.setLoadOp(vk::AttachmentLoadOp::eDontCare)
 		.setStoreOp(vk::AttachmentStoreOp::eDontCare)
 		.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare)
