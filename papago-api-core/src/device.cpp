@@ -58,7 +58,7 @@ SwapChain Device::createSwapChain(const Format& format, size_t framebufferCount,
 
 	auto presentMode = chooseSwapPresentMode(preferredPresentMode, details.presentmodes); 
 
-	auto extent = chooseSwapChainExtend(surface.getWidth(), surface.getHeight(), details.capabilities);
+	auto extent = chooseSwapChainExtent(surface.getWidth(), surface.getHeight(), details.capabilities);
 
 	if (details.capabilities.maxImageCount > 0 &&
 		framebufferCount > details.capabilities.maxImageCount) {
@@ -115,6 +115,7 @@ SwapChain Device::createSwapChain(const Format& format, size_t framebufferCount,
 				m_vkDevice, 
 				swapFormat.format));
 
+		//TODO: configurable amount of depth buffers?
 		depthResources.emplace_back(
 			ImageResource::createDepthResource(
 				m_vkPhysicalDevice, m_vkDevice, 
@@ -214,7 +215,7 @@ vk::PresentModeKHR Device::chooseSwapPresentMode(SwapChainPresentMode &preferred
 	return bestMode;
 }
 
-vk::Extent2D Device::chooseSwapChainExtend(uint32_t width, uint32_t height, const vk::SurfaceCapabilitiesKHR & capabilities)
+vk::Extent2D Device::chooseSwapChainExtent(uint32_t width, uint32_t height, const vk::SurfaceCapabilitiesKHR & capabilities)
 {
 
 	if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {

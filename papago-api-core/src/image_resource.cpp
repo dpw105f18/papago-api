@@ -13,7 +13,9 @@ ImageResource::ImageResource(ImageResource&& other) noexcept
 ImageResource::~ImageResource()
 {
 	// HACK: If size is zero then memory was externally allocated
-	if (getSize()) m_vkDevice->destroyImage(m_vkImage);
+	if (getSize()) {
+		m_vkDevice->destroyImage(m_vkImage);
+	}
 }
 
 void ImageResource::destroy()
@@ -32,12 +34,14 @@ ImageResource ImageResource::createDepthResource(
 		vk::ImageTiling::eOptimal, 
 		vk::FormatFeatureFlagBits::eDepthStencilAttachment);
 
+	auto extent = vk::Extent3D()
+		.setWidth(width)
+		.setHeight(height)
+		.setDepth(1);
+
 	auto image = device->createImage(vk::ImageCreateInfo()
 		.setImageType(vk::ImageType::e2D)
-		.setExtent(vk::Extent3D()
-			.setWidth(width)
-			.setHeight(height)
-			.setDepth(1))
+		.setExtent(extent)
 		.setMipLevels(1)
 		.setArrayLayers(1)
 		.setFormat(format)
@@ -72,24 +76,24 @@ ImageResource::ImageResource(
 	vk::ImageAspectFlags aspectFlags, 
 	Format format, 
 	vk::MemoryRequirements memoryRequirements) 
-	: Resource(physicalDevice, device, vk::MemoryPropertyFlagBits::eDeviceLocal, memoryRequirements)
-	, m_vkImage(image)
-	, m_format(format)
+		: Resource(physicalDevice, device, vk::MemoryPropertyFlagBits::eDeviceLocal, memoryRequirements)
+		, m_vkImage(image)
+		, m_format(format)
 {
 	device->bindImageMemory(m_vkImage, *m_vkMemory, 0);
 
-	setImageView(device, aspectFlags);
+	createImageView(device, aspectFlags);
 
 	//TODO: transition image (via command buffers)
 }
 
-// Does NOT allocate memory, this is assumed to already be allocated
+// Does NOT allocate memory, this is assumed to already be allocated; but does create a VkImageView.
 ImageResource::ImageResource(vk::Image& image, const vk::UniqueDevice &device, Format format)
 	: Resource(device)
 	, m_vkImage(std::move(image))
 	, m_format(format)
 {
-	setImageView(device);
+	createImageView(device);
 }
 
 Format ImageResource::findSupportedFormat(
@@ -111,7 +115,7 @@ Format ImageResource::findSupportedFormat(
 	PAPAGO_ERROR("failed to find supported format");
 }
 
-void ImageResource::setImageView(const vk::UniqueDevice &device, vk::ImageAspectFlags aspectFlags)
+void ImageResource::createImageView(const vk::UniqueDevice &device, vk::ImageAspectFlags aspectFlags)
 {
 	m_vkImageView = device->createImageViewUnique(vk::ImageViewCreateInfo()
 		.setImage(m_vkImage)

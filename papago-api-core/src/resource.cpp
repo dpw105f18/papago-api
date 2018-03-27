@@ -26,20 +26,26 @@ std::vector<char> Resource::download()
 size_t Resource::getSize() const { return m_size; }
 Resource::Resource(const vk::UniqueDevice& device) : m_vkMemory(nullptr), m_vkDevice(device), m_size(0) {}
 
-Resource::Resource(const vk::PhysicalDevice& physicalDevice, const vk::UniqueDevice& device, vk::MemoryPropertyFlags flags, vk::MemoryRequirements memoryRequirements) : m_vkDevice(device), m_size(memoryRequirements.size)
+Resource::Resource(
+	const vk::PhysicalDevice& physicalDevice, 
+	const vk::UniqueDevice& device, 
+	vk::MemoryPropertyFlags flags, 
+	vk::MemoryRequirements memoryRequirements) 
+		: m_vkDevice(device), 
+		m_size(memoryRequirements.size)
 {
-	m_vkMemory = device->allocateMemoryUnique(vk::MemoryAllocateInfo()
-		.setAllocationSize(memoryRequirements.size)
-		.setMemoryTypeIndex(
-			findMemoryType(
-				physicalDevice,
-				memoryRequirements.memoryTypeBits,
-				flags)
-		)
+	auto memoryType = findMemoryType(physicalDevice, memoryRequirements.memoryTypeBits, flags);
+	m_vkMemory = device->allocateMemoryUnique(
+		vk::MemoryAllocateInfo()
+			.setAllocationSize(memoryRequirements.size)
+			.setMemoryTypeIndex(memoryType)
 	);
 }
 
-uint32_t Resource::findMemoryType(const vk::PhysicalDevice& physicalDevice, uint32_t memoryTypeBits, const vk::MemoryPropertyFlags& flags)
+uint32_t Resource::findMemoryType(
+	const vk::PhysicalDevice& physicalDevice, 
+	uint32_t memoryTypeBits, 
+	const vk::MemoryPropertyFlags& flags)
 {
 	auto memoryProperties = physicalDevice.getMemoryProperties();
 	for (auto i = 0; i < memoryProperties.memoryTypeCount; i++)

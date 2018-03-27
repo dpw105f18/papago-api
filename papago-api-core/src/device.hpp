@@ -55,7 +55,7 @@ private:
 	static QueueFamilyIndices findQueueFamilies(const vk::PhysicalDevice& device, Surface& surface);
 	static vk::SurfaceFormatKHR chooseSwapSurfaceFormat(Format,  std::vector<vk::SurfaceFormatKHR>& availableFormats);
 	static vk::PresentModeKHR chooseSwapPresentMode(SwapChainPresentMode&, const std::vector<vk::PresentModeKHR>& availablePresentModes);
-	static vk::Extent2D chooseSwapChainExtend(uint32_t width, uint32_t height, const vk::SurfaceCapabilitiesKHR& availableCapabilities);
+	static vk::Extent2D chooseSwapChainExtent(uint32_t width, uint32_t height, const vk::SurfaceCapabilitiesKHR& availableCapabilities);
 
 	vk::PhysicalDevice m_vkPhysicalDevice;
 	vk::UniqueDevice m_vkDevice;
@@ -91,6 +91,7 @@ BufferResource Device::createIndexBuffer(const std::vector<T>& indexData) const
 		vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
 
 	auto data = reinterpret_cast<char const *>(indexData.data());
+	//TODO: should the creation of buffers also upload right away?
 	buffer.upload(std::vector<char>(data, data + bufferSize));
 	return std::move(buffer);
 }

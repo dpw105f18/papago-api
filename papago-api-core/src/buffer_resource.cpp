@@ -19,9 +19,11 @@ BufferResource BufferResource::createBufferResource(
 	vk::BufferUsageFlags	usageFlags, 
 	vk::MemoryPropertyFlags memoryFlags)
 {
-	auto vkBuffer(device->createBufferUnique(vk::BufferCreateInfo()
-		.setSize(size)
-		.setUsage(usageFlags | vk::BufferUsageFlagBits::eTransferDst))); // IMPROVEMENT : All buffers are currently assumed to be able to be uploaded to
+	auto vkBuffer = device->createBufferUnique(
+		vk::BufferCreateInfo()
+			.setSize(size)
+			.setUsage(usageFlags | vk::BufferUsageFlagBits::eTransferDst)
+	); // IMPROVEMENT : All buffers are currently assumed to be able to be uploaded to
 
 	auto memoryRequirements = device->getBufferMemoryRequirements(*vkBuffer);
 

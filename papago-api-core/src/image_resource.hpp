@@ -44,7 +44,8 @@ private:
 		const std::vector<Format>&, 
 		vk::ImageTiling, 
 		vk::FormatFeatureFlags);
-	void setImageView(
+
+	void createImageView(
 		const vk::UniqueDevice&, 
 		vk::ImageAspectFlags = vk::ImageAspectFlagBits::eColor);
 
@@ -52,6 +53,6 @@ private:
 	vk::UniqueImageView m_vkImageView;
 	Format m_format;
 
-	friend class SwapChain; //TODO: Figure out how to be friend of private constructor instead.
+	friend class SwapChain;
 	friend class Device;
 };
