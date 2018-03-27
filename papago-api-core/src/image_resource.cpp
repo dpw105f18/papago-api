@@ -25,7 +25,7 @@ void ImageResource::destroy()
 ImageResource ImageResource::createDepthResource(
 	const vk::PhysicalDevice &physicalDevice, 
 	const vk::UniqueDevice &device, 
-	size_t width, size_t height, 
+	vk::Extent3D extent,
 	const std::vector<Format>& formatCandidates)
 {
 	auto format = findSupportedFormat(
@@ -33,11 +33,6 @@ ImageResource ImageResource::createDepthResource(
 		formatCandidates, 
 		vk::ImageTiling::eOptimal, 
 		vk::FormatFeatureFlagBits::eDepthStencilAttachment);
-
-	auto extent = vk::Extent3D()
-		.setWidth(width)
-		.setHeight(height)
-		.setDepth(1);
 
 	auto image = device->createImage(vk::ImageCreateInfo()
 		.setImageType(vk::ImageType::e2D)
@@ -47,8 +42,8 @@ ImageResource ImageResource::createDepthResource(
 		.setFormat(format)
 		.setTiling(vk::ImageTiling::eOptimal)
 		.setUsage(vk::ImageUsageFlagBits::eDepthStencilAttachment)
-		.setSamples(vk::SampleCountFlagBits::e1)
-	);
+		.setSamples(vk::SampleCountFlagBits::e1));
+
 	auto memoryRequirements = device->getImageMemoryRequirements(image);
 
 	return ImageResource(
@@ -56,16 +51,18 @@ ImageResource ImageResource::createDepthResource(
 		physicalDevice, 
 		device, 
 		vk::ImageAspectFlagBits::eDepth, 
-		format, 
+		format,
+		extent,
 		memoryRequirements);
 }
 
 ImageResource ImageResource::createColorResource(
 	vk::Image image, 
 	const vk::UniqueDevice &device, 
-	Format format)
+	Format format,
+	vk::Extent3D extent)
 {
-	return ImageResource(image, device, format);
+	return ImageResource(image, device, format, extent);
 }
 
 // Allocates memory to the image and creates an image view to the provided image
@@ -75,10 +72,12 @@ ImageResource::ImageResource(
 	const vk::UniqueDevice& device, 
 	vk::ImageAspectFlags aspectFlags, 
 	Format format, 
+	vk::Extent3D extent,
 	vk::MemoryRequirements memoryRequirements) 
 		: Resource(physicalDevice, device, vk::MemoryPropertyFlagBits::eDeviceLocal, memoryRequirements)
 		, m_vkImage(image)
 		, m_format(format)
+		, m_vkExtent(extent)
 {
 	device->bindImageMemory(m_vkImage, *m_vkMemory, 0);
 
@@ -88,10 +87,11 @@ ImageResource::ImageResource(
 }
 
 // Does NOT allocate memory, this is assumed to already be allocated; but does create a VkImageView.
-ImageResource::ImageResource(vk::Image& image, const vk::UniqueDevice &device, Format format)
+ImageResource::ImageResource(vk::Image& image, const vk::UniqueDevice &device, Format format, vk::Extent3D extent)
 	: Resource(device)
 	, m_vkImage(std::move(image))
 	, m_format(format)
+	, m_vkExtent(extent)
 {
 	createImageView(device);
 }

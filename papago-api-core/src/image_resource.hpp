@@ -17,13 +17,14 @@ private:
 	static ImageResource createDepthResource(
 		const vk::PhysicalDevice&, 
 		const vk::UniqueDevice&, 
-		size_t width, size_t height, 
+		vk::Extent3D, 
 		const std::vector<Format>& formatCandidates);
 
 	static ImageResource createColorResource(
 		vk::Image, 
 		const vk::UniqueDevice&,
-		Format);
+		Format,
+		vk::Extent3D);
 
 	ImageResource(
 		vk::Image&,
@@ -31,12 +32,14 @@ private:
 		const vk::UniqueDevice&,
 		vk::ImageAspectFlags,
 		Format,
+		vk::Extent3D,
 		vk::MemoryRequirements);
 
 	ImageResource(
 		vk::Image&, 
 		const vk::UniqueDevice&, 
-		Format);
+		Format,
+		vk::Extent3D);
 
 
 	static Format findSupportedFormat(
@@ -49,9 +52,11 @@ private:
 		const vk::UniqueDevice&, 
 		vk::ImageAspectFlags = vk::ImageAspectFlagBits::eColor);
 
+	vk::ImageCreateInfo m_vkImageCreateInfo;
 	vk::Image m_vkImage;
 	vk::UniqueImageView m_vkImageView;
 	Format m_format;
+	vk::Extent3D m_vkExtent;
 
 	friend class SwapChain;
 	friend class Device;
