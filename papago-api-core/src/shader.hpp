@@ -13,5 +13,5 @@ protected:
 	std::string m_entryPoint;
 
 private:
-	std::vector<char> readFile(const std::string& filePath);
+	std::vector<char> readFile(const std::string& filePath);	//TODO: move to a Parser-stub
 };
