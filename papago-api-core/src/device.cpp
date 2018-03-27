@@ -130,7 +130,6 @@ SwapChain Device::createSwapChain(const Format& format, size_t framebufferCount,
 
 VertexShader Device::createVertexShader(const std::string & filePath, const std::string & entryPoint)
 {
-	auto blep = VertexShader(m_vkDevice, filePath, entryPoint);
 	return std::move(VertexShader(m_vkDevice, filePath, entryPoint));
 }
 
