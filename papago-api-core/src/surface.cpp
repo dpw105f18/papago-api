@@ -80,7 +80,7 @@ VkBool32 VKAPI_CALL VkDebugCallback(
 
 #endif /* PAPAGO_USE_VALIDATION_LAYERS */
 
-void Surface::checkInstanceLayers(std::vector<const char*> requiredLayers)
+void Surface::checkInstanceLayers(const std::vector<const char*>& requiredLayers)
 {
 	auto layers = vk::enumerateInstanceLayerProperties();
 	
@@ -105,16 +105,18 @@ Surface::Surface(uint32_t width, uint32_t height, HWND hwnd) : m_width(width), m
 	std::vector<const char*> surfaceExtensions = {
 		VK_KHR_SURFACE_EXTENSION_NAME,
 		VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
-#ifdef PAPAGO_USE_VALIDATION_LAYERS
-		VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
-#endif /* PAPAGO_USE_VALIDATION_LAYERS */
 	};
 
-	std::vector<const char*> requiredLayers = {
 #ifdef PAPAGO_USE_VALIDATION_LAYERS
-		"VK_LAYER_LUNARG_standard_validation"
-#endif /* PAPAGO_USE_VALIDATION_LAYERS */
-	};
+	surfaceExtensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+#endif
+
+
+	std::vector<const char*> requiredLayers = {};
+
+#ifdef PAPAGO_USE_VALIDATION_LAYERS
+	requiredLayers.push_back("VK_LAYER_LUNARG_standard_validation");
+#endif 
 
 	checkInstanceLayers(requiredLayers);
 
@@ -126,7 +128,7 @@ Surface::Surface(uint32_t width, uint32_t height, HWND hwnd) : m_width(width), m
 		.setPpEnabledExtensionNames(surfaceExtensions.data()));
 
 #ifdef PAPAGO_USE_VALIDATION_LAYERS
-	m_DebugReportCallback = m_vkInstance->createDebugReportCallbackEXTUnique(
+	m_debugReportCallback = m_vkInstance->createDebugReportCallbackEXTUnique(
 		vk::DebugReportCallbackCreateInfoEXT()
 			.setFlags(
 				vk::DebugReportFlagBitsEXT::eWarning | 
@@ -137,7 +139,9 @@ Surface::Surface(uint32_t width, uint32_t height, HWND hwnd) : m_width(width), m
 			.setPfnCallback(VkDebugCallback));
 #endif
 
-	m_vkSurfaceKHR = m_vkInstance->createWin32SurfaceKHRUnique(vk::Win32SurfaceCreateInfoKHR()
+	auto surfaceCreateInfo = vk::Win32SurfaceCreateInfoKHR()
 		.setHwnd(hwnd)
-		.setHinstance(GetModuleHandle(nullptr)));
+		.setHinstance(GetModuleHandle(nullptr));
+
+	m_vkSurfaceKHR = m_vkInstance->createWin32SurfaceKHRUnique(surfaceCreateInfo);
 }
