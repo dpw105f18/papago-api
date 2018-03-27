@@ -6,31 +6,58 @@
 class ImageResource : public Resource
 {
 public:
+	ImageResource(const ImageResource&) = delete;
+	ImageResource(ImageResource&& other) noexcept;
+	~ImageResource();
 
 	// Inherited via Resource
-	void upload(const std::vector<char>& data) override;
 	void destroy() override;
-	std::vector<char> download() override;
-
 
 private:
-	static ImageResource createDepthResource(const vk::PhysicalDevice &physicalDevice, const vk::UniqueDevice &device, size_t width, size_t height, const std::vector<Format>& formatCandidates);
-	static ImageResource createColorResource(vk::Image, const vk::UniqueDevice&, Format format);
-	static ImageResource createTextureResource();
+	static ImageResource createDepthResource(
+		const vk::PhysicalDevice&, 
+		const vk::UniqueDevice&, 
+		vk::Extent3D, 
+		const std::vector<Format>& formatCandidates);
 
-	ImageResource(vk::ImageCreateInfo, const vk::PhysicalDevice&, const vk::UniqueDevice&, vk::ImageAspectFlags);
-	ImageResource(vk::Image, const vk::UniqueDevice&, Format format);
+	static ImageResource createColorResource(
+		vk::Image, 
+		const vk::UniqueDevice&,
+		Format,
+		vk::Extent3D);
 
-	static Format findSupportedFormat(const vk::PhysicalDevice&, const std::vector<Format>&, vk::ImageTiling, vk::FormatFeatureFlags);
-	void setImageView(const vk::UniqueDevice&);
+	ImageResource(
+		vk::Image&,
+		const vk::PhysicalDevice&,
+		const vk::UniqueDevice&,
+		vk::ImageAspectFlags,
+		Format,
+		vk::Extent3D,
+		vk::MemoryRequirements);
 
-	vk::ImageCreateInfo m_vkCreateInfo;
+	ImageResource(
+		vk::Image&, 
+		const vk::UniqueDevice&, 
+		Format,
+		vk::Extent3D);
+
+
+	static Format findSupportedFormat(
+		const vk::PhysicalDevice&, 
+		const std::vector<Format>&, 
+		vk::ImageTiling, 
+		vk::FormatFeatureFlags);
+
+	void createImageView(
+		const vk::UniqueDevice&, 
+		vk::ImageAspectFlags = vk::ImageAspectFlagBits::eColor);
+
+	vk::ImageCreateInfo m_vkImageCreateInfo;
 	vk::Image m_vkImage;
-
-	vk::DeviceMemory m_vkMemory;
-	vk::ImageView m_vkImageView;
+	vk::UniqueImageView m_vkImageView;
 	Format m_format;
+	vk::Extent3D m_vkExtent;
 
-	friend class SwapChain; //TODO: Figure out how to be friend of private constructor instead.
+	friend class SwapChain;
 	friend class Device;
 };

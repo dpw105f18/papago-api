@@ -164,7 +164,7 @@ SwapChain Device::createSwapChain(const Format& format, size_t framebufferCount,
 
 	auto presentMode = chooseSwapPresentMode(preferredPresentMode, details.presentmodes); 
 
-	auto extent = chooseSwapChainExtend(surface.getWidth(), surface.getHeight(), details.capabilities);
+	auto extent = chooseSwapChainExtent(surface.getWidth(), surface.getHeight(), details.capabilities);
 
 	if (details.capabilities.maxImageCount > 0 &&
 		framebufferCount > details.capabilities.maxImageCount) {
@@ -186,17 +186,21 @@ SwapChain Device::createSwapChain(const Format& format, size_t framebufferCount,
 		Format::eD24UnormS8Uint
 	};
 
+	auto resourceExtent = vk::Extent3D(extent.width, extent.height, 1);
+
 	for (auto i = 0; i < images.size(); ++i) {
 		colorResources.emplace_back(
 			ImageResource::createColorResource(
 				images[i], 
 				m_vkDevice, 
-				swapFormat.format));
+				swapFormat.format,
+				resourceExtent));
 
+		//TODO: configurable amount of depth buffers?
 		depthResources.emplace_back(
 			ImageResource::createDepthResource(
 				m_vkPhysicalDevice, m_vkDevice, 
-				extent.width, extent.height, 
+				resourceExtent,
 				formatCandidates));
 	}
 
@@ -215,14 +219,11 @@ FragmentShader Device::createFragmentShader(const std::string & filePath, const 
 RenderPass Device::createRenderPass(VertexShader &vertexShader, FragmentShader &fragmentShader, const SwapChain &swapChain) const
 {
 	// TODO: Dangerous hacking, fix this by adding error handling instead of expecting there always being data available.
-	auto extent = swapChain.m_colorResources[0].m_vkCreateInfo.extent;
+	auto extent = swapChain.m_colorResources[0].m_vkExtent;
 	auto format = swapChain.m_colorResources[0].m_format;
 
 	return RenderPass(m_vkDevice, vertexShader, fragmentShader, { extent.width, extent.height }, format);
 }
-
-
-
 
 Device::Device(vk::PhysicalDevice physicalDevice, vk::UniqueDevice &device) 
 	: m_vkPhysicalDevice(physicalDevice)
@@ -284,7 +285,7 @@ vk::PresentModeKHR Device::chooseSwapPresentMode(SwapChainPresentMode &preferred
 	return bestMode;
 }
 
-vk::Extent2D Device::chooseSwapChainExtend(uint32_t width, uint32_t height, const vk::SurfaceCapabilitiesKHR & capabilities)
+vk::Extent2D Device::chooseSwapChainExtent(uint32_t width, uint32_t height, const vk::SurfaceCapabilitiesKHR & capabilities)
 {
 
 	if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {

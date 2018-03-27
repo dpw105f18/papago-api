@@ -5,30 +5,28 @@
 class BufferResource : public Resource
 {
 public:
-	// Inherited via Resource
-	void upload(const std::vector<char>& data) override;
-	void destroy() override;
-	std::vector<char> download() override;
+	BufferResource(const BufferResource&) = delete;
+	BufferResource(BufferResource&& other) noexcept;
 
-	size_t getSize() const { return m_size; }
+	// Inherited via Resource
+	void destroy() override;
 
 private:
 	vk::UniqueBuffer m_vkBuffer;
-	vk::UniqueDeviceMemory m_vkMemory;
-	const vk::UniqueDevice& m_vkDevice;
-	size_t m_size;
 
-	static uint32_t findMemoryType(
-		const vk::PhysicalDevice&, 
-		uint32_t memoryTypeBits, 
-		const vk::MemoryPropertyFlags&);
+	static BufferResource createBufferResource(
+		vk::PhysicalDevice		physicalDevice,
+		const vk::UniqueDevice& device,
+		size_t					size,
+		vk::BufferUsageFlags	usageFlags,
+		vk::MemoryPropertyFlags memoryFlags);
 
 	BufferResource(
-		const vk::UniqueDevice&,
-		const vk::PhysicalDevice&,
-		size_t,
-		vk::BufferUsageFlags,
-		vk::MemoryPropertyFlags);
+		const vk::UniqueDevice&		device,
+		const vk::PhysicalDevice&	physicalDevice,
+		vk::UniqueBuffer&&			buffer,
+		vk::MemoryPropertyFlags		memoryFlags,
+		vk::MemoryRequirements		memoryRequirements);
 
 	friend class Device;
 };

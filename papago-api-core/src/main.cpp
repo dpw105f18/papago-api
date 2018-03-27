@@ -102,8 +102,8 @@ int main()
 	auto& device = devices[0];
 	auto swapChain = device.createSwapChain(Format::eR8G8B8Unorm, 3, SwapChainPresentMode::eMailbox, surface);
 	auto vertexBuffer = device.createVertexBuffer(std::vector<float>{
-			 0.0f,  0.5f, 0.0f,
-			 0.5f, -0.4f, 0.0f,
+		0.0f, 0.5f, 0.0f,
+			0.5f, -0.4f, 0.0f,
 			-0.5f, -0.4f, 0.0f,
 	});
 	auto indexBuffer = device.createIndexBuffer(std::vector<uint16_t>{
