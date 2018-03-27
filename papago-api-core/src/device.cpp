@@ -4,6 +4,7 @@
 #include <set>
 #include "swap_chain.hpp"
 #include "image_resource.hpp"
+#include "sampler.hpp"
 
 //Provides a vector of devices with the given [features] and [extensions] enabled
 std::vector<Device> Device::enumerateDevices(Surface& surface, const vk::PhysicalDeviceFeatures &features, const std::vector<const char*> &extensions)
@@ -200,7 +201,33 @@ SwapChain Device::createSwapChain(const Format& format, size_t framebufferCount,
 	return SwapChain(m_vkDevice, swapChain, colorResources, depthResources, extent);
 }
 
+Sampler Device::createTextureSampler(SamplerD dimension, Filter magFil, Filter minFil, TextureWrapMode modeU, TextureWrapMode modeV, TextureWrapMode modeW)
+{
+	Sampler sampler(dimension);
 
+	sampler.setMagFilter(magFil);
+	sampler.setMinFilter(magFil);
+
+	if (dimension < SamplerD::e3D)
+	{
+		sampler.setTextureWrapU(modeU);
+		sampler.setTextureWrapV(modeV);
+		sampler.setTextureWrapW(modeW);
+	}
+	else if (dimension == SamplerD::e2D)
+	{
+		sampler.setTextureWrapU(modeU);
+		sampler.setTextureWrapV(modeV);
+	}
+	else
+	{
+		sampler.setTextureWrapU(modeU);
+	}
+
+	sampler.vk_mTextureSampler = m_vkDevice->createSamplerUnique(sampler.m_vkSamplerCreateInfo);
+
+	return sampler;
+}
 
 
 Device::Device(vk::PhysicalDevice physicalDevice, vk::UniqueDevice &device) 
@@ -286,5 +313,3 @@ vk::Extent2D Device::chooseSwapChainExtend(uint32_t width, uint32_t height, cons
 
 	return actualExtent;
 }
-
-

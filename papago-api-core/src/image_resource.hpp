@@ -29,7 +29,7 @@ private:
 
 	vk::DeviceMemory m_VkMemory;
 	vk::ImageView m_vkImageView;
-	Format m_Format;
+	Format m_format;
 
 	friend class SwapChain; //TODO: Figure out how to be friend of private constructor instead.
 	friend class Device;

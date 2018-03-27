@@ -12,6 +12,7 @@ class GraphicsQueue;
 class Surface;
 class SwapChain;
 class ImageResource;
+class Sampler;
 
 class Device {
 public:
@@ -22,6 +23,7 @@ public:
 	GraphicsQueue createGraphicsQueue(SwapChain);
 	CommandBuffer createCommandBuffer(CommandBuffer::Usage);
 	SubCommandBuffer createSubCommandBuffer(SubCommandBuffer::Usage);
+	Sampler Device::createTextureSampler(SamplerD mode, Filter magFil, Filter minFil, TextureWrapMode modeU, TextureWrapMode modeV, TextureWrapMode modeW);
 
 	template<typename T>
 	BufferResource createVertexBuffer(const std::vector<T>& vertexData) const;
@@ -71,9 +73,9 @@ private:
 	static bool isPhysicalDeviceSuitable(const vk::PhysicalDevice& physicalDevice, Surface&, const std::vector<const char*> &);
 	static bool areExtensionsSupported(const vk::PhysicalDevice& physicalDevice, const std::vector<const char*> &extensions);
 
-
 	vk::PhysicalDevice m_vkPhysicalDevice;
 	vk::UniqueDevice m_vkDevice;
+
 };
 
 template<typename T>
