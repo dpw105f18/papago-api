@@ -42,7 +42,7 @@ ImageResource ImageResource::createColorResource(vk::Image image, const vk::Uniq
 }
 
 ImageResource::ImageResource(vk::ImageCreateInfo imageCreateInfo, const vk::PhysicalDevice& physicalDevice, const vk::UniqueDevice& device, vk::ImageAspectFlags aspectFlags) 
-	: m_VkCreateInfo(imageCreateInfo), m_Format(imageCreateInfo.format)
+	: m_VkCreateInfo(imageCreateInfo), m_format(imageCreateInfo.format)
 {
 	m_VkImage = device.get().createImage(imageCreateInfo);
 
@@ -77,7 +77,7 @@ ImageResource::ImageResource(vk::ImageCreateInfo imageCreateInfo, const vk::Phys
 	vk::ImageViewCreateInfo viewCreateInfo;
 	viewCreateInfo.setImage(m_VkImage)
 		.setViewType(vk::ImageViewType::e2D)
-		.setFormat(m_Format)
+		.setFormat(m_format)
 		.setSubresourceRange(subresourceRange);
 
 	m_vkImageView = device->createImageView(viewCreateInfo);
@@ -86,7 +86,7 @@ ImageResource::ImageResource(vk::ImageCreateInfo imageCreateInfo, const vk::Phys
 
 }
 
-ImageResource::ImageResource(vk::Image image, const vk::UniqueDevice &device, Format format): m_VkImage(image), m_Format(format)
+ImageResource::ImageResource(vk::Image image, const vk::UniqueDevice &device, Format format): m_VkImage(image), m_format(format)
 {
 	setImageView(device);
 }
@@ -117,7 +117,7 @@ void ImageResource::setImageView(const vk::UniqueDevice &device)
 	vk::ImageViewCreateInfo viewCreateInfo;
 	viewCreateInfo.setImage(m_VkImage)
 		.setViewType(vk::ImageViewType::e2D)
-		.setFormat(m_Format)
+		.setFormat(m_format)
 		.setSubresourceRange(subresourceRange);
 
 	m_vkImageView = device->createImageView(viewCreateInfo);

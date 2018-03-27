@@ -1,21 +1,35 @@
 #pragma once
+#include "device.hpp"
+#include "api_enums.hpp"
 
-class Sampler2D
+//TODO: Check if constructors work at runtime.
+
+class Sampler
 {
 public:
-	enum Filter {
-		NEAREST,
-		ANISOTROPIC,
-		LINEAR
-	};
 
-	enum Wrap {
-		CLAMP_TO_EDGE,
-		CLAMP_TO_BORDER
-	};
+	Sampler(SamplerD dimension)
+	{
+		m_dimension = dimension;
 
-	void setMagFilter(Filter);
-	void setMinFilter(Filter);
-	void setTextureWrapS(Wrap);
-	void setTextureWrapT(Wrap);
+		m_vkSamplerCreateInfo.magFilter = vk::Filter::eLinear;
+		m_vkSamplerCreateInfo.minFilter = vk::Filter::eLinear;
+		m_vkSamplerCreateInfo.anisotropyEnable = VK_TRUE;
+		m_vkSamplerCreateInfo.maxAnisotropy = 16;
+		m_vkSamplerCreateInfo.borderColor = vk::BorderColor::eIntOpaqueBlack;
+		m_vkSamplerCreateInfo.mipmapMode = vk::SamplerMipmapMode::eLinear;
+	}
+
+	Sampler& setMagFilter(vk::Filter filter);
+	Sampler& setMinFilter(vk::Filter filter);
+	Sampler& setTextureWrapU(vk::SamplerAddressMode mode);
+	Sampler& setTextureWrapV(vk::SamplerAddressMode mode);
+	Sampler& setTextureWrapW(vk::SamplerAddressMode mode);
+
+private:
+	friend class Device;
+	vk::SamplerCreateInfo m_vkSamplerCreateInfo;
+	vk::UniqueSampler vk_mTextureSampler;
+	SamplerD m_dimension;
+
 };
