@@ -138,7 +138,7 @@ FragmentShader Device::createFragmentShader(const std::string & filePath, const 
 
 RenderPass Device::createRenderPass(VertexShader &vertexShader, FragmentShader &fragmentShader, const SwapChain &swapChain) const
 {
-	// Dangerous hacking
+	// TODO: Dangerous hacking, fix this by adding error handling instead of expecting there always being data available.
 	auto extent = swapChain.m_colorResources[0].m_VkCreateInfo.extent;
 	auto format = swapChain.m_colorResources[0].m_Format;
 
