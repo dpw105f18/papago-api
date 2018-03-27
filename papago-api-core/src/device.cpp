@@ -125,26 +125,24 @@ SwapChain Device::createSwapChain(const Format& format, size_t framebufferCount,
 				formatCandidates));
 	}
 
-	return std::move(SwapChain(m_vkDevice, swapChain, colorResources, depthResources, extent));
+	return SwapChain(m_vkDevice, swapChain, colorResources, depthResources, extent);
 }
 
-VertexShader Device::createVertexShader(const std::string & filePath, const std::string & entryPoint)
-{
-	return std::move(VertexShader(m_vkDevice, filePath, entryPoint));
+VertexShader Device::createVertexShader(const std::string & filePath, const std::string & entryPoint) const {
+	return VertexShader(m_vkDevice, filePath, entryPoint);
 }
 
-FragmentShader Device::createFragmentShader(const std::string & filePath, const std::string & entryPoint)
-{
-	return std::move(FragmentShader(m_vkDevice, filePath, entryPoint));
+FragmentShader Device::createFragmentShader(const std::string & filePath, const std::string & entryPoint) const {
+	return FragmentShader(m_vkDevice, filePath, entryPoint);
 }
 
-RenderPass Device::createRenderPass(VertexShader &vertexShader, FragmentShader &fragmentShader, const SwapChain &swapChain)
+RenderPass Device::createRenderPass(VertexShader &vertexShader, FragmentShader &fragmentShader, const SwapChain &swapChain) const
 {
 	// Dangerous hacking
 	auto extent = swapChain.m_colorResources[0].m_VkCreateInfo.extent;
 	auto format = swapChain.m_colorResources[0].m_Format;
 
-	return std::move(RenderPass(m_vkDevice, vertexShader, fragmentShader, { extent.width, extent.height }, format));
+	return RenderPass(m_vkDevice, vertexShader, fragmentShader, { extent.width, extent.height }, format);
 }
 
 

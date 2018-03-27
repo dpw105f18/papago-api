@@ -5,13 +5,16 @@
 
 RenderPass::RenderPass(
 	const vk::UniqueDevice& device,
-	VertexShader& vertexShader,
-	FragmentShader& fragmentShader,
+	const VertexShader& vertexShader,
+	const FragmentShader& fragmentShader,
 	const vk::Extent2D& extent,
 	Format format)
 	: m_vertexShader(vertexShader), m_fragmentShader(fragmentShader)
 {
-	vk::PipelineShaderStageCreateInfo shaderStages[] = { m_vertexShader.m_vkStageCreateInfo, m_fragmentShader.m_vkStageCreateInfo };
+	vk::PipelineShaderStageCreateInfo shaderStages[] = { 
+		m_vertexShader.m_vkStageCreateInfo, 
+		m_fragmentShader.m_vkStageCreateInfo 
+	};
 
 	//TODO: use our vertex buffer
 	vk::PipelineVertexInputStateCreateInfo vertexInputInfo;
@@ -59,7 +62,7 @@ RenderPass::RenderPass(
 
 	m_vkPipelineLayout = device->createPipelineLayoutUnique(pipelineLayoutInfo);
 
-	m_vkRenderPass =  std::move(createDummyRenderpass(device, format));
+	m_vkRenderPass =  createDummyRenderpass(device, format);
 
 	// Not expecting vertex buffer or depth test 
 	vk::GraphicsPipelineCreateInfo pipelineCreateInfo = {};
@@ -73,7 +76,7 @@ RenderPass::RenderPass(
 		.setRenderPass(m_vkRenderPass.get())
 		.setLayout(m_vkPipelineLayout.get());
 
-	m_vkGraphicsPipeline = std::move(device->createGraphicsPipelineUnique(vk::PipelineCache(), pipelineCreateInfo));
+	m_vkGraphicsPipeline = device->createGraphicsPipelineUnique(vk::PipelineCache(), pipelineCreateInfo);
 }
 
 //TODO: Make the creation of vkRenderPass more flexible. This dummy only makes one color-attachment (no depth)
@@ -106,5 +109,5 @@ vk::UniqueRenderPass RenderPass::createDummyRenderpass(const vk::UniqueDevice& d
 		.setDependencyCount(1)
 		.setPDependencies(&dependency);
 
-	return std::move(device->createRenderPassUnique(renderPassInfo));
+	return device->createRenderPassUnique(renderPassInfo);
 }

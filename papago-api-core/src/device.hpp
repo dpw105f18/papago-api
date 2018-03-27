@@ -22,9 +22,9 @@ public:
 	GraphicsQueue createGraphicsQueue(SwapChain);
 	CommandBuffer createCommandBuffer(CommandBuffer::Usage);
 	SubCommandBuffer createSubCommandBuffer(SubCommandBuffer::Usage);
-	VertexShader createVertexShader(const std::string& filePath, const std::string& entryPoint);
-	FragmentShader createFragmentShader(const std::string& filePath, const std::string& entryPoint);
-	RenderPass createRenderPass(VertexShader&, FragmentShader&, const SwapChain&);
+	VertexShader createVertexShader(const std::string& filePath, const std::string& entryPoint) const;
+	FragmentShader createFragmentShader(const std::string& filePath, const std::string& entryPoint) const;
+	RenderPass createRenderPass(VertexShader&, FragmentShader&, const SwapChain&) const;
 
 
 	template<typename T>

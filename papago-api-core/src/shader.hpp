@@ -7,11 +7,11 @@ public:
 
 protected:
 	Shader(const vk::UniqueDevice& device, const std::string& filePath, std::string entryPoint);
-	Shader(Shader&&);
+	Shader(Shader&&) noexcept;
 	vk::UniqueShaderModule m_vkShader;
 	vk::PipelineShaderStageCreateInfo m_vkStageCreateInfo;	//<-- set by children
 	std::string m_entryPoint;
 
 private:
-	std::vector<char> readFile(const std::string& filePath);	//TODO: move to a Parser-stub
+	static std::vector<char> readFile(const std::string& filePath);	//TODO: move to a Parser-stub
 };
