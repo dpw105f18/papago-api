@@ -1,9 +1,12 @@
 #include "standard_header.hpp"
 #include "surface.hpp"
 #include "device.hpp"
-#include <set>
 #include "swap_chain.hpp"
 #include "image_resource.hpp"
+#include "vertex_shader.hpp"
+#include "fragment_shader.hpp"
+#include <set>
+#include "render_pass.hpp"
 
 //Provides a vector of devices with the given [features] and [extensions] enabled
 std::vector<Device> Device::enumerateDevices(Surface& surface, const vk::PhysicalDeviceFeatures &features, const std::vector<const char*> &extensions)
@@ -198,6 +201,24 @@ SwapChain Device::createSwapChain(const Format& format, size_t framebufferCount,
 	}
 
 	return SwapChain(m_vkDevice, swapChain, colorResources, depthResources, extent);
+
+}
+
+VertexShader Device::createVertexShader(const std::string & filePath, const std::string & entryPoint) const {
+	return VertexShader(m_vkDevice, filePath, entryPoint);
+}
+
+FragmentShader Device::createFragmentShader(const std::string & filePath, const std::string & entryPoint) const {
+	return FragmentShader(m_vkDevice, filePath, entryPoint);
+}
+
+RenderPass Device::createRenderPass(VertexShader &vertexShader, FragmentShader &fragmentShader, const SwapChain &swapChain) const
+{
+	// TODO: Dangerous hacking, fix this by adding error handling instead of expecting there always being data available.
+	auto extent = swapChain.m_colorResources[0].m_VkCreateInfo.extent;
+	auto format = swapChain.m_colorResources[0].m_Format;
+
+	return RenderPass(m_vkDevice, vertexShader, fragmentShader, { extent.width, extent.height }, format);
 }
 
 
