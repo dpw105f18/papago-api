@@ -205,18 +205,18 @@ SwapChain Device::createSwapChain(const Format& format, size_t framebufferCount,
 }
 
 VertexShader Device::createVertexShader(const std::string & filePath, const std::string & entryPoint) const {
-	return VertexShader(m_vkDevice, filePath, entryPoint);
-}
+	return std::move(VertexShader(m_vkDevice, filePath, entryPoint));	//<-- m_vkStageCreateInfo loses its entry-point if not std::move'd
+} 
 
 FragmentShader Device::createFragmentShader(const std::string & filePath, const std::string & entryPoint) const {
-	return FragmentShader(m_vkDevice, filePath, entryPoint);
+	return std::move(FragmentShader(m_vkDevice, filePath, entryPoint)); //<-- m_vkStageCreateInfo loses its entry-point if not std::move'd
 }
 
 RenderPass Device::createRenderPass(VertexShader &vertexShader, FragmentShader &fragmentShader, const SwapChain &swapChain) const
 {
 	// TODO: Dangerous hacking, fix this by adding error handling instead of expecting there always being data available.
-	auto extent = swapChain.m_colorResources[0].m_VkCreateInfo.extent;
-	auto format = swapChain.m_colorResources[0].m_Format;
+	auto extent = swapChain.m_colorResources[0].m_vkCreateInfo.extent;
+	auto format = swapChain.m_colorResources[0].m_format;
 
 	return RenderPass(m_vkDevice, vertexShader, fragmentShader, { extent.width, extent.height }, format);
 }

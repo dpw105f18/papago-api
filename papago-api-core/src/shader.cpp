@@ -13,9 +13,9 @@ Shader::Shader(const vk::UniqueDevice& device, const std::string & filePath, std
 }
 
 Shader::Shader(Shader &&other) noexcept
-	: m_vkShader(std::move(other.m_vkShader))
+	: m_entryPoint(std::move(other.m_entryPoint))
 	, m_vkStageCreateInfo(std::move(other.m_vkStageCreateInfo))
-	, m_entryPoint(std::move(other.m_entryPoint))
+	, m_vkShader(std::move(other.m_vkShader))
 {
 	m_vkStageCreateInfo.setPName(m_entryPoint.c_str());
 }

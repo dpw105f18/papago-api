@@ -3,7 +3,7 @@
 #include <string>
 class Shader {
 public:
-	Shader(Shader&) = delete;
+	Shader(const Shader&) = delete;
 
 protected:
 	Shader(const vk::UniqueDevice& device, const std::string& filePath, std::string entryPoint);
