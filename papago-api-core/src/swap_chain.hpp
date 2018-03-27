@@ -10,11 +10,12 @@ private:
 	vk::UniqueSwapchainKHR m_vkSwapChain;
 	std::vector<ImageResource> m_colorResources;
 	std::vector<ImageResource> m_depthResources;
-	std::vector<vk::Framebuffer> m_framebuffers;
+	std::vector<vk::UniqueFramebuffer> m_framebuffers;
+	vk::UniqueRenderPass m_vkRenderPass;
 	
 	SwapChain(vk::UniqueDevice&, vk::UniqueSwapchainKHR&, std::vector<ImageResource>& colorResources, std::vector<ImageResource>& depthResources, vk::Extent2D);
 	
-	vk::RenderPass createDummyRenderPass(const vk::UniqueDevice& device); //<-- TODO: use proper RenderPass
+	vk::UniqueRenderPass createDummyRenderPass(const vk::UniqueDevice& device); //<-- TODO: use proper RenderPass
 
 	//TODO: use ImageResource when it's done?
 	friend class Device;

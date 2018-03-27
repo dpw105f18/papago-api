@@ -52,7 +52,6 @@ private:
 		const vk::UniqueDevice&, 
 		vk::ImageAspectFlags = vk::ImageAspectFlagBits::eColor);
 
-	vk::ImageCreateInfo m_vkImageCreateInfo;
 	vk::Image m_vkImage;
 	vk::UniqueImageView m_vkImageView;
 	Format m_format;

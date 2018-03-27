@@ -6,8 +6,10 @@ ImageResource::ImageResource(ImageResource&& other) noexcept
 	, m_vkImage(std::move(other.m_vkImage))
 	, m_vkImageView(std::move(other.m_vkImageView))
 	, m_format(other.m_format)
+	, m_vkExtent(other.m_vkExtent)
 {
 	other.m_format = Format();
+	other.m_vkExtent = vk::Extent3D();
 }
 
 ImageResource::~ImageResource()
