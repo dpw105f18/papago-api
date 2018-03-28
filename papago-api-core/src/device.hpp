@@ -12,6 +12,7 @@ class GraphicsQueue;
 class Surface;
 class SwapChain;
 class ImageResource;
+class Sampler;
 
 class Device {
 public:
@@ -24,7 +25,11 @@ public:
 	VertexShader createVertexShader(const std::string& filePath, const std::string& entryPoint) const;
 	FragmentShader createFragmentShader(const std::string& filePath, const std::string& entryPoint) const;
 	RenderPass createRenderPass(VertexShader&, FragmentShader&, const SwapChain&) const;
-
+	Sampler Device::createTextureSampler3D(Filter magFil, Filter minFil, TextureWrapMode modeU, TextureWrapMode modeV, TextureWrapMode modeW);
+	Sampler Device::createTextureSampler2D(Filter magFil, Filter minFil, TextureWrapMode modeU, TextureWrapMode modeV);
+	Sampler Device::createTextureSampler1D(Filter magFil, Filter minFil, TextureWrapMode modeU);
+	//drop the other create textureSampler idea below?
+	void Device::createTextureSampler(Sampler sampler);
 
 	template<typename T>
 	BufferResource createVertexBuffer(const std::vector<T>& vertexData) const;
@@ -74,9 +79,9 @@ private:
 	static bool isPhysicalDeviceSuitable(const vk::PhysicalDevice& physicalDevice, Surface&, const std::vector<const char*> &);
 	static bool areExtensionsSupported(const vk::PhysicalDevice& physicalDevice, const std::vector<const char*> &extensions);
 
-
 	vk::PhysicalDevice m_vkPhysicalDevice;
 	vk::UniqueDevice m_vkDevice;
+
 };
 
 template<typename T>

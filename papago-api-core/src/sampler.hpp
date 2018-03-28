@@ -1,21 +1,23 @@
 #pragma once
+#include "device.hpp"
+#include "api_enums.hpp"
 
-class Sampler2D
+class Sampler
 {
 public:
-	enum Filter {
-		NEAREST,
-		ANISOTROPIC,
-		LINEAR
-	};
 
-	enum Wrap {
-		CLAMP_TO_EDGE,
-		CLAMP_TO_BORDER
-	};
+	Sampler(SamplerD dimension);
 
-	void setMagFilter(Filter);
-	void setMinFilter(Filter);
-	void setTextureWrapS(Wrap);
-	void setTextureWrapT(Wrap);
+	Sampler& setMagFilter(Filter filter);
+	Sampler& setMinFilter(Filter filter);
+	Sampler& setTextureWrapU(TextureWrapMode mode);
+	Sampler& setTextureWrapV(TextureWrapMode mode);
+	Sampler& setTextureWrapW(TextureWrapMode mode);
+
+private:
+	friend class Device;
+	vk::SamplerCreateInfo m_vkSamplerCreateInfo;
+	vk::UniqueSampler vk_mTextureSampler;
+	SamplerD m_dimension;
+
 };

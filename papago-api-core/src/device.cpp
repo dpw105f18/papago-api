@@ -5,8 +5,10 @@
 #include "image_resource.hpp"
 #include "vertex_shader.hpp"
 #include "fragment_shader.hpp"
-#include <set>
 #include "render_pass.hpp"
+#include "sampler.hpp"
+#include <set>
+
 
 //Provides a vector of devices with the given [features] and [extensions] enabled
 std::vector<Device> Device::enumerateDevices(Surface& surface, const vk::PhysicalDeviceFeatures &features, const std::vector<const char*> &extensions)
@@ -222,6 +224,53 @@ FragmentShader Device::createFragmentShader(const std::string & filePath, const 
 	return std::move(FragmentShader(m_vkDevice, filePath, entryPoint)); //<-- m_vkStageCreateInfo loses its entry-point if not std::move'd
 }
 
+
+Sampler Device::createTextureSampler3D(Filter magFilter, Filter minFilter, TextureWrapMode wrapU, TextureWrapMode wrapV, TextureWrapMode wrapW)
+{
+	//TODO: provide builder-pattern to API user -AM/AB
+	auto& sampler = Sampler(SamplerD::e3D)
+		.setMagFilter(magFilter)
+		.setMinFilter(magFilter)
+		.setTextureWrapU(wrapU)
+		.setTextureWrapV(wrapV)
+		.setTextureWrapW(wrapW);
+
+	sampler.vk_mTextureSampler = m_vkDevice->createSamplerUnique(sampler.m_vkSamplerCreateInfo);
+
+	return std::move(sampler);
+}
+
+Sampler Device::createTextureSampler2D(Filter magFilter, Filter minFilter, TextureWrapMode wrapU, TextureWrapMode wrapV)
+{
+	auto&  sampler = Sampler(SamplerD::e2D)
+		.setMagFilter(magFilter)
+		.setMinFilter(minFilter)
+		.setTextureWrapU(wrapU)
+		.setTextureWrapV(wrapV);
+
+	sampler.vk_mTextureSampler = m_vkDevice->createSamplerUnique(sampler.m_vkSamplerCreateInfo);
+
+	return std::move(sampler);
+}
+
+Sampler Device::createTextureSampler1D(Filter magFilter, Filter minFilter, TextureWrapMode wrapU )
+{
+	auto& sampler = Sampler(SamplerD::e1D)
+		.setMagFilter(magFilter)
+		.setMinFilter(minFilter)
+		.setTextureWrapU(wrapU);
+
+	sampler.vk_mTextureSampler = m_vkDevice->createSamplerUnique(sampler.m_vkSamplerCreateInfo);
+
+	return std::move(sampler);
+}
+
+//TODO: rename? make as public method on sampler? -AM/AB
+void Device::createTextureSampler(Sampler sampler)
+{
+	m_vkDevice->createSamplerUnique(sampler.m_vkSamplerCreateInfo);
+}
+
 RenderPass Device::createRenderPass(VertexShader &vertexShader, FragmentShader &fragmentShader, const SwapChain &swapChain) const
 {
 	// TODO: Dangerous hacking, fix this by adding error handling instead of expecting there always being data available.
@@ -314,5 +363,3 @@ vk::Extent2D Device::chooseSwapChainExtent(uint32_t width, uint32_t height, cons
 
 	return actualExtent;
 }
-
-
