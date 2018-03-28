@@ -6,6 +6,7 @@
 #include "vertex_shader.hpp"
 #include "fragment_shader.hpp"
 #include "render_pass.hpp"
+#include "graphics_queue.hpp"
 #include <WinUser.h>
 
 LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -131,6 +132,12 @@ int main()
 	auto fragmentShader = device.createFragmentShader("shader/frag.spv", "main");
 
 	auto renderPass = device.createRenderPass(vertexShader, fragmentShader, swapChain);
+
+	auto graphicsQueue = device.createGraphicsQueue(surface, swapChain);
+
+	//TODO: using the graphics queue when CommandBuffers are working -AM
+	//graphicsQueue.submitCommands({});
+	//graphicsQueue.present();
 	
 	std::cin.ignore();
 }

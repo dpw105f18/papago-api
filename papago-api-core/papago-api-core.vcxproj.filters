@@ -83,13 +83,13 @@
     <ClCompile Include="src\image_resource.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-	<ClCompile Include="src\resource.cpp">
+    <ClCompile Include="src\resource.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\sampler.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-	<ClCompile Include="src\shader.cpp">
+    <ClCompile Include="src\shader.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\vertex_shader.cpp">
@@ -99,6 +99,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\render_pass.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\graphics_queue.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\command_buffer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
