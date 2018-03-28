@@ -19,7 +19,7 @@ public:
 	static std::vector<Device> enumerateDevices(Surface& surface, const vk::PhysicalDeviceFeatures &features, const std::vector<const char*> &extensions);
 
 	SwapChain createSwapChain(const Format&, size_t framebufferCount, SwapChainPresentMode, Surface&);
-	GraphicsQueue createGraphicsQueue(SwapChain);
+	GraphicsQueue createGraphicsQueue(Surface&, SwapChain&);
 	CommandBuffer createCommandBuffer(CommandBuffer::Usage);
 	SubCommandBuffer createSubCommandBuffer(SubCommandBuffer::Usage);
 	VertexShader createVertexShader(const std::string& filePath, const std::string& entryPoint) const;

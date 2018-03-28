@@ -6,6 +6,9 @@
 class SwapChain {
 public:
 	void present();
+
+	explicit operator vk::SwapchainKHR&();
+
 private:
 	vk::UniqueSwapchainKHR m_vkSwapChain;
 	std::vector<ImageResource> m_colorResources;

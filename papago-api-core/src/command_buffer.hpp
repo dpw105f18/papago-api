@@ -1,4 +1,5 @@
 #pragma once
+#include "standard_header.hpp"
 #include "sub_command_buffer.hpp"
 
 class CommandBuffer : public SubCommandBuffer
@@ -23,4 +24,9 @@ public:
 	void drawInstanced(size_t instanceVertexCount, size_t instanceCount, size_t startVertexLocation, size_t startInstanceLocation) override;
 	void setOutput(const std::string&, ImageResource&) override;
 	void executeSubCommands(std::vector<SubCommandBuffer>);
+
+	explicit operator vk::CommandBuffer&();
+
+private:
+	vk::UniqueCommandBuffer m_vkCommandBuffer;
 };

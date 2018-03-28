@@ -2,6 +2,11 @@
 #include "swap_chain.hpp"
 #include "image_resource.hpp"
 
+SwapChain::operator vk::SwapchainKHR&()
+{
+	return *m_vkSwapChain;
+}
+
 SwapChain::SwapChain(
 	vk::UniqueDevice&			device, 
 	vk::UniqueSwapchainKHR&		swapChain, 
