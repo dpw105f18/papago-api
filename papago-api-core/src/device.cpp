@@ -7,6 +7,7 @@
 #include "fragment_shader.hpp"
 #include "render_pass.hpp"
 #include "sampler.hpp"
+#include "graphics_queue.hpp"
 #include <set>
 
 
@@ -214,6 +215,12 @@ SwapChain Device::createSwapChain(const Format& format, size_t framebufferCount,
 
 	return SwapChain(m_vkDevice, swapChain, colorResources, depthResources, extent);
 
+}
+
+GraphicsQueue Device::createGraphicsQueue(Surface& surface, SwapChain& swapChain)
+{
+	auto queueFamilyIndices = findQueueFamilies(m_vkPhysicalDevice, surface);
+	return std::move(GraphicsQueue(m_vkDevice, queueFamilyIndices.graphicsFamily, queueFamilyIndices.presentFamily, swapChain));
 }
 
 VertexShader Device::createVertexShader(const std::string & filePath, const std::string & entryPoint) const {
