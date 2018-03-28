@@ -201,32 +201,54 @@ SwapChain Device::createSwapChain(const Format& format, size_t framebufferCount,
 	return SwapChain(m_vkDevice, swapChain, colorResources, depthResources, extent);
 }
 
-Sampler Device::createTextureSampler(SamplerD dimension, Filter magFil, Filter minFil, TextureWrapMode modeU, TextureWrapMode modeV, TextureWrapMode modeW)
+Sampler Device::createTextureSampler3D(Filter magFil, Filter minFil, TextureWrapMode modeU, TextureWrapMode modeV, TextureWrapMode modeW)
 {
-	Sampler sampler(dimension);
+	Sampler sampler(SamplerD::e3D);
 
 	sampler.setMagFilter(magFil);
 	sampler.setMinFilter(magFil);
 
-	if (dimension < SamplerD::e3D)
-	{
-		sampler.setTextureWrapU(modeU);
-		sampler.setTextureWrapV(modeV);
-		sampler.setTextureWrapW(modeW);
-	}
-	else if (dimension == SamplerD::e2D)
-	{
-		sampler.setTextureWrapU(modeU);
-		sampler.setTextureWrapV(modeV);
-	}
-	else
-	{
-		sampler.setTextureWrapU(modeU);
-	}
+	sampler.setTextureWrapU(modeU);
+	sampler.setTextureWrapV(modeV);
+	sampler.setTextureWrapW(modeW);
 
 	sampler.vk_mTextureSampler = m_vkDevice->createSamplerUnique(sampler.m_vkSamplerCreateInfo);
 
 	return sampler;
+}
+
+Sampler Device::createTextureSampler2D(Filter magFil, Filter minFil, TextureWrapMode modeU, TextureWrapMode modeV)
+{
+	Sampler sampler(SamplerD::e2D);
+
+	sampler.setMagFilter(magFil);
+	sampler.setMinFilter(magFil);
+
+	sampler.setTextureWrapU(modeU);
+	sampler.setTextureWrapV(modeV);
+
+	sampler.vk_mTextureSampler = m_vkDevice->createSamplerUnique(sampler.m_vkSamplerCreateInfo);
+
+	return sampler;
+}
+
+Sampler Device::createTextureSampler1D(Filter magFil, Filter minFil, TextureWrapMode modeU)
+{
+	Sampler sampler(SamplerD::e1D);
+
+	sampler.setMagFilter(magFil);
+	sampler.setMinFilter(magFil);
+
+	sampler.setTextureWrapU(modeU);
+
+	sampler.vk_mTextureSampler = m_vkDevice->createSamplerUnique(sampler.m_vkSamplerCreateInfo);
+
+	return sampler;
+}
+
+void Device::createTextureSampler(Sampler sampler)
+{
+	m_vkDevice->createSamplerUnique(sampler.m_vkSamplerCreateInfo);
 }
 
 

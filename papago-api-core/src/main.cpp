@@ -2,6 +2,7 @@
 #include "device.hpp"
 #include "swap_chain.hpp"
 #include "surface.hpp"
+#include "sampler.hpp"
 #include <WinUser.h>
 
 LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -114,6 +115,10 @@ int main()
 	for (auto i = 0; i < 1000; ++i) {
 		bigData[i] = i % 256;
 	}
+
+	auto sampler3D = device.createTextureSampler3D(Filter::eNearest, Filter::eNearest, TextureWrapMode::eClampToBorder, TextureWrapMode::eClampToEdge, TextureWrapMode::eRepeat);
+	auto sampler2D = device.createTextureSampler2D(Filter::eLinear, Filter::eLinear, TextureWrapMode::eMirroredRepeat, TextureWrapMode::eMirrorClampToEdge);
+	auto sampler1D = device.createTextureSampler1D(Filter::eNearest, Filter::eNearest, TextureWrapMode::eRepeat);
 
 	bigUniform.upload(bigData);
 

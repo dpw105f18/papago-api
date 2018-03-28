@@ -23,7 +23,11 @@ public:
 	GraphicsQueue createGraphicsQueue(SwapChain);
 	CommandBuffer createCommandBuffer(CommandBuffer::Usage);
 	SubCommandBuffer createSubCommandBuffer(SubCommandBuffer::Usage);
-	Sampler Device::createTextureSampler(SamplerD mode, Filter magFil, Filter minFil, TextureWrapMode modeU, TextureWrapMode modeV, TextureWrapMode modeW);
+	Sampler Device::createTextureSampler3D(Filter magFil, Filter minFil, TextureWrapMode modeU, TextureWrapMode modeV, TextureWrapMode modeW);
+	Sampler Device::createTextureSampler2D(Filter magFil, Filter minFil, TextureWrapMode modeU, TextureWrapMode modeV);
+	Sampler Device::createTextureSampler1D(Filter magFil, Filter minFil, TextureWrapMode modeU);
+	//drop the other create textureSampler idea below?
+	void Device::createTextureSampler(Sampler sampler);
 
 	template<typename T>
 	BufferResource createVertexBuffer(const std::vector<T>& vertexData) const;

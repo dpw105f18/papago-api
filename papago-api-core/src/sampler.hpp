@@ -20,11 +20,11 @@ public:
 		m_vkSamplerCreateInfo.mipmapMode = vk::SamplerMipmapMode::eLinear;
 	}
 
-	Sampler& setMagFilter(vk::Filter filter);
-	Sampler& setMinFilter(vk::Filter filter);
-	Sampler& setTextureWrapU(vk::SamplerAddressMode mode);
-	Sampler& setTextureWrapV(vk::SamplerAddressMode mode);
-	Sampler& setTextureWrapW(vk::SamplerAddressMode mode);
+	Sampler& setMagFilter(Filter filter);
+	Sampler& setMinFilter(Filter filter);
+	Sampler& setTextureWrapU(TextureWrapMode mode);
+	Sampler& setTextureWrapV(TextureWrapMode mode);
+	Sampler& setTextureWrapW(TextureWrapMode mode);
 
 private:
 	friend class Device;

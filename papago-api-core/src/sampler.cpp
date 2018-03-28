@@ -1,25 +1,25 @@
 #include "standard_header.hpp"
 #include "sampler.hpp"
 
-Sampler& Sampler::setMagFilter(vk::Filter filter)
+Sampler& Sampler::setMagFilter(Filter filter)
 {
 	m_vkSamplerCreateInfo.magFilter = filter;
 	return *this;
 }
 
-Sampler& Sampler::setMinFilter(vk::Filter filter)
+Sampler& Sampler::setMinFilter(Filter filter)
 {
 	m_vkSamplerCreateInfo.magFilter = filter;
 	return *this;
 }
 
-Sampler& Sampler::setTextureWrapU(vk::SamplerAddressMode mode)
+Sampler& Sampler::setTextureWrapU(TextureWrapMode mode)
 {
 	m_vkSamplerCreateInfo.addressModeU = mode;
 	return *this;
 }
 
-Sampler& Sampler::setTextureWrapV(vk::SamplerAddressMode mode)
+Sampler& Sampler::setTextureWrapV(TextureWrapMode mode)
 {
 	if (m_dimension < SamplerD::e2D)
 	{
@@ -30,7 +30,7 @@ Sampler& Sampler::setTextureWrapV(vk::SamplerAddressMode mode)
 	return *this;
 }
 
-Sampler& Sampler::setTextureWrapW(vk::SamplerAddressMode mode)
+Sampler& Sampler::setTextureWrapW(TextureWrapMode mode)
 {
 	if (m_dimension < SamplerD::e3D) 
 	{
@@ -38,5 +38,6 @@ Sampler& Sampler::setTextureWrapW(vk::SamplerAddressMode mode)
 	}
 
 	m_vkSamplerCreateInfo.addressModeW = mode;
+
 	return *this;
 }
