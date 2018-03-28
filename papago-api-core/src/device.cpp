@@ -11,6 +11,11 @@
 //Provides a vector of devices with the given [features] and [extensions] enabled
 std::vector<Device> Device::enumerateDevices(Surface& surface, const vk::PhysicalDeviceFeatures &features, const std::vector<const char*> &extensions)
 {
+	std::vector<const char*> enabledLayers;
+#ifdef PAPAGO_USE_VALIDATION_LAYERS
+	enabledLayers.push_back("VK_LAYER_LUNARG_standard_validation");
+#endif 
+
 	std::vector<Device> result;
 
 	for (auto& physicalDevice : surface.m_vkInstance->enumeratePhysicalDevices()) {
@@ -25,7 +30,8 @@ std::vector<Device> Device::enumerateDevices(Surface& surface, const vk::Physica
 			.setEnabledExtensionCount(extensions.size())
 			.setPpEnabledExtensionNames(extensions.data())
 			.setPEnabledFeatures(&features)
-			.setEnabledLayerCount(0)
+			.setEnabledLayerCount(enabledLayers.size())
+			.setPpEnabledLayerNames(enabledLayers.data())
 			.setQueueCreateInfoCount(queueCreateInfos.size())
 			.setPQueueCreateInfos(queueCreateInfos.data()));
 

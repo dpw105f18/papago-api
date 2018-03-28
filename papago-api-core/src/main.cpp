@@ -90,40 +90,43 @@ struct UniformBufferObject{};
 
 int main()
 {
-	size_t winHeight = 800;
-	size_t winWidth = 600;
-	auto hwnd = StartWindow(winWidth, winHeight);
+	{
+		size_t winHeight = 800;
+		size_t winWidth = 600;
+		auto hwnd = StartWindow(winWidth, winHeight);
 
 
-	auto surface = Surface(winWidth, winHeight, hwnd);
-	vk::PhysicalDeviceFeatures features = {};
-	features.samplerAnisotropy = VK_TRUE;
-	auto devices = Device::enumerateDevices(surface, features, { VK_KHR_SWAPCHAIN_EXTENSION_NAME });
-	auto& device = devices[0];
-	auto swapChain = device.createSwapChain(Format::eR8G8B8Unorm, 3, SwapChainPresentMode::eMailbox, surface);
-	auto vertexBuffer = device.createVertexBuffer(std::vector<float>{
-		0.0f, 0.5f, 0.0f,
-			0.5f, -0.4f, 0.0f,
-			-0.5f, -0.4f, 0.0f,
-	});
-	auto indexBuffer = device.createIndexBuffer(std::vector<uint16_t>{
-		0, 1, 2
-	});
-	auto uniformBuffer = device.createUniformBuffer<sizeof(UniformBufferObject)>();
+		auto surface = Surface(winWidth, winHeight, hwnd);
+		vk::PhysicalDeviceFeatures features = {};
+		features.samplerAnisotropy = VK_TRUE;
+		auto devices = Device::enumerateDevices(surface, features, { VK_KHR_SWAPCHAIN_EXTENSION_NAME });
+		auto& device = devices[0];
+		auto swapChain = device.createSwapChain(Format::eR8G8B8Unorm, 3, SwapChainPresentMode::eMailbox, surface);
+		auto vertexBuffer = device.createVertexBuffer(std::vector<float>{
+			0.0f, 0.5f, 0.0f,
+				0.5f, -0.4f, 0.0f,
+				-0.5f, -0.4f, 0.0f,
+		});
+		auto indexBuffer = device.createIndexBuffer(std::vector<uint16_t>{
+			0, 1, 2
+		});
+		auto uniformBuffer = device.createUniformBuffer<sizeof(UniformBufferObject)>();
 
-	auto bigUniform = device.createUniformBuffer<1000>();
+		auto bigUniform = device.createUniformBuffer<1000>();
 
-	std::vector<char> bigData(1000);
-	for (auto i = 0; i < 1000; ++i) {
-		bigData[i] = i % 256;
+		std::vector<char> bigData(1000);
+		for (auto i = 0; i < 1000; ++i) {
+			bigData[i] = i % 256;
+		}
+
+		bigUniform.upload(bigData);
+
+		auto dlData = bigUniform.download();
+
+		auto vertexShader = device.createVertexShader("shader/vert.spv", "main");
+		auto fragmentShader = device.createFragmentShader("shader/frag.spv", "main");
+
+		auto renderPass = device.createRenderPass(vertexShader, fragmentShader, swapChain);
 	}
-
-	bigUniform.upload(bigData);
-
-	auto dlData = bigUniform.download();
-
-	auto vertexShader = device.createVertexShader("shader/vert.spv", "main");
-	auto fragmentShader = device.createFragmentShader("shader/frag.spv", "main");
-	
-	auto renderPass = device.createRenderPass(vertexShader, fragmentShader, swapChain);
+	std::cin.ignore();
 }
