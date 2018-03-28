@@ -1,97 +1,108 @@
 #include "standard_header.hpp"
 #include "image_resource.hpp"
 
-void ImageResource::upload(const std::vector<char>& data)
+ImageResource::ImageResource(ImageResource&& other) noexcept
+	: Resource(std::move(other))
+	, m_vkImage(std::move(other.m_vkImage))
+	, m_vkImageView(std::move(other.m_vkImageView))
+	, m_format(other.m_format)
+	, m_vkExtent(other.m_vkExtent)
 {
+	other.m_format = Format();
+	other.m_vkExtent = vk::Extent3D();
+}
+
+ImageResource::~ImageResource()
+{
+	// HACK: If size is zero then memory was externally allocated
+	if (getSize()) {
+		m_vkDevice->destroyImage(m_vkImage);
+	}
 }
 
 void ImageResource::destroy()
 {
 }
 
-std::vector<char> ImageResource::download()
+ImageResource ImageResource::createDepthResource(
+	const vk::PhysicalDevice &physicalDevice, 
+	const vk::UniqueDevice &device, 
+	vk::Extent3D extent,
+	const std::vector<Format>& formatCandidates)
 {
-	return {};
-}
+	auto format = findSupportedFormat(
+		physicalDevice, 
+		formatCandidates, 
+		vk::ImageTiling::eOptimal, 
+		vk::FormatFeatureFlagBits::eDepthStencilAttachment);
 
-ImageResource ImageResource::createDepthResource(const vk::PhysicalDevice &physicalDevice, const vk::UniqueDevice &device, size_t width, size_t height, const std::vector<Format>& formatCandidates)
-{
-	auto format = findSupportedFormat(physicalDevice, formatCandidates, vk::ImageTiling::eOptimal, vk::FormatFeatureFlagBits::eDepthStencilAttachment);
-
-	auto extent = vk::Extent3D().setWidth(width)
-		.setHeight(height)
-		.setDepth(1);
-
-	vk::ImageCreateInfo createInfo = {};
-	createInfo.setImageType(vk::ImageType::e2D)
+	auto image = device->createImage(vk::ImageCreateInfo()
+		.setImageType(vk::ImageType::e2D)
 		.setExtent(extent)
 		.setMipLevels(1)
 		.setArrayLayers(1)
 		.setFormat(format)
 		.setTiling(vk::ImageTiling::eOptimal)
 		.setUsage(vk::ImageUsageFlagBits::eDepthStencilAttachment)
-		.setSamples(vk::SampleCountFlagBits::e1);
+		.setSamples(vk::SampleCountFlagBits::e1));
 
+	auto memoryRequirements = device->getImageMemoryRequirements(image);
 
-	return ImageResource(createInfo, physicalDevice, device, vk::ImageAspectFlagBits::eDepth);
+	return ImageResource(
+		image, 
+		physicalDevice, 
+		device, 
+		vk::ImageAspectFlagBits::eDepth, 
+		format,
+		extent,
+		memoryRequirements);
 }
 
-ImageResource ImageResource::createColorResource(vk::Image image, const vk::UniqueDevice &device, Format format)
+ImageResource ImageResource::createColorResource(
+	vk::Image image, 
+	const vk::UniqueDevice &device, 
+	Format format,
+	vk::Extent3D extent)
 {
-	return ImageResource(image, device, format);
+	return ImageResource(image, device, format, extent);
 }
 
-ImageResource::ImageResource(vk::ImageCreateInfo imageCreateInfo, const vk::PhysicalDevice& physicalDevice, const vk::UniqueDevice& device, vk::ImageAspectFlags aspectFlags) 
-	: m_VkCreateInfo(imageCreateInfo), m_format(imageCreateInfo.format)
+// Allocates memory to the image and creates an image view to the provided image
+ImageResource::ImageResource(
+	vk::Image& image,
+	const vk::PhysicalDevice& physicalDevice, 
+	const vk::UniqueDevice& device, 
+	vk::ImageAspectFlags aspectFlags, 
+	Format format, 
+	vk::Extent3D extent,
+	vk::MemoryRequirements memoryRequirements) 
+		: Resource(physicalDevice, device, vk::MemoryPropertyFlagBits::eDeviceLocal, memoryRequirements)
+		, m_vkImage(image)
+		, m_format(format)
+		, m_vkExtent(extent)
 {
-	m_VkImage = device.get().createImage(imageCreateInfo);
+	device->bindImageMemory(m_vkImage, *m_vkMemory, 0);
 
-	vk::MemoryRequirements memoryRequirements = device.get().getImageMemoryRequirements(m_VkImage);
-
-	uint32_t memoryType;
-
-	auto memoryProperties = physicalDevice.getMemoryProperties();
-	for (auto i = 0; i < memoryProperties.memoryTypeCount; ++i) {
-		if (memoryRequirements.memoryTypeBits & (1 << i) &&
-			memoryProperties.memoryTypes[i].propertyFlags & vk::MemoryPropertyFlagBits::eDeviceLocal) { //<-- TODO: make memPropFlagBit setable
-			memoryType = i;
-			break;
-		}
-	}
-
-	vk::MemoryAllocateInfo allocateInfo = {};
-	allocateInfo.setAllocationSize(memoryRequirements.size)
-		.setMemoryTypeIndex(memoryType);
-
-	m_VkMemory = device.get().allocateMemory(allocateInfo);
-
-	device.get().bindImageMemory(m_VkImage, m_VkMemory, 0);
-
-	vk::ImageSubresourceRange subresourceRange;
-	subresourceRange.setAspectMask(aspectFlags)
-		.setLevelCount(1)
-		.setLayerCount(1);
-
-
-
-	vk::ImageViewCreateInfo viewCreateInfo;
-	viewCreateInfo.setImage(m_VkImage)
-		.setViewType(vk::ImageViewType::e2D)
-		.setFormat(m_format)
-		.setSubresourceRange(subresourceRange);
-
-	m_vkImageView = device->createImageView(viewCreateInfo);
+	createImageView(device, aspectFlags);
 
 	//TODO: transition image (via command buffers)
-
 }
 
-ImageResource::ImageResource(vk::Image image, const vk::UniqueDevice &device, Format format): m_VkImage(image), m_format(format)
+// Does NOT allocate memory, this is assumed to already be allocated; but does create a VkImageView.
+ImageResource::ImageResource(vk::Image& image, const vk::UniqueDevice &device, Format format, vk::Extent3D extent)
+	: Resource(device)
+	, m_vkImage(std::move(image))
+	, m_format(format)
+	, m_vkExtent(extent)
 {
-	setImageView(device);
+	createImageView(device);
 }
 
-Format ImageResource::findSupportedFormat(const vk::PhysicalDevice & physicalDevice, const std::vector<Format>& candidateFormats, vk::ImageTiling tiling, vk::FormatFeatureFlags features)
+Format ImageResource::findSupportedFormat(
+	const vk::PhysicalDevice & physicalDevice, 
+	const std::vector<Format>& candidateFormats, 
+	vk::ImageTiling tiling, 
+	vk::FormatFeatureFlags features)
 {
 	for (auto candidate : candidateFormats) {
 		auto properties = physicalDevice.getFormatProperties(candidate);
@@ -106,19 +117,15 @@ Format ImageResource::findSupportedFormat(const vk::PhysicalDevice & physicalDev
 	PAPAGO_ERROR("failed to find supported format");
 }
 
-void ImageResource::setImageView(const vk::UniqueDevice &device)
+void ImageResource::createImageView(const vk::UniqueDevice &device, vk::ImageAspectFlags aspectFlags)
 {
-	vk::ImageSubresourceRange subresourceRange;
-	subresourceRange.setAspectMask(vk::ImageAspectFlagBits::eColor)
-		.setLevelCount(1)
-		.setLayerCount(1);
-
-
-	vk::ImageViewCreateInfo viewCreateInfo;
-	viewCreateInfo.setImage(m_VkImage)
+	m_vkImageView = device->createImageViewUnique(vk::ImageViewCreateInfo()
+		.setImage(m_vkImage)
 		.setViewType(vk::ImageViewType::e2D)
 		.setFormat(m_format)
-		.setSubresourceRange(subresourceRange);
-
-	m_vkImageView = device->createImageView(viewCreateInfo);
+		.setSubresourceRange(vk::ImageSubresourceRange()
+			.setAspectMask(aspectFlags)
+			.setLevelCount(1)
+			.setLayerCount(1))
+	);
 }

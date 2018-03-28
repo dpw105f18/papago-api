@@ -3,6 +3,9 @@
 #include "swap_chain.hpp"
 #include "surface.hpp"
 #include "sampler.hpp"
+#include "vertex_shader.hpp"
+#include "fragment_shader.hpp"
+#include "render_pass.hpp"
 #include <WinUser.h>
 
 LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -123,4 +126,11 @@ int main()
 	bigUniform.upload(bigData);
 
 	auto dlData = bigUniform.download();
+
+	auto vertexShader = device.createVertexShader("shader/vert.spv", "main");
+	auto fragmentShader = device.createFragmentShader("shader/frag.spv", "main");
+
+	auto renderPass = device.createRenderPass(vertexShader, fragmentShader, swapChain);
+	
+	std::cin.ignore();
 }

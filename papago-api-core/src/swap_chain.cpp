@@ -9,33 +9,32 @@ SwapChain::SwapChain(
 	std::vector<ImageResource>& depthResources, 
 	vk::Extent2D				extent) 
 	: m_vkSwapChain(std::move(swapChain))
-	, m_colorResources(colorResources)
-	, m_depthResources(depthResources)
+	, m_colorResources(std::move(colorResources))
+	, m_depthResources(std::move(depthResources))
 {
-
 	// the vk::RenderPass set on the Framebuffers is a guideline for what RenderPass' are compatible with them
 	// this _may_ be error-prone...
-	auto renderPass = createDummyRenderPass(device);
+	m_vkRenderPass = createDummyRenderPass(device);
 
-	for (auto i = 0; i < colorResources.size(); ++i) {
+	for (auto i = 0; i < m_colorResources.size(); ++i) {
 		std::vector<vk::ImageView> attachments = {
-			colorResources[i].m_vkImageView,
-			depthResources[i].m_vkImageView
+			*m_colorResources[i].m_vkImageView,
+			*m_depthResources[i].m_vkImageView
 		};
 
 		vk::FramebufferCreateInfo framebufferCreateInfo = {};
-		framebufferCreateInfo.setRenderPass(renderPass)
+		framebufferCreateInfo.setRenderPass(*m_vkRenderPass)
 			.setAttachmentCount(attachments.size())
 			.setPAttachments(attachments.data())
 			.setWidth(extent.width)
 			.setHeight(extent.height)
 			.setLayers(1);
 
-		m_framebuffers.emplace_back(device->createFramebuffer(framebufferCreateInfo));
+		m_framebuffers.emplace_back(device->createFramebufferUnique(framebufferCreateInfo));
 	}
 }
 
-vk::RenderPass SwapChain::createDummyRenderPass(const vk::UniqueDevice& device)
+vk::UniqueRenderPass SwapChain::createDummyRenderPass(const vk::UniqueDevice& device)
 {
 	vk::AttachmentDescription colorDesc = {};
 	colorDesc.setFormat(m_colorResources[0].m_format)
@@ -77,5 +76,5 @@ vk::RenderPass SwapChain::createDummyRenderPass(const vk::UniqueDevice& device)
 		.setDependencyCount(1)
 		.setPDependencies(&subpassDependency);
 
-	return device->createRenderPass(renderPassCreateInfo);
+	return device->createRenderPassUnique(renderPassCreateInfo);
 }

@@ -19,10 +19,12 @@ public:
 	static std::vector<Device> enumerateDevices(Surface& surface, const vk::PhysicalDeviceFeatures &features, const std::vector<const char*> &extensions);
 
 	SwapChain createSwapChain(const Format&, size_t framebufferCount, SwapChainPresentMode, Surface&);
-	BufferResource createBufferResource();
 	GraphicsQueue createGraphicsQueue(SwapChain);
 	CommandBuffer createCommandBuffer(CommandBuffer::Usage);
 	SubCommandBuffer createSubCommandBuffer(SubCommandBuffer::Usage);
+	VertexShader createVertexShader(const std::string& filePath, const std::string& entryPoint) const;
+	FragmentShader createFragmentShader(const std::string& filePath, const std::string& entryPoint) const;
+	RenderPass createRenderPass(VertexShader&, FragmentShader&, const SwapChain&) const;
 	Sampler Device::createTextureSampler3D(Filter magFil, Filter minFil, TextureWrapMode modeU, TextureWrapMode modeV, TextureWrapMode modeW);
 	Sampler Device::createTextureSampler2D(Filter magFil, Filter minFil, TextureWrapMode modeU, TextureWrapMode modeV);
 	Sampler Device::createTextureSampler1D(Filter magFil, Filter minFil, TextureWrapMode modeU);
@@ -70,7 +72,7 @@ private:
 	static QueueFamilyIndices findQueueFamilies(const vk::PhysicalDevice& device, Surface& surface);
 	static vk::SurfaceFormatKHR chooseSwapSurfaceFormat(Format,  std::vector<vk::SurfaceFormatKHR>& availableFormats);
 	static vk::PresentModeKHR chooseSwapPresentMode(SwapChainPresentMode&, const std::vector<vk::PresentModeKHR>& availablePresentModes);
-	static vk::Extent2D chooseSwapChainExtend(uint32_t width, uint32_t height, const vk::SurfaceCapabilitiesKHR& availableCapabilities);
+	static vk::Extent2D chooseSwapChainExtent(uint32_t width, uint32_t height, const vk::SurfaceCapabilitiesKHR& availableCapabilities);
 	static std::vector<vk::DeviceQueueCreateInfo> createQueueCreateInfos(QueueFamilyIndices);
 	vk::SwapchainCreateInfoKHR createSwapChainCreateInfo(Surface&, const size_t& framebufferCount, const vk::SurfaceFormatKHR&, const vk::Extent2D&, const vk::SurfaceCapabilitiesKHR&, const vk::PresentModeKHR&) const;
 
@@ -86,9 +88,9 @@ template<typename T>
 BufferResource Device::createVertexBuffer(const std::vector<T>& vertexData) const
 {
 	size_t bufferSize = sizeof(T) * vertexData.size();
-	auto buffer = BufferResource(
-		m_vkDevice,
+	auto buffer = BufferResource::createBufferResource(
 		m_vkPhysicalDevice,
+		m_vkDevice,
 		bufferSize,
 		vk::BufferUsageFlagBits::eVertexBuffer,
 		// TODO: Convert to device local memory when command pool and buffers are ready
@@ -103,25 +105,26 @@ template<typename T>
 BufferResource Device::createIndexBuffer(const std::vector<T>& indexData) const
 {
 	size_t bufferSize = sizeof(T) * indexData.size();
-	auto buffer = BufferResource(
-		m_vkDevice,
+	auto buffer = BufferResource::createBufferResource(
 		m_vkPhysicalDevice,
+		m_vkDevice,
 		bufferSize,
 		vk::BufferUsageFlagBits::eIndexBuffer,
 		// TODO: Convert to device local memory when command pool and buffers are ready
 		vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
 
 	auto data = reinterpret_cast<char const *>(indexData.data());
+	//TODO: should the creation of buffers also upload right away?
 	buffer.upload(std::vector<char>(data, data + bufferSize));
-	return buffer;
+	return std::move(buffer);
 }
 
 template<size_t N>
 BufferResource Device::createUniformBuffer() const
 {
-	return BufferResource(
-		m_vkDevice,
+	return BufferResource::createBufferResource(
 		m_vkPhysicalDevice,
+		m_vkDevice,
 		N,
 		vk::BufferUsageFlagBits::eUniformBuffer,
 		vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);

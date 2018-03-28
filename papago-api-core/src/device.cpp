@@ -1,14 +1,23 @@
 #include "standard_header.hpp"
 #include "surface.hpp"
 #include "device.hpp"
-#include <set>
 #include "swap_chain.hpp"
 #include "image_resource.hpp"
+#include "vertex_shader.hpp"
+#include "fragment_shader.hpp"
+#include "render_pass.hpp"
 #include "sampler.hpp"
+#include <set>
+
 
 //Provides a vector of devices with the given [features] and [extensions] enabled
 std::vector<Device> Device::enumerateDevices(Surface& surface, const vk::PhysicalDeviceFeatures &features, const std::vector<const char*> &extensions)
 {
+	std::vector<const char*> enabledLayers;
+#ifdef PAPAGO_USE_VALIDATION_LAYERS
+	enabledLayers.push_back("VK_LAYER_LUNARG_standard_validation");
+#endif 
+
 	std::vector<Device> result;
 
 	for (auto& physicalDevice : surface.m_vkInstance->enumeratePhysicalDevices()) {
@@ -23,7 +32,8 @@ std::vector<Device> Device::enumerateDevices(Surface& surface, const vk::Physica
 			.setEnabledExtensionCount(extensions.size())
 			.setPpEnabledExtensionNames(extensions.data())
 			.setPEnabledFeatures(&features)
-			.setEnabledLayerCount(0)
+			.setEnabledLayerCount(enabledLayers.size())
+			.setPpEnabledLayerNames(enabledLayers.data())
 			.setQueueCreateInfoCount(queueCreateInfos.size())
 			.setPQueueCreateInfos(queueCreateInfos.data()));
 
@@ -162,7 +172,7 @@ SwapChain Device::createSwapChain(const Format& format, size_t framebufferCount,
 
 	auto presentMode = chooseSwapPresentMode(preferredPresentMode, details.presentmodes); 
 
-	auto extent = chooseSwapChainExtend(surface.getWidth(), surface.getHeight(), details.capabilities);
+	auto extent = chooseSwapChainExtent(surface.getWidth(), surface.getHeight(), details.capabilities);
 
 	if (details.capabilities.maxImageCount > 0 &&
 		framebufferCount > details.capabilities.maxImageCount) {
@@ -184,61 +194,75 @@ SwapChain Device::createSwapChain(const Format& format, size_t framebufferCount,
 		Format::eD24UnormS8Uint
 	};
 
+	auto resourceExtent = vk::Extent3D(extent.width, extent.height, 1);
+
 	for (auto i = 0; i < images.size(); ++i) {
 		colorResources.emplace_back(
 			ImageResource::createColorResource(
 				images[i], 
 				m_vkDevice, 
-				swapFormat.format));
+				swapFormat.format,
+				resourceExtent));
 
+		//TODO: configurable amount of depth buffers?
 		depthResources.emplace_back(
 			ImageResource::createDepthResource(
 				m_vkPhysicalDevice, m_vkDevice, 
-				extent.width, extent.height, 
+				resourceExtent,
 				formatCandidates));
 	}
 
 	return SwapChain(m_vkDevice, swapChain, colorResources, depthResources, extent);
+
 }
+
+VertexShader Device::createVertexShader(const std::string & filePath, const std::string & entryPoint) const {
+	return std::move(VertexShader(m_vkDevice, filePath, entryPoint));	//<-- m_vkStageCreateInfo loses its entry-point if not std::move'd
+} 
+
+FragmentShader Device::createFragmentShader(const std::string & filePath, const std::string & entryPoint) const {
+	return std::move(FragmentShader(m_vkDevice, filePath, entryPoint)); //<-- m_vkStageCreateInfo loses its entry-point if not std::move'd
+}
+
 
 Sampler Device::createTextureSampler3D(Filter magFilter, Filter minFilter, TextureWrapMode wrapU, TextureWrapMode wrapV, TextureWrapMode wrapW)
 {
 	//TODO: provide builder-pattern to API user -AM/AB
-	Sampler sampler(SamplerD::e3D)
-		.setMagFilter(magFil)
-		.setMinFilter(magFil)
-		.setTextureWrapU(modeU)
-		.setTextureWrapV(modeV)
-		.setTextureWrapW(modeW)
+	auto& sampler = Sampler(SamplerD::e3D)
+		.setMagFilter(magFilter)
+		.setMinFilter(magFilter)
+		.setTextureWrapU(wrapU)
+		.setTextureWrapV(wrapV)
+		.setTextureWrapW(wrapW);
 
 	sampler.vk_mTextureSampler = m_vkDevice->createSamplerUnique(sampler.m_vkSamplerCreateInfo);
 
-	return sampler;
+	return std::move(sampler);
 }
 
 Sampler Device::createTextureSampler2D(Filter magFilter, Filter minFilter, TextureWrapMode wrapU, TextureWrapMode wrapV)
 {
-	Sampler sampler(SamplerD::e2D)
+	auto&  sampler = Sampler(SamplerD::e2D)
 		.setMagFilter(magFilter)
 		.setMinFilter(minFilter)
 		.setTextureWrapU(wrapU)
-		.setTextureWrapV(wrapV)
+		.setTextureWrapV(wrapV);
 
 	sampler.vk_mTextureSampler = m_vkDevice->createSamplerUnique(sampler.m_vkSamplerCreateInfo);
 
-	return sampler;
+	return std::move(sampler);
 }
 
 Sampler Device::createTextureSampler1D(Filter magFilter, Filter minFilter, TextureWrapMode wrapU )
 {
-	Sampler sampler(SamplerD::e1D)
+	auto& sampler = Sampler(SamplerD::e1D)
 		.setMagFilter(magFilter)
 		.setMinFilter(minFilter)
-		.setTextureWrapU(wrapU)
+		.setTextureWrapU(wrapU);
 
 	sampler.vk_mTextureSampler = m_vkDevice->createSamplerUnique(sampler.m_vkSamplerCreateInfo);
 
-	return sampler;
+	return std::move(sampler);
 }
 
 //TODO: rename? make as public method on sampler? -AM/AB
@@ -247,6 +271,14 @@ void Device::createTextureSampler(Sampler sampler)
 	m_vkDevice->createSamplerUnique(sampler.m_vkSamplerCreateInfo);
 }
 
+RenderPass Device::createRenderPass(VertexShader &vertexShader, FragmentShader &fragmentShader, const SwapChain &swapChain) const
+{
+	// TODO: Dangerous hacking, fix this by adding error handling instead of expecting there always being data available.
+	auto extent = swapChain.m_colorResources[0].m_vkExtent;
+	auto format = swapChain.m_colorResources[0].m_format;
+
+	return RenderPass(m_vkDevice, vertexShader, fragmentShader, { extent.width, extent.height }, format);
+}
 
 Device::Device(vk::PhysicalDevice physicalDevice, vk::UniqueDevice &device) 
 	: m_vkPhysicalDevice(physicalDevice)
@@ -308,7 +340,7 @@ vk::PresentModeKHR Device::chooseSwapPresentMode(SwapChainPresentMode &preferred
 	return bestMode;
 }
 
-vk::Extent2D Device::chooseSwapChainExtend(uint32_t width, uint32_t height, const vk::SurfaceCapabilitiesKHR & capabilities)
+vk::Extent2D Device::chooseSwapChainExtent(uint32_t width, uint32_t height, const vk::SurfaceCapabilitiesKHR & capabilities)
 {
 
 	if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
