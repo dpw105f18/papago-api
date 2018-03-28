@@ -96,7 +96,7 @@ int main()
 	auto surface = Surface(winWidth, winHeight, hwnd);
 	vk::PhysicalDeviceFeatures features = {};
 	features.samplerAnisotropy = VK_TRUE;
-	auto devices = Device::enumerateDevices(surface, features, { VK_KHR_SWAPCHAIN_EXTENSION_NAME });
+	auto devices = Device::enumerateDevices(surface, features, { VK_KHR_SWAPCHAIN_EXTENSION_NAME, VK_KHR_SAMPLER_MIRROR_CLAMP_TO_EDGE_EXTENSION_NAME });
 	auto& device = devices[0];
 	auto swapChain = device.createSwapChain(Format::eR8G8B8Unorm, 3, SwapChainPresentMode::eMailbox, surface);
 	auto vertexBuffer = device.createVertexBuffer(std::vector<float>{

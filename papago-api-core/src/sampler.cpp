@@ -1,6 +1,18 @@
 #include "standard_header.hpp"
 #include "sampler.hpp"
 
+Sampler::Sampler(SamplerD dimension)
+{
+	m_dimension = dimension;
+
+	m_vkSamplerCreateInfo.magFilter = vk::Filter::eLinear;
+	m_vkSamplerCreateInfo.minFilter = vk::Filter::eLinear;
+	m_vkSamplerCreateInfo.anisotropyEnable = VK_TRUE;
+	m_vkSamplerCreateInfo.maxAnisotropy = 16;
+	m_vkSamplerCreateInfo.borderColor = vk::BorderColor::eIntOpaqueBlack;
+	m_vkSamplerCreateInfo.mipmapMode = vk::SamplerMipmapMode::eLinear;
+}
+
 Sampler& Sampler::setMagFilter(Filter filter)
 {
 	m_vkSamplerCreateInfo.magFilter = filter;

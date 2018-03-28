@@ -201,51 +201,47 @@ SwapChain Device::createSwapChain(const Format& format, size_t framebufferCount,
 	return SwapChain(m_vkDevice, swapChain, colorResources, depthResources, extent);
 }
 
-Sampler Device::createTextureSampler3D(Filter magFil, Filter minFil, TextureWrapMode modeU, TextureWrapMode modeV, TextureWrapMode modeW)
+Sampler Device::createTextureSampler3D(Filter magFilter, Filter minFilter, TextureWrapMode wrapU, TextureWrapMode wrapV, TextureWrapMode wrapW)
 {
-	Sampler sampler(SamplerD::e3D);
-
-	sampler.setMagFilter(magFil);
-	sampler.setMinFilter(magFil);
-
-	sampler.setTextureWrapU(modeU);
-	sampler.setTextureWrapV(modeV);
-	sampler.setTextureWrapW(modeW);
+	//TODO: provide builder-pattern to API user -AM/AB
+	Sampler sampler(SamplerD::e3D)
+		.setMagFilter(magFil)
+		.setMinFilter(magFil)
+		.setTextureWrapU(modeU)
+		.setTextureWrapV(modeV)
+		.setTextureWrapW(modeW)
 
 	sampler.vk_mTextureSampler = m_vkDevice->createSamplerUnique(sampler.m_vkSamplerCreateInfo);
 
 	return sampler;
 }
 
-Sampler Device::createTextureSampler2D(Filter magFil, Filter minFil, TextureWrapMode modeU, TextureWrapMode modeV)
+Sampler Device::createTextureSampler2D(Filter magFilter, Filter minFilter, TextureWrapMode wrapU, TextureWrapMode wrapV)
 {
-	Sampler sampler(SamplerD::e2D);
-
-	sampler.setMagFilter(magFil);
-	sampler.setMinFilter(magFil);
-
-	sampler.setTextureWrapU(modeU);
-	sampler.setTextureWrapV(modeV);
+	Sampler sampler(SamplerD::e2D)
+		.setMagFilter(magFilter)
+		.setMinFilter(minFilter)
+		.setTextureWrapU(wrapU)
+		.setTextureWrapV(wrapV)
 
 	sampler.vk_mTextureSampler = m_vkDevice->createSamplerUnique(sampler.m_vkSamplerCreateInfo);
 
 	return sampler;
 }
 
-Sampler Device::createTextureSampler1D(Filter magFil, Filter minFil, TextureWrapMode modeU)
+Sampler Device::createTextureSampler1D(Filter magFilter, Filter minFilter, TextureWrapMode wrapU )
 {
-	Sampler sampler(SamplerD::e1D);
-
-	sampler.setMagFilter(magFil);
-	sampler.setMinFilter(magFil);
-
-	sampler.setTextureWrapU(modeU);
+	Sampler sampler(SamplerD::e1D)
+		.setMagFilter(magFilter)
+		.setMinFilter(minFilter)
+		.setTextureWrapU(wrapU)
 
 	sampler.vk_mTextureSampler = m_vkDevice->createSamplerUnique(sampler.m_vkSamplerCreateInfo);
 
 	return sampler;
 }
 
+//TODO: rename? make as public method on sampler? -AM/AB
 void Device::createTextureSampler(Sampler sampler)
 {
 	m_vkDevice->createSamplerUnique(sampler.m_vkSamplerCreateInfo);
