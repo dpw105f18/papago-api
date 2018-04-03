@@ -38,7 +38,7 @@ std::vector<Device> Device::enumerateDevices(Surface& surface, const vk::Physica
 			.setQueueCreateInfoCount(queueCreateInfos.size())
 			.setPQueueCreateInfos(queueCreateInfos.data()));
 
-		result.push_back(Device(physicalDevice, logicalDevice));
+		result.push_back(Device(physicalDevice, logicalDevice, surface));
 	}
 	
 	return result;
@@ -165,22 +165,22 @@ bool Device::areExtensionsSupported(const vk::PhysicalDevice & physicalDevice, c
 }
 
 // framebufferCount is a prefered minimum of buffers in the swapchain
-SwapChain Device::createSwapChain(const Format& format, size_t framebufferCount, SwapChainPresentMode preferredPresentMode, Surface& surface)
+SwapChain Device::createSwapChain(const Format& format, size_t framebufferCount, SwapChainPresentMode preferredPresentMode)
 {
-	auto details = querySwapChainSupport(m_vkPhysicalDevice, surface);
+	auto details = querySwapChainSupport(m_vkPhysicalDevice, m_surface);
 
 	auto swapFormat = chooseSwapSurfaceFormat(format, details.formats);
 
 	auto presentMode = chooseSwapPresentMode(preferredPresentMode, details.presentmodes); 
 
-	auto extent = chooseSwapChainExtent(surface.getWidth(), surface.getHeight(), details.capabilities);
+	auto extent = chooseSwapChainExtent(m_surface.getWidth(), m_surface.getHeight(), details.capabilities);
 
 	if (details.capabilities.maxImageCount > 0 &&
 		framebufferCount > details.capabilities.maxImageCount) {
 		framebufferCount = details.capabilities.maxImageCount;
 	}
 
-	auto createInfo = createSwapChainCreateInfo(surface, framebufferCount, swapFormat, extent, details.capabilities, presentMode);
+	auto createInfo = createSwapChainCreateInfo(m_surface, framebufferCount, swapFormat, extent, details.capabilities, presentMode);
 
 	auto swapChain =  m_vkDevice->createSwapchainKHRUnique(createInfo);
 
@@ -217,10 +217,16 @@ SwapChain Device::createSwapChain(const Format& format, size_t framebufferCount,
 
 }
 
-GraphicsQueue Device::createGraphicsQueue(Surface& surface, SwapChain& swapChain)
+GraphicsQueue Device::createGraphicsQueue(SwapChain& swapChain)
 {
-	auto queueFamilyIndices = findQueueFamilies(m_vkPhysicalDevice, surface);
+	auto queueFamilyIndices = findQueueFamilies(m_vkPhysicalDevice, m_surface);
 	return std::move(GraphicsQueue(m_vkDevice, queueFamilyIndices.graphicsFamily, queueFamilyIndices.presentFamily, swapChain));
+}
+
+CommandBuffer Device::createCommandBuffer(Usage usage)
+{
+	auto queueFamilyIndices = findQueueFamilies(m_vkPhysicalDevice, m_surface);
+	return std::move(CommandBuffer(m_vkDevice, queueFamilyIndices.graphicsFamily, usage));
 }
 
 VertexShader Device::createVertexShader(const std::string & filePath, const std::string & entryPoint) const {
@@ -287,9 +293,10 @@ RenderPass Device::createRenderPass(VertexShader &vertexShader, FragmentShader &
 	return RenderPass(m_vkDevice, vertexShader, fragmentShader, { extent.width, extent.height }, format);
 }
 
-Device::Device(vk::PhysicalDevice physicalDevice, vk::UniqueDevice &device) 
+Device::Device(vk::PhysicalDevice physicalDevice, vk::UniqueDevice &device, Surface &surface)
 	: m_vkPhysicalDevice(physicalDevice)
 	, m_vkDevice(std::move(device))
+	, m_surface(surface)
 {
 
 }

@@ -8,6 +8,7 @@ class VertexShader;
 class RenderPass
 {
 public:
+	explicit operator vk::RenderPass&();
 
 private:
 	RenderPass(const vk::UniqueDevice&, const VertexShader&, const FragmentShader&, const vk::Extent2D&, Format);
@@ -19,4 +20,5 @@ private:
 	vk::UniquePipelineLayout m_vkPipelineLayout;
 
 	friend class Device;
+	friend class CommandBuffer;
 };

@@ -8,7 +8,7 @@ class SwapChain;
 class GraphicsQueue
 {
 public:
-	void submitCommands(std::vector<CommandBuffer>);
+	void submitCommands(std::vector<CommandBuffer>&);
 	void present();
 	uint32_t getCurrentFrameIndex();
 private:

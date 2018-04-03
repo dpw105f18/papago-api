@@ -2,7 +2,7 @@
 #include "graphics_queue.hpp"
 #include "swap_chain.hpp"
 
-void GraphicsQueue::submitCommands(std::vector<CommandBuffer> commandBuffers)
+void GraphicsQueue::submitCommands(std::vector<CommandBuffer>& commandBuffers)
 {
 	std::vector<vk::Semaphore> semaphores = { *m_vkRenderFinishSemaphore };
 	std::vector<vk::Semaphore> waitSemaphores = { *m_vkImageAvailableSemaphore };
@@ -41,7 +41,7 @@ void GraphicsQueue::present()
 
 	m_vkPresentQueue.presentKHR(presentInfo);
 
-	//TODO: handle wait another way?
+	//TODO: handle wait another way? -AM
 	m_vkPresentQueue.waitIdle();
 }
 

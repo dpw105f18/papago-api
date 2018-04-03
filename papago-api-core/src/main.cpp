@@ -7,6 +7,7 @@
 #include "fragment_shader.hpp"
 #include "render_pass.hpp"
 #include "graphics_queue.hpp"
+#include "command_buffer.hpp"
 #include <WinUser.h>
 
 LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -102,7 +103,7 @@ int main()
 	features.samplerAnisotropy = VK_TRUE;
 	auto devices = Device::enumerateDevices(surface, features, { VK_KHR_SWAPCHAIN_EXTENSION_NAME, VK_KHR_SAMPLER_MIRROR_CLAMP_TO_EDGE_EXTENSION_NAME });
 	auto& device = devices[0];
-	auto swapChain = device.createSwapChain(Format::eR8G8B8Unorm, 3, SwapChainPresentMode::eMailbox, surface);
+	auto swapChain = device.createSwapChain(Format::eR8G8B8Unorm, 3, SwapChainPresentMode::eMailbox);
 	auto vertexBuffer = device.createVertexBuffer(std::vector<float>{
 			 0.0f,  0.5f, 0.0f,
 			 0.5f, -0.4f, 0.0f,
@@ -133,11 +134,21 @@ int main()
 
 	auto renderPass = device.createRenderPass(vertexShader, fragmentShader, swapChain);
 
-	auto graphicsQueue = device.createGraphicsQueue(surface, swapChain);
+	auto graphicsQueue = device.createGraphicsQueue(swapChain);
 
-	//TODO: using the graphics queue when CommandBuffers are working -AM
-	//graphicsQueue.submitCommands({});
-	//graphicsQueue.present();
+	auto cmd = device.createCommandBuffer(Usage::RESET);
+
+	cmd.begin(renderPass, swapChain);
+	cmd.drawInstanced(3, 1, 0, 0);
+	cmd.end();
+
+	
+	auto cmdBuffers = std::vector<CommandBuffer>();
+	cmdBuffers.push_back(std::move(cmd));	//TODO: make CommandBuffer members non-unique. -AM
+	
+	auto frameIndex = graphicsQueue.getCurrentFrameIndex();
+	graphicsQueue.submitCommands(cmdBuffers);
+	graphicsQueue.present();
 	
 	std::cin.ignore();
 }

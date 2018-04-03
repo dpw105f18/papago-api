@@ -35,4 +35,12 @@ enum class Filter
 	eCubicIMG = VK_FILTER_CUBIC_IMG
 };
 */
+
+enum Usage {
+	RESET,
+	REUSE
+};
+
 using TextureWrapMode = vk::SamplerAddressMode;
+
+using CommandBufferUsage = vk::CommandPoolCreateFlagBits;
