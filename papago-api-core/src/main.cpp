@@ -146,7 +146,7 @@ int main()
 	auto cmdBuffers = std::vector<CommandBuffer>();
 	cmdBuffers.push_back(std::move(cmd));	//TODO: make CommandBuffer members non-unique. -AM
 	
-	auto frameIndex = graphicsQueue.getCurrentFrameIndex();
+	auto frameIndex = graphicsQueue.getCurrentFrameIndex();	//<-- TODO: make sure that getNextAvailableImageKHR() is called before submitCommands() in some other way. -AM
 	graphicsQueue.submitCommands(cmdBuffers);
 	graphicsQueue.present();
 	
