@@ -10,6 +10,9 @@ public:
 	ImageResource(ImageResource&& other) noexcept;
 	~ImageResource();
 
+	template<vk::ImageLayout source, vk::ImageLayout destination>
+	void transition(const CommandBuffer&);
+
 	// Inherited via Resource
 	void destroy() override;
 
@@ -59,4 +62,37 @@ private:
 
 	friend class SwapChain;
 	friend class Device;
+	friend class CommandBuffer;
 };
+
+template<>
+inline void ImageResource::transition<vk::ImageLayout::eUndefined, vk::ImageLayout::eTransferDstOptimal>(const CommandBuffer & commandBuffer)
+{
+	auto imageMemoryBarrier = vk::ImageMemoryBarrier(
+		vk::AccessFlags(),
+		vk::AccessFlagBits::eTransferWrite,
+		vk::ImageLayout::eUndefined,
+		vk::ImageLayout::eTransferDstOptimal,
+		VK_QUEUE_FAMILY_IGNORED,
+		VK_QUEUE_FAMILY_IGNORED,
+		m_vkImage,
+		{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
+
+		((vk::CommandBuffer&)commandBuffer).pipelineBarrier(
+		vk::PipelineStageFlagBits::eTopOfPipe, 
+		vk::PipelineStageFlagBits::eTransfer, 
+		vk::DependencyFlags(), 
+		{}, 
+		{}, 
+		{ imageMemoryBarrier });
+}
+
+
+template<vk::ImageLayout source, vk::ImageLayout destination>
+inline void ImageResource::transition(const CommandBuffer &)
+{
+	std::stringstream stream;
+
+	stream << "Transition from " << vk::to_string(source) << " to " << vk::to_string(destination) << " not implemented.";
+	throw std::runtime_error(stream.str());
+}

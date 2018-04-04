@@ -49,6 +49,7 @@ void CommandBuffer::begin(RenderPass & renderPass, SwapChain& swapChain)
 
 	//TODO: can we assume a graphics bindpoint and pipeline? -AM
 	m_vkCommandBuffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *renderPass.m_vkGraphicsPipeline);
+
 }
 
 void CommandBuffer::end()
