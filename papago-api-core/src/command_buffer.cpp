@@ -26,18 +26,20 @@ CommandBuffer::CommandBuffer(const vk::UniqueDevice &device, int queueFamilyInde
 }
 
 //TODO: make checks to see if cmd.begin(...) has been called before. -AM
-void CommandBuffer::begin(RenderPass & renderPass, SwapChain& swapChain)
+void CommandBuffer::begin(RenderPass & renderPass, SwapChain& swapChain, uint32_t imageIndex)
 {
 	vk::Rect2D renderArea = {};
 	renderArea.setOffset({ 0,0 })
 		.setExtent(swapChain.m_vkExtent);
 
+	auto clearValue = vk::ClearValue(); // NOTE: This is currently the clear color being used - CW 2018-04-04
+
 	vk::RenderPassBeginInfo renderPassBeginInfo = {};
 	renderPassBeginInfo.setRenderPass(static_cast<vk::RenderPass>(renderPass))
-		.setFramebuffer(*swapChain.m_framebuffers[swapChain.getCurrentFramebufferIndex()])
+		.setFramebuffer(*swapChain.m_framebuffers[imageIndex])
 		.setRenderArea(renderArea)
 		.setClearValueCount(1)
-		.setPClearValues(&vk::ClearValue());
+		.setPClearValues(&clearValue);
 
 	//note: no clear-values because of the specific constructor overload...
 

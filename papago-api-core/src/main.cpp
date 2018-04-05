@@ -93,62 +93,72 @@ struct UniformBufferObject{};
 
 int main()
 {
-	size_t winHeight = 800;
-	size_t winWidth = 600;
-	auto hwnd = StartWindow(winWidth, winHeight);
+	{
+		size_t winHeight = 800;
+		size_t winWidth = 600;
+		auto hwnd = StartWindow(winWidth, winHeight);
 
 
-	auto surface = Surface(winWidth, winHeight, hwnd);
-	vk::PhysicalDeviceFeatures features = {};
-	features.samplerAnisotropy = VK_TRUE;
-	auto devices = Device::enumerateDevices(surface, features, { VK_KHR_SWAPCHAIN_EXTENSION_NAME, VK_KHR_SAMPLER_MIRROR_CLAMP_TO_EDGE_EXTENSION_NAME });
-	auto& device = devices[0];
-	auto swapChain = device.createSwapChain(Format::eR8G8B8Unorm, 3, SwapChainPresentMode::eMailbox);
-	auto vertexBuffer = device.createVertexBuffer(std::vector<float>{
-			 0.0f,  0.5f, 0.0f,
-			 0.5f, -0.4f, 0.0f,
-			-0.5f, -0.4f, 0.0f,
-	});
-	auto indexBuffer = device.createIndexBuffer(std::vector<uint16_t>{
-		0, 1, 2
-	});
-	auto uniformBuffer = device.createUniformBuffer<sizeof(UniformBufferObject)>();
+		auto surface = Surface(winWidth, winHeight, hwnd);
+		vk::PhysicalDeviceFeatures features = {};
+		features.samplerAnisotropy = VK_TRUE;
+		auto devices = Device::enumerateDevices(surface, features, { VK_KHR_SWAPCHAIN_EXTENSION_NAME, VK_KHR_SAMPLER_MIRROR_CLAMP_TO_EDGE_EXTENSION_NAME });
+		auto& device = devices[0];
+		auto swapChain = device.createSwapChain(Format::eR8G8B8Unorm, 3, SwapChainPresentMode::eMailbox);
+		auto vertexBuffer = device.createVertexBuffer(std::vector<float>{
+			0.0f, 0.5f, 0.0f,
+				0.5f, -0.4f, 0.0f,
+				-0.5f, -0.4f, 0.0f,
+		});
+		auto indexBuffer = device.createIndexBuffer(std::vector<uint16_t>{
+			0, 1, 2
+		});
+		auto uniformBuffer = device.createUniformBuffer<sizeof(UniformBufferObject)>();
 
-	auto bigUniform = device.createUniformBuffer<1000>();
+		auto bigUniform = device.createUniformBuffer<1000>();
 
-	std::vector<char> bigData(1000);
-	for (auto i = 0; i < 1000; ++i) {
-		bigData[i] = i % 256;
+		std::vector<char> bigData(1000);
+		for (auto i = 0; i < 1000; ++i) {
+			bigData[i] = i % 256;
+		}
+
+		auto sampler3D = device.createTextureSampler3D(Filter::eNearest, Filter::eNearest, TextureWrapMode::eClampToBorder, TextureWrapMode::eClampToEdge, TextureWrapMode::eRepeat);
+		auto sampler2D = device.createTextureSampler2D(Filter::eLinear, Filter::eLinear, TextureWrapMode::eMirroredRepeat, TextureWrapMode::eMirrorClampToEdge);
+		auto sampler1D = device.createTextureSampler1D(Filter::eNearest, Filter::eNearest, TextureWrapMode::eRepeat);
+
+		bigUniform.upload(bigData);
+
+		auto dlData = bigUniform.download();
+
+		auto vertexShader = device.createVertexShader("shader/vert.spv", "main");
+		auto fragmentShader = device.createFragmentShader("shader/frag.spv", "main");
+
+		auto renderPass = device.createRenderPass(vertexShader, fragmentShader, swapChain);
+
+		auto graphicsQueue = device.createGraphicsQueue(swapChain);
+
+		while(true)
+		{
+			MSG msg;
+			if(PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
+			{
+				if (msg.message == WM_QUIT) {
+					break;
+				}
+				TranslateMessage(&msg);
+				DispatchMessage(&msg);
+			}
+			else {
+				auto cmd = device.createCommandBuffer(Usage::RESET);
+				cmd.begin(renderPass, swapChain, graphicsQueue.getCurrentFrameIndex());
+				cmd.drawInstanced(3, 1, 0, 0);
+				cmd.end();
+				std::vector<CommandBuffer> commandBuffers;
+				commandBuffers.push_back(std::move(cmd));
+				graphicsQueue.present(commandBuffers);
+			}
+		}
+		device.waitIdle();
 	}
-
-	auto sampler3D = device.createTextureSampler3D(Filter::eNearest, Filter::eNearest, TextureWrapMode::eClampToBorder, TextureWrapMode::eClampToEdge, TextureWrapMode::eRepeat);
-	auto sampler2D = device.createTextureSampler2D(Filter::eLinear, Filter::eLinear, TextureWrapMode::eMirroredRepeat, TextureWrapMode::eMirrorClampToEdge);
-	auto sampler1D = device.createTextureSampler1D(Filter::eNearest, Filter::eNearest, TextureWrapMode::eRepeat);
-
-	bigUniform.upload(bigData);
-
-	auto dlData = bigUniform.download();
-
-	auto vertexShader = device.createVertexShader("shader/vert.spv", "main");
-	auto fragmentShader = device.createFragmentShader("shader/frag.spv", "main");
-
-	auto renderPass = device.createRenderPass(vertexShader, fragmentShader, swapChain);
-
-	auto graphicsQueue = device.createGraphicsQueue(swapChain);
-
-	auto cmd = device.createCommandBuffer(Usage::RESET);
-
-	cmd.begin(renderPass, swapChain);
-	cmd.drawInstanced(3, 1, 0, 0);
-	cmd.end();
-
-	
-	auto cmdBuffers = std::vector<CommandBuffer>();
-	cmdBuffers.push_back(std::move(cmd));	//TODO: make CommandBuffer members non-unique. -AM
-	
-	auto frameIndex = graphicsQueue.getCurrentFrameIndex();	//<-- TODO: make sure that getNextAvailableImageKHR() is called before submitCommands() in some other way. -AM
-	graphicsQueue.submitCommands(cmdBuffers);
-	graphicsQueue.present();
-	
 	std::cin.ignore();
 }

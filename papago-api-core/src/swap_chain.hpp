@@ -6,9 +6,6 @@
 class SwapChain {
 public:
 	explicit operator vk::SwapchainKHR&();
-
-	uint32_t getCurrentFramebufferIndex(); //TODO: hide this from API users? -AM
-
 private:
 	vk::UniqueSwapchainKHR m_vkSwapChain;
 	std::vector<ImageResource> m_colorResources;

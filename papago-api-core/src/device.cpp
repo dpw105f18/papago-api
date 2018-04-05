@@ -226,7 +226,7 @@ GraphicsQueue Device::createGraphicsQueue(SwapChain& swapChain)
 CommandBuffer Device::createCommandBuffer(Usage usage)
 {
 	auto queueFamilyIndices = findQueueFamilies(m_vkPhysicalDevice, m_surface);
-	return std::move(CommandBuffer(m_vkDevice, queueFamilyIndices.graphicsFamily, usage));
+	return { m_vkDevice, queueFamilyIndices.graphicsFamily, usage };
 }
 
 VertexShader Device::createVertexShader(const std::string & filePath, const std::string & entryPoint) const {
@@ -282,6 +282,11 @@ Sampler Device::createTextureSampler1D(Filter magFilter, Filter minFilter, Textu
 void Device::createTextureSampler(Sampler sampler)
 {
 	m_vkDevice->createSamplerUnique(sampler.m_vkSamplerCreateInfo);
+}
+
+void Device::waitIdle()
+{
+	m_vkDevice->waitIdle();
 }
 
 RenderPass Device::createRenderPass(VertexShader &vertexShader, FragmentShader &fragmentShader, const SwapChain &swapChain) const

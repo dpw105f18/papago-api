@@ -37,6 +37,7 @@ public:
 	BufferResource createIndexBuffer(const std::vector<T>& indexData) const;
 	template<size_t N>
 	BufferResource createUniformBuffer() const;
+	void waitIdle();
 private:
 	struct SwapChainSupportDetails
 	{

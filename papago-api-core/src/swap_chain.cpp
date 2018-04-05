@@ -7,12 +7,6 @@ SwapChain::operator vk::SwapchainKHR&()
 	return *m_vkSwapChain;
 }
 
-uint32_t SwapChain::getCurrentFramebufferIndex()
-{
-	//TODO: implement currentFramebufferIndex. -AM
-	return 0;
-}
-
 SwapChain::SwapChain(
 	vk::UniqueDevice&			device, 
 	vk::UniqueSwapchainKHR&		swapChain, 

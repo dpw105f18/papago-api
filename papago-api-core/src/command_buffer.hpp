@@ -9,7 +9,7 @@ public:
 
 	//TODO: remove "override"s - place functionality in SubCommandBuffer or redesign relationship. -AM
 	void begin(const RenderPass&);
-	void begin(RenderPass&, SwapChain&);
+	void begin(RenderPass&, SwapChain&, uint32_t imageIndex);
 	void begin(const RenderPass&, ImageResource& depthStencilBuffer);
 	void begin(const RenderPass&, SwapChain&, ImageResource& depthStencilBuffer);
 
@@ -32,8 +32,8 @@ public:
 private:
 	CommandBuffer(const vk::UniqueDevice& device, int queueFamilyIndex, Usage);
 
-	vk::UniqueCommandBuffer m_vkCommandBuffer;
 	vk::UniqueCommandPool m_vkCommandPool;	//TODO: <-- make non-unique if we reuse command pools. -AM
+	vk::UniqueCommandBuffer m_vkCommandBuffer;
 	Usage m_usage; //TODO: <-- use this! -AM
 
 	friend class Device;
