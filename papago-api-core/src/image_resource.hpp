@@ -87,6 +87,50 @@ inline void ImageResource::transition<vk::ImageLayout::eUndefined, vk::ImageLayo
 		{ imageMemoryBarrier });
 }
 
+template<>
+inline void ImageResource::transition<vk::ImageLayout::eUndefined, vk::ImageLayout::eDepthStencilAttachmentOptimal>(const CommandBuffer & commandBuffer)
+{
+	auto imageMemoryBarrier = vk::ImageMemoryBarrier(
+		vk::AccessFlags(),
+		vk::AccessFlagBits::eDepthStencilAttachmentRead | vk::AccessFlagBits::eDepthStencilAttachmentWrite,
+		vk::ImageLayout::eUndefined,
+		vk::ImageLayout::eDepthStencilAttachmentOptimal,
+		VK_QUEUE_FAMILY_IGNORED,
+		VK_QUEUE_FAMILY_IGNORED,
+		m_vkImage,
+		{ vk::ImageAspectFlagBits::eDepth | vk::ImageAspectFlagBits::eStencil, 0, 1, 0, 1 });
+
+		((vk::CommandBuffer&)commandBuffer).pipelineBarrier(
+		vk::PipelineStageFlagBits::eTopOfPipe, 
+		vk::PipelineStageFlagBits::eEarlyFragmentTests, 
+		vk::DependencyFlags(), 
+		{}, 
+		{}, 
+		{ imageMemoryBarrier });
+}
+
+template<>
+inline void ImageResource::transition<vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eShaderReadOnlyOptimal>(const CommandBuffer & commandBuffer)
+{
+	auto imageMemoryBarrier = vk::ImageMemoryBarrier(
+	vk::AccessFlagBits::eTransferWrite,
+	vk::AccessFlagBits::eShaderRead,
+	vk::ImageLayout::eTransferDstOptimal,
+	vk::ImageLayout::eShaderReadOnlyOptimal,
+	VK_QUEUE_FAMILY_IGNORED,
+	VK_QUEUE_FAMILY_IGNORED,
+	m_vkImage,
+	{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
+
+	((vk::CommandBuffer&)commandBuffer).pipelineBarrier(
+	vk::PipelineStageFlagBits::eTransfer, 
+	vk::PipelineStageFlagBits::eFragmentShader,
+	vk::DependencyFlags(), 
+	{},
+	{}, 
+	{ imageMemoryBarrier });
+
+}
 
 template<vk::ImageLayout source, vk::ImageLayout destination>
 inline void ImageResource::transition(const CommandBuffer &)
