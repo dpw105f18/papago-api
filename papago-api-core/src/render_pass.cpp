@@ -52,7 +52,10 @@ RenderPass::RenderPass(
 		vk::ColorComponentFlagBits::eR
 		| vk::ColorComponentFlagBits::eG
 		| vk::ColorComponentFlagBits::eB
-		| vk::ColorComponentFlagBits::eA);
+		| vk::ColorComponentFlagBits::eA)
+		.setSrcColorBlendFactor(vk::BlendFactor::eOne)
+		.setSrcAlphaBlendFactor(vk::BlendFactor::eOne)
+		.setBlendEnable(1);
 
 	vk::PipelineColorBlendStateCreateInfo colorBlending;
 	colorBlending.setAttachmentCount(1)

@@ -9,7 +9,8 @@ class GraphicsQueue
 {
 public:
 	void present(std::vector<CommandBuffer>&);
-	uint32_t getCurrentFrameIndex() const;
+	uint32_t getCurrentFrameIndex();
+	void Wait();
 private:
 	uint32_t getNextFrameIndex();
 	void submitCommands(std::vector<CommandBuffer>&);

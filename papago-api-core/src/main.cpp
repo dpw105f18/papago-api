@@ -136,6 +136,7 @@ int main()
 		auto renderPass = device.createRenderPass(vertexShader, fragmentShader, swapChain);
 
 		auto graphicsQueue = device.createGraphicsQueue(swapChain);
+		size_t frameNo = 0;	//<-- for debugging
 
 		while(true)
 		{
@@ -156,6 +157,8 @@ int main()
 				std::vector<CommandBuffer> commandBuffers;
 				commandBuffers.push_back(std::move(cmd));
 				graphicsQueue.present(commandBuffers);
+				frameNo++;
+				graphicsQueue.Wait();
 			}
 		}
 		device.waitIdle();

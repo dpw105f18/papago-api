@@ -42,17 +42,25 @@ void GraphicsQueue::present(std::vector<CommandBuffer>& commandBuffers)
 		.setPSwapchains(swapchains.data())
 		.setPImageIndices(&imageIndices);
 
-	m_vkPresentQueue.presentKHR(presentInfo);
+	auto res = m_vkPresentQueue.presentKHR(presentInfo);
 }
 
-uint32_t GraphicsQueue::getCurrentFrameIndex() const {
+//TODO: switch getCurrentFrameIndex and getNextFrameIndex back. -AM
+uint32_t GraphicsQueue::getCurrentFrameIndex() {
+	
+	auto result = m_vkDevice->acquireNextImageKHR(static_cast<vk::SwapchainKHR>(m_swapChain), 0, *m_vkImageAvailableSemaphore, vk::Fence());
+	m_currentFrameIndex = result.value;
 	return m_currentFrameIndex;
+}
+
+//TODO: don't present this to API users. -AM
+void GraphicsQueue::Wait()
+{
+	m_vkPresentQueue.waitIdle();
 }
 
 uint32_t GraphicsQueue::getNextFrameIndex()
 {
-	auto result = m_vkDevice->acquireNextImageKHR(static_cast<vk::SwapchainKHR>(m_swapChain), 0, *m_vkImageAvailableSemaphore, vk::Fence());
-	m_currentFrameIndex = result.value;
 	return m_currentFrameIndex;
 }
 
