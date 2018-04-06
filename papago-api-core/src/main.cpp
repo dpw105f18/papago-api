@@ -94,8 +94,8 @@ struct UniformBufferObject{};
 int main()
 {
 	{
-		size_t winHeight = 800;
-		size_t winWidth = 600;
+		size_t winWidth = 800;
+		size_t winHeight = 600;
 		auto hwnd = StartWindow(winWidth, winHeight);
 
 

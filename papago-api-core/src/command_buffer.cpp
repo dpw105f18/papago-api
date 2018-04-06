@@ -32,14 +32,18 @@ void CommandBuffer::begin(RenderPass & renderPass, SwapChain& swapChain, uint32_
 	renderArea.setOffset({ 0,0 })
 		.setExtent(swapChain.m_vkExtent);
 
-	auto clearValue = vk::ClearValue(); // NOTE: This is currently the clear color being used - CW 2018-04-04
+
+	std::array<vk::ClearValue, 2> clearValues;
+
+	clearValues[0].setColor(vk::ClearColorValue(std::array<float, 4>{0, 0, 0, 1}));
+	clearValues[1].setDepthStencil(vk::ClearDepthStencilValue{ 1.0, 0 });
 
 	vk::RenderPassBeginInfo renderPassBeginInfo = {};
 	renderPassBeginInfo.setRenderPass(static_cast<vk::RenderPass>(renderPass))
 		.setFramebuffer(*swapChain.m_framebuffers[imageIndex])
 		.setRenderArea(renderArea)
-		.setClearValueCount(1)
-		.setPClearValues(&clearValue);
+		.setClearValueCount(clearValues.size())
+		.setPClearValues(clearValues.data());
 
 	//note: no clear-values because of the specific constructor overload...
 

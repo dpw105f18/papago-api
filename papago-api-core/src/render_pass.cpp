@@ -44,8 +44,8 @@ RenderPass::RenderPass(
 	rasterizer.setPolygonMode(vk::PolygonMode::eFill)
 		.setLineWidth(1.0f)
 		.setCullMode(vk::CullModeFlagBits::eBack)
-		.setFrontFace(vk::FrontFace::eCounterClockwise)
-		.setRasterizerDiscardEnable(VK_TRUE);
+		.setFrontFace(vk::FrontFace::eClockwise)
+		.setRasterizerDiscardEnable(VK_FALSE);
 
 	vk::PipelineColorBlendAttachmentState colorBlendAttatchment;
 	colorBlendAttatchment.setColorWriteMask(
@@ -72,6 +72,16 @@ RenderPass::RenderPass(
 
 	m_vkRenderPass =  createDummyRenderpass(device, format);
 
+	vk::PipelineMultisampleStateCreateInfo multisampleCreateInfo = {};
+	multisampleCreateInfo.setRasterizationSamples(vk::SampleCountFlagBits::e1)
+		.setMinSampleShading(1.0f);
+
+	vk::PipelineDepthStencilStateCreateInfo depthCreateInfo = {};
+	depthCreateInfo.setDepthTestEnable(true)
+		.setDepthWriteEnable(true)
+		.setDepthCompareOp(vk::CompareOp::eLess)
+		.setMaxDepthBounds(1.0f);
+
 	// Not expecting vertex buffer or depth test 
 	vk::GraphicsPipelineCreateInfo pipelineCreateInfo = {};
 	pipelineCreateInfo.setStageCount(2)
@@ -82,7 +92,9 @@ RenderPass::RenderPass(
 		.setPRasterizationState(&rasterizer)
 		.setPColorBlendState(&colorBlending)
 		.setRenderPass(m_vkRenderPass.get())
-		.setLayout(m_vkPipelineLayout.get());
+		.setLayout(m_vkPipelineLayout.get())
+		.setPMultisampleState(&multisampleCreateInfo)
+		.setPDepthStencilState(&depthCreateInfo);
 
 	m_vkGraphicsPipeline = device->createGraphicsPipelineUnique(vk::PipelineCache(), pipelineCreateInfo);
 }
@@ -95,7 +107,7 @@ vk::UniqueRenderPass RenderPass::createDummyRenderpass(const vk::UniqueDevice& d
 		.setSamples(vk::SampleCountFlagBits::e1)
 		.setLoadOp(vk::AttachmentLoadOp::eClear)
 		.setStoreOp(vk::AttachmentStoreOp::eStore)
-		.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare)
+		.setStencilLoadOp(vk::AttachmentLoadOp::eLoad)
 		.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare)
 		.setInitialLayout(vk::ImageLayout::eUndefined)
 		.setFinalLayout(vk::ImageLayout::ePresentSrcKHR);
@@ -104,7 +116,7 @@ vk::UniqueRenderPass RenderPass::createDummyRenderpass(const vk::UniqueDevice& d
 
 	vk::AttachmentDescription depthAttachment;
 	depthAttachment.setFormat(vk::Format::eD32Sfloat)
-		.setLoadOp(vk::AttachmentLoadOp::eDontCare) // Clear buffer data at load
+		.setLoadOp(vk::AttachmentLoadOp::eClear) // Clear buffer data at load
 		.setStoreOp(vk::AttachmentStoreOp::eDontCare)
 		.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare)
 		.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare)
