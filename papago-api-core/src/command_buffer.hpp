@@ -28,6 +28,9 @@ public:
 	void executeSubCommands(std::vector<SubCommandBuffer>);
 
 	explicit operator vk::CommandBuffer&();
+	const vk::CommandBuffer* operator ->() const {
+		return &*m_vkCommandBuffer;
+	}
 
 private:
 	CommandBuffer(const vk::UniqueDevice& device, int queueFamilyIndex, Usage);

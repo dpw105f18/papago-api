@@ -6,5 +6,5 @@ VertexShader::VertexShader(const vk::UniqueDevice & device, const std::string & 
 {
 	m_vkStageCreateInfo.setModule(m_vkShader.get())
 		.setStage(vk::ShaderStageFlagBits::eVertex)
-		.setPName(entryPoint.c_str());
+		.setPName(m_entryPoint.c_str());
 }

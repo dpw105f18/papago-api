@@ -150,7 +150,7 @@ int main()
 				DispatchMessage(&msg);
 			}
 			else {
-				auto cmd = device.createCommandBuffer(Usage::RESET);
+				auto cmd = device.createCommandBuffer(Usage::eReset);
 				cmd.begin(renderPass, swapChain, graphicsQueue.getCurrentFrameIndex());
 				cmd.drawInstanced(3, 1, 0, 0);
 				cmd.end();

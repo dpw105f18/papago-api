@@ -36,9 +36,9 @@ enum class Filter
 };
 */
 
-enum Usage {
-	RESET,
-	REUSE
+enum class Usage {
+	eReset,
+	eReuse
 };
 
 using TextureWrapMode = vk::SamplerAddressMode;

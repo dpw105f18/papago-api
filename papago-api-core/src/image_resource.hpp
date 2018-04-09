@@ -78,7 +78,7 @@ inline void ImageResource::transition<vk::ImageLayout::eUndefined, vk::ImageLayo
 		m_vkImage,
 		{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
 
-		((vk::CommandBuffer&)commandBuffer).pipelineBarrier(
+	commandBuffer->pipelineBarrier(
 		vk::PipelineStageFlagBits::eTopOfPipe, 
 		vk::PipelineStageFlagBits::eTransfer, 
 		vk::DependencyFlags(), 
@@ -100,7 +100,7 @@ inline void ImageResource::transition<vk::ImageLayout::eUndefined, vk::ImageLayo
 		m_vkImage,
 		{ vk::ImageAspectFlagBits::eDepth | vk::ImageAspectFlagBits::eStencil, 0, 1, 0, 1 });
 
-		((vk::CommandBuffer&)commandBuffer).pipelineBarrier(
+	commandBuffer->pipelineBarrier(
 		vk::PipelineStageFlagBits::eTopOfPipe, 
 		vk::PipelineStageFlagBits::eEarlyFragmentTests, 
 		vk::DependencyFlags(), 
@@ -113,30 +113,30 @@ template<>
 inline void ImageResource::transition<vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eShaderReadOnlyOptimal>(const CommandBuffer & commandBuffer)
 {
 	auto imageMemoryBarrier = vk::ImageMemoryBarrier(
-	vk::AccessFlagBits::eTransferWrite,
-	vk::AccessFlagBits::eShaderRead,
-	vk::ImageLayout::eTransferDstOptimal,
-	vk::ImageLayout::eShaderReadOnlyOptimal,
-	VK_QUEUE_FAMILY_IGNORED,
-	VK_QUEUE_FAMILY_IGNORED,
-	m_vkImage,
-	{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
+		vk::AccessFlagBits::eTransferWrite,
+		vk::AccessFlagBits::eShaderRead,
+		vk::ImageLayout::eTransferDstOptimal,
+		vk::ImageLayout::eShaderReadOnlyOptimal,
+		VK_QUEUE_FAMILY_IGNORED,
+		VK_QUEUE_FAMILY_IGNORED,
+		m_vkImage,
+		{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
 
-	((vk::CommandBuffer&)commandBuffer).pipelineBarrier(
-	vk::PipelineStageFlagBits::eTransfer, 
-	vk::PipelineStageFlagBits::eFragmentShader,
-	vk::DependencyFlags(), 
-	{},
-	{}, 
-	{ imageMemoryBarrier });
+	commandBuffer->pipelineBarrier(
+		vk::PipelineStageFlagBits::eTransfer, 
+		vk::PipelineStageFlagBits::eFragmentShader,
+		vk::DependencyFlags(), 
+		{},
+		{}, 
+		{ imageMemoryBarrier });
 
 }
 
 template<vk::ImageLayout source, vk::ImageLayout destination>
-inline void ImageResource::transition(const CommandBuffer &)
+void ImageResource::transition(const CommandBuffer &)
 {
 	std::stringstream stream;
 
-	stream << "Transition from " << vk::to_string(source) << " to " << vk::to_string(destination) << " not implemented.";
+	stream << "Transition from " << to_string(source) << " to " << to_string(destination) << " not implemented.";
 	throw std::runtime_error(stream.str());
 }

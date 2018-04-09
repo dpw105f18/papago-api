@@ -38,7 +38,7 @@ std::vector<Device> Device::enumerateDevices(Surface& surface, const vk::Physica
 			.setQueueCreateInfoCount(queueCreateInfos.size())
 			.setPQueueCreateInfos(queueCreateInfos.data()));
 
-		result.push_back(Device(physicalDevice, logicalDevice, surface));
+		result.emplace_back(physicalDevice, logicalDevice, surface);
 	}
 	
 	return result;
@@ -217,24 +217,24 @@ SwapChain Device::createSwapChain(const Format& format, size_t framebufferCount,
 
 }
 
-GraphicsQueue Device::createGraphicsQueue(SwapChain& swapChain)
+GraphicsQueue Device::createGraphicsQueue(SwapChain& swapChain) const
 {
 	auto queueFamilyIndices = findQueueFamilies(m_vkPhysicalDevice, m_surface);
-	return std::move(GraphicsQueue(m_vkDevice, queueFamilyIndices.graphicsFamily, queueFamilyIndices.presentFamily, swapChain));
+	return { m_vkDevice, queueFamilyIndices.graphicsFamily, queueFamilyIndices.presentFamily, swapChain };
 }
 
-CommandBuffer Device::createCommandBuffer(Usage usage)
+CommandBuffer Device::createCommandBuffer(Usage usage) const
 {
 	auto queueFamilyIndices = findQueueFamilies(m_vkPhysicalDevice, m_surface);
 	return { m_vkDevice, queueFamilyIndices.graphicsFamily, usage };
 }
 
 VertexShader Device::createVertexShader(const std::string & filePath, const std::string & entryPoint) const {
-	return std::move(VertexShader(m_vkDevice, filePath, entryPoint));	//<-- m_vkStageCreateInfo loses its entry-point if not std::move'd
+	return {m_vkDevice, filePath, entryPoint };
 } 
 
 FragmentShader Device::createFragmentShader(const std::string & filePath, const std::string & entryPoint) const {
-	return std::move(FragmentShader(m_vkDevice, filePath, entryPoint)); //<-- m_vkStageCreateInfo loses its entry-point if not std::move'd
+	return { m_vkDevice, filePath, entryPoint }; 
 }
 
 

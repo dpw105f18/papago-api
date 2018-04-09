@@ -6,5 +6,5 @@ FragmentShader::FragmentShader(const vk::UniqueDevice & device, const std::strin
 {
 	m_vkStageCreateInfo.setModule(*m_vkShader)
 		.setStage(vk::ShaderStageFlagBits::eFragment)
-		.setPName(entryPoint.c_str());
+		.setPName(m_entryPoint.c_str());
 }
