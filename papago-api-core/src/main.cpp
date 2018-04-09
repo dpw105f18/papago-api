@@ -8,6 +8,7 @@
 #include "render_pass.hpp"
 #include "graphics_queue.hpp"
 #include "command_buffer.hpp"
+#include "parser.hpp"
 #include <WinUser.h>
 
 LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -94,6 +95,7 @@ struct UniformBufferObject{};
 int main()
 {
 	{
+
 		size_t winWidth = 800;
 		size_t winHeight = 600;
 		auto hwnd = StartWindow(winWidth, winHeight);
@@ -126,6 +128,8 @@ int main()
 		auto sampler2D = device.createTextureSampler2D(Filter::eLinear, Filter::eLinear, TextureWrapMode::eMirroredRepeat, TextureWrapMode::eMirrorClampToEdge);
 		auto sampler1D = device.createTextureSampler1D(Filter::eNearest, Filter::eNearest, TextureWrapMode::eRepeat);
 
+		auto image = device.createTexture2D(100, 100, Format::eR8G8B8A8Unorm);
+
 		bigUniform.upload(bigData);
 
 		auto dlData = bigUniform.download();
@@ -152,6 +156,7 @@ int main()
 			else {
 				auto cmd = device.createCommandBuffer(Usage::eReset);
 				cmd.begin(renderPass, swapChain, graphicsQueue.getCurrentFrameIndex());
+				cmd.setUniform("test", image, sampler2D);
 				cmd.drawInstanced(3, 1, 0, 0);
 				cmd.end();
 				std::vector<CommandBuffer> commandBuffers;

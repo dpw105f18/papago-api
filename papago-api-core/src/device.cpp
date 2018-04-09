@@ -226,7 +226,7 @@ GraphicsQueue Device::createGraphicsQueue(SwapChain& swapChain) const
 CommandBuffer Device::createCommandBuffer(Usage usage) const
 {
 	auto queueFamilyIndices = findQueueFamilies(m_vkPhysicalDevice, m_surface);
-	return { m_vkDevice, queueFamilyIndices.graphicsFamily, usage };
+	return CommandBuffer( m_vkDevice, queueFamilyIndices.graphicsFamily, usage );
 }
 
 VertexShader Device::createVertexShader(const std::string & filePath, const std::string & entryPoint) const {
@@ -248,7 +248,7 @@ Sampler Device::createTextureSampler3D(Filter magFilter, Filter minFilter, Textu
 		.setTextureWrapV(wrapV)
 		.setTextureWrapW(wrapW);
 
-	sampler.vk_mTextureSampler = m_vkDevice->createSamplerUnique(sampler.m_vkSamplerCreateInfo);
+	sampler.m_vkTextureSampler = m_vkDevice->createSamplerUnique(sampler.m_vkSamplerCreateInfo);
 
 	return std::move(sampler);
 }
@@ -261,7 +261,7 @@ Sampler Device::createTextureSampler2D(Filter magFilter, Filter minFilter, Textu
 		.setTextureWrapU(wrapU)
 		.setTextureWrapV(wrapV);
 
-	sampler.vk_mTextureSampler = m_vkDevice->createSamplerUnique(sampler.m_vkSamplerCreateInfo);
+	sampler.m_vkTextureSampler = m_vkDevice->createSamplerUnique(sampler.m_vkSamplerCreateInfo);
 
 	return std::move(sampler);
 }
@@ -273,7 +273,7 @@ Sampler Device::createTextureSampler1D(Filter magFilter, Filter minFilter, Textu
 		.setMinFilter(minFilter)
 		.setTextureWrapU(wrapU);
 
-	sampler.vk_mTextureSampler = m_vkDevice->createSamplerUnique(sampler.m_vkSamplerCreateInfo);
+	sampler.m_vkTextureSampler = m_vkDevice->createSamplerUnique(sampler.m_vkSamplerCreateInfo);
 
 	return std::move(sampler);
 }
@@ -282,6 +282,24 @@ Sampler Device::createTextureSampler1D(Filter magFilter, Filter minFilter, Textu
 void Device::createTextureSampler(Sampler sampler)
 {
 	m_vkDevice->createSamplerUnique(sampler.m_vkSamplerCreateInfo);
+}
+
+//TODO: remove 2D from method name and let dimension be determined by the (number of) arguments? -AM
+ImageResource Device::createTexture2D(uint32_t width, uint32_t height, Format format )
+{
+	vk::Extent3D extent = { width, height, 1 };
+	vk::ImageCreateInfo info;
+	info.setImageType(vk::ImageType::e2D)
+		.setExtent(extent)
+		.setFormat(format)
+		.setInitialLayout(vk::ImageLayout::eUndefined)
+		.setMipLevels(1)
+		.setArrayLayers(1)
+		.setUsage(vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled);
+
+	auto image = m_vkDevice->createImage(info);
+	auto memoryRequirements = m_vkDevice->getImageMemoryRequirements(image);
+	return ImageResource(image, m_vkPhysicalDevice, m_vkDevice, vk::ImageAspectFlagBits::eColor, format, extent, memoryRequirements);
 }
 
 void Device::waitIdle()

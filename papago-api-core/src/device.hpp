@@ -32,6 +32,8 @@ public:
 	//drop the other create textureSampler idea below?
 	void Device::createTextureSampler(Sampler sampler);
 
+	ImageResource createTexture2D(uint32_t width, uint32_t height, Format format);
+
 	template<typename T>
 	BufferResource createVertexBuffer(const std::vector<T>& vertexData) const;
 	template<typename T>
