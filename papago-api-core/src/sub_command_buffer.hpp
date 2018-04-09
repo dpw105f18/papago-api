@@ -14,10 +14,6 @@ class SwapChain;
 class SubCommandBuffer
 {
 public:
-	enum Usage {
-		RESET,
-		REUSE
-	};
 
 	virtual void begin(const RenderPass&);
 	virtual void begin(const RenderPass&, SwapChain&);

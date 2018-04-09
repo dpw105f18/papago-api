@@ -2,7 +2,7 @@
 #include "graphics_queue.hpp"
 #include "swap_chain.hpp"
 
-void GraphicsQueue::submitCommands(std::vector<CommandBuffer> commandBuffers)
+void GraphicsQueue::submitCommands(std::vector<CommandBuffer>& commandBuffers)
 {
 	std::vector<vk::Semaphore> semaphores = { *m_vkRenderFinishSemaphore };
 	std::vector<vk::Semaphore> waitSemaphores = { *m_vkImageAvailableSemaphore };
@@ -26,12 +26,15 @@ void GraphicsQueue::submitCommands(std::vector<CommandBuffer> commandBuffers)
 	m_vkGraphicsQueue.submit(submitInfo, vk::Fence());
 }
 
-void GraphicsQueue::present()
+void GraphicsQueue::present(std::vector<CommandBuffer>& commandBuffers)
 {
+	m_vkPresentQueue.waitIdle();
+	auto imageIndices = getNextFrameIndex();
 	std::vector<vk::Semaphore> semaphores = { *m_vkRenderFinishSemaphore };
 	std::vector<vk::SwapchainKHR> swapchains = { static_cast<vk::SwapchainKHR>(m_swapChain) };
 
-	auto imageIndices = getCurrentFrameIndex();
+	submitCommands(commandBuffers);
+
 	vk::PresentInfoKHR presentInfo = {};
 	presentInfo.setWaitSemaphoreCount(semaphores.size())
 		.setPWaitSemaphores(semaphores.data())
@@ -39,20 +42,30 @@ void GraphicsQueue::present()
 		.setPSwapchains(swapchains.data())
 		.setPImageIndices(&imageIndices);
 
-	m_vkPresentQueue.presentKHR(presentInfo);
+	auto res = m_vkPresentQueue.presentKHR(presentInfo);
+}
 
-	//TODO: handle wait another way?
+//TODO: switch getCurrentFrameIndex and getNextFrameIndex back. -AM
+uint32_t GraphicsQueue::getCurrentFrameIndex() {
+	
+	auto result = m_vkDevice->acquireNextImageKHR(static_cast<vk::SwapchainKHR>(m_swapChain), 0, *m_vkImageAvailableSemaphore, vk::Fence());
+	m_currentFrameIndex = result.value;
+	return m_currentFrameIndex;
+}
+
+//TODO: don't present this to API users. -AM
+void GraphicsQueue::Wait()
+{
 	m_vkPresentQueue.waitIdle();
 }
 
-uint32_t GraphicsQueue::getCurrentFrameIndex()
+uint32_t GraphicsQueue::getNextFrameIndex()
 {
-	auto result = m_vkDevice->acquireNextImageKHR(static_cast<vk::SwapchainKHR>(m_swapChain), 0, *m_vkImageAvailableSemaphore, vk::Fence());
-	return result.value;
+	return m_currentFrameIndex;
 }
 
 GraphicsQueue::GraphicsQueue(const vk::UniqueDevice& device, int graphicsQueueIndex, int presentQueueIndex, SwapChain& swapChain)
-	: m_vkDevice(device), m_swapChain(swapChain)
+	: m_swapChain(swapChain), m_vkDevice(device)
 {
 	m_vkGraphicsQueue = device->getQueue(graphicsQueueIndex, 0);
 	m_vkPresentQueue = device->getQueue(presentQueueIndex, 0);

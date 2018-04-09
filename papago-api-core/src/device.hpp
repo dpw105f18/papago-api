@@ -17,11 +17,12 @@ class Sampler;
 class Device {
 public:
 	static std::vector<Device> enumerateDevices(Surface& surface, const vk::PhysicalDeviceFeatures &features, const std::vector<const char*> &extensions);
+	Device(vk::PhysicalDevice, vk::UniqueDevice&, Surface&);
 
-	SwapChain createSwapChain(const Format&, size_t framebufferCount, SwapChainPresentMode, Surface&);
-	GraphicsQueue createGraphicsQueue(Surface&, SwapChain&);
-	CommandBuffer createCommandBuffer(CommandBuffer::Usage);
-	SubCommandBuffer createSubCommandBuffer(SubCommandBuffer::Usage);
+	SwapChain createSwapChain(const Format&, size_t framebufferCount, SwapChainPresentMode);
+	GraphicsQueue createGraphicsQueue(SwapChain&) const;
+	CommandBuffer createCommandBuffer(Usage) const;
+	SubCommandBuffer createSubCommandBuffer(Usage);
 	VertexShader createVertexShader(const std::string& filePath, const std::string& entryPoint) const;
 	FragmentShader createFragmentShader(const std::string& filePath, const std::string& entryPoint) const;
 	RenderPass createRenderPass(VertexShader&, FragmentShader&, const SwapChain&) const;
@@ -37,6 +38,7 @@ public:
 	BufferResource createIndexBuffer(const std::vector<T>& indexData) const;
 	template<size_t N>
 	BufferResource createUniformBuffer() const;
+	void waitIdle();
 private:
 	struct SwapChainSupportDetails
 	{
@@ -65,7 +67,6 @@ private:
 		}
 	};
 
-	Device(vk::PhysicalDevice, vk::UniqueDevice&);
 
 	static SwapChainSupportDetails querySwapChainSupport(const vk::PhysicalDevice& , Surface& ) ;
 	
@@ -81,6 +82,8 @@ private:
 
 	vk::PhysicalDevice m_vkPhysicalDevice;
 	vk::UniqueDevice m_vkDevice;
+
+	Surface& m_surface;
 
 };
 

@@ -16,6 +16,7 @@ SwapChain::SwapChain(
 	: m_vkSwapChain(std::move(swapChain))
 	, m_colorResources(std::move(colorResources))
 	, m_depthResources(std::move(depthResources))
+	, m_vkExtent(extent)
 {
 	// the vk::RenderPass set on the Framebuffers is a guideline for what RenderPass' are compatible with them
 	// this _may_ be error-prone...

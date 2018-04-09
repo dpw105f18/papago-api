@@ -38,7 +38,7 @@ std::vector<Device> Device::enumerateDevices(Surface& surface, const vk::Physica
 			.setQueueCreateInfoCount(queueCreateInfos.size())
 			.setPQueueCreateInfos(queueCreateInfos.data()));
 
-		result.push_back(Device(physicalDevice, logicalDevice));
+		result.emplace_back(physicalDevice, logicalDevice, surface);
 	}
 	
 	return result;
@@ -165,22 +165,22 @@ bool Device::areExtensionsSupported(const vk::PhysicalDevice & physicalDevice, c
 }
 
 // framebufferCount is a prefered minimum of buffers in the swapchain
-SwapChain Device::createSwapChain(const Format& format, size_t framebufferCount, SwapChainPresentMode preferredPresentMode, Surface& surface)
+SwapChain Device::createSwapChain(const Format& format, size_t framebufferCount, SwapChainPresentMode preferredPresentMode)
 {
-	auto details = querySwapChainSupport(m_vkPhysicalDevice, surface);
+	auto details = querySwapChainSupport(m_vkPhysicalDevice, m_surface);
 
 	auto swapFormat = chooseSwapSurfaceFormat(format, details.formats);
 
 	auto presentMode = chooseSwapPresentMode(preferredPresentMode, details.presentmodes); 
 
-	auto extent = chooseSwapChainExtent(surface.getWidth(), surface.getHeight(), details.capabilities);
+	auto extent = chooseSwapChainExtent(m_surface.getWidth(), m_surface.getHeight(), details.capabilities);
 
 	if (details.capabilities.maxImageCount > 0 &&
 		framebufferCount > details.capabilities.maxImageCount) {
 		framebufferCount = details.capabilities.maxImageCount;
 	}
 
-	auto createInfo = createSwapChainCreateInfo(surface, framebufferCount, swapFormat, extent, details.capabilities, presentMode);
+	auto createInfo = createSwapChainCreateInfo(m_surface, framebufferCount, swapFormat, extent, details.capabilities, presentMode);
 
 	auto swapChain =  m_vkDevice->createSwapchainKHRUnique(createInfo);
 
@@ -217,18 +217,24 @@ SwapChain Device::createSwapChain(const Format& format, size_t framebufferCount,
 
 }
 
-GraphicsQueue Device::createGraphicsQueue(Surface& surface, SwapChain& swapChain)
+GraphicsQueue Device::createGraphicsQueue(SwapChain& swapChain) const
 {
-	auto queueFamilyIndices = findQueueFamilies(m_vkPhysicalDevice, surface);
-	return std::move(GraphicsQueue(m_vkDevice, queueFamilyIndices.graphicsFamily, queueFamilyIndices.presentFamily, swapChain));
+	auto queueFamilyIndices = findQueueFamilies(m_vkPhysicalDevice, m_surface);
+	return { m_vkDevice, queueFamilyIndices.graphicsFamily, queueFamilyIndices.presentFamily, swapChain };
+}
+
+CommandBuffer Device::createCommandBuffer(Usage usage) const
+{
+	auto queueFamilyIndices = findQueueFamilies(m_vkPhysicalDevice, m_surface);
+	return { m_vkDevice, queueFamilyIndices.graphicsFamily, usage };
 }
 
 VertexShader Device::createVertexShader(const std::string & filePath, const std::string & entryPoint) const {
-	return std::move(VertexShader(m_vkDevice, filePath, entryPoint));	//<-- m_vkStageCreateInfo loses its entry-point if not std::move'd
+	return {m_vkDevice, filePath, entryPoint };
 } 
 
 FragmentShader Device::createFragmentShader(const std::string & filePath, const std::string & entryPoint) const {
-	return std::move(FragmentShader(m_vkDevice, filePath, entryPoint)); //<-- m_vkStageCreateInfo loses its entry-point if not std::move'd
+	return { m_vkDevice, filePath, entryPoint }; 
 }
 
 
@@ -278,6 +284,11 @@ void Device::createTextureSampler(Sampler sampler)
 	m_vkDevice->createSamplerUnique(sampler.m_vkSamplerCreateInfo);
 }
 
+void Device::waitIdle()
+{
+	m_vkDevice->waitIdle();
+}
+
 RenderPass Device::createRenderPass(VertexShader &vertexShader, FragmentShader &fragmentShader, const SwapChain &swapChain) const
 {
 	// TODO: Dangerous hacking, fix this by adding error handling instead of expecting there always being data available.
@@ -287,9 +298,10 @@ RenderPass Device::createRenderPass(VertexShader &vertexShader, FragmentShader &
 	return RenderPass(m_vkDevice, vertexShader, fragmentShader, { extent.width, extent.height }, format);
 }
 
-Device::Device(vk::PhysicalDevice physicalDevice, vk::UniqueDevice &device) 
+Device::Device(vk::PhysicalDevice physicalDevice, vk::UniqueDevice &device, Surface &surface)
 	: m_vkPhysicalDevice(physicalDevice)
 	, m_vkDevice(std::move(device))
+	, m_surface(surface)
 {
 
 }
