@@ -8,6 +8,7 @@
 #include "render_pass.hpp"
 #include "sampler.hpp"
 #include "graphics_queue.hpp"
+#include "shader_program.h"
 #include <set>
 
 
@@ -226,17 +227,8 @@ GraphicsQueue Device::createGraphicsQueue(SwapChain& swapChain) const
 CommandBuffer Device::createCommandBuffer(Usage usage) const
 {
 	auto queueFamilyIndices = findQueueFamilies(m_vkPhysicalDevice, m_surface);
-	return CommandBuffer( m_vkDevice, queueFamilyIndices.graphicsFamily, usage );
+	return { m_vkDevice, queueFamilyIndices.graphicsFamily, usage };
 }
-
-VertexShader Device::createVertexShader(const std::string & filePath, const std::string & entryPoint) const {
-	return {m_vkDevice, filePath, entryPoint };
-} 
-
-FragmentShader Device::createFragmentShader(const std::string & filePath, const std::string & entryPoint) const {
-	return { m_vkDevice, filePath, entryPoint }; 
-}
-
 
 Sampler Device::createTextureSampler3D(Filter magFilter, Filter minFilter, TextureWrapMode wrapU, TextureWrapMode wrapV, TextureWrapMode wrapW)
 {
@@ -302,18 +294,23 @@ ImageResource Device::createTexture2D(uint32_t width, uint32_t height, Format fo
 	return ImageResource(image, m_vkPhysicalDevice, m_vkDevice, vk::ImageAspectFlagBits::eColor, format, extent, memoryRequirements);
 }
 
+ShaderProgram Device::createShaderProgram(VertexShader &vertexShader, FragmentShader &fragmentShader)
+{
+	return ShaderProgram(m_vkDevice, vertexShader, fragmentShader);
+}
+
 void Device::waitIdle()
 {
 	m_vkDevice->waitIdle();
 }
 
-RenderPass Device::createRenderPass(VertexShader &vertexShader, FragmentShader &fragmentShader, const SwapChain &swapChain) const
+RenderPass Device::createRenderPass(const ShaderProgram& program, const SwapChain &swapChain) const
 {
 	// TODO: Dangerous hacking, fix this by adding error handling instead of expecting there always being data available.
 	auto extent = swapChain.m_colorResources[0].m_vkExtent;
 	auto format = swapChain.m_colorResources[0].m_format;
 
-	return RenderPass(m_vkDevice, vertexShader, fragmentShader, { extent.width, extent.height }, format);
+	return RenderPass(m_vkDevice, program, { extent.width, extent.height }, format);
 }
 
 Device::Device(vk::PhysicalDevice physicalDevice, vk::UniqueDevice &device, Surface &surface)

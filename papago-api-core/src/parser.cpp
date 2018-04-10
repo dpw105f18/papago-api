@@ -8,19 +8,37 @@ Parser::Parser(const std::string & compilePath): m_compilePath(compilePath)
 {
 }
 
-VertexShader Parser::compileVertexShader(const std::string & filePath)
+VertexShader Parser::compileVertexShader(const std::string &filePath, const std::string &entryPoint)
 {
+	auto spvFile = compile(filePath);
 
 
+	auto result = VertexShader(spvFile, entryPoint);
+
+	//TODO: set binding information on [result]
+	return result;
+}
+
+FragmentShader Parser::compileFragmentShader(const std::string & filePath, const std::string & entryPoint)
+{
+	auto spvFile = compile(filePath);
+	auto result = FragmentShader(spvFile, entryPoint);
+	
+	//TODO: set binding information on [result]
+	return result;
+}
+
+std::string Parser::compile(const std::string & filePath)
+{
 	auto pathIndex = filePath.find_last_of('/');
 	auto spirVPath = filePath.substr(0, pathIndex);
 
 	auto fileIndex = filePath.find_last_of('.');
 	auto fileName = filePath.substr(pathIndex, fileIndex - pathIndex);
 	auto spvFile = spirVPath + "/" + fileName + ".spv";
-	
+
 	// Is here or else c_str will point to junk
-	auto arg =  std::string(" -V ")	//<-- compile using Vulkan semantics
+	auto arg = std::string(" -V ")	//<-- compile using Vulkan semantics
 		+ std::string("-o ") + std::string("\"") + spvFile + std::string("\" ") //<-- output file = fileName.spv (in same folder as fileName.vert)
 		+ std::string("\"") + filePath + "\" ";	//<-- fileName.vert file
 
@@ -53,13 +71,5 @@ VertexShader Parser::compileVertexShader(const std::string & filePath)
 		CloseHandle(processInfo.hThread);
 	}
 
-
-	return VertexShader();
+	return spvFile;
 }
-
-/*
-FragmentShader Parser::compileFragmentShader(const std::string & filePath)
-{
-	return FragmentShader();
-}*/
-

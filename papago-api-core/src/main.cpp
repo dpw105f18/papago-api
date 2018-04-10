@@ -96,8 +96,7 @@ int main()
 {
 	{
 
-		auto p = Parser("C:/VulkanSDK/1.0.65.0/Bin32/glslangValidator.exe");
-		p.compileVertexShader("shader/shader.vert");
+		auto parser = Parser("C:/VulkanSDK/1.0.65.0/Bin32/glslangValidator.exe");
 		
 		size_t winWidth = 800;
 		size_t winHeight = 600;
@@ -137,10 +136,12 @@ int main()
 
 		auto dlData = bigUniform.download();
 
-		auto vertexShader = device.createVertexShader("shader/vert.spv", "main");
-		auto fragmentShader = device.createFragmentShader("shader/frag.spv", "main");
+		auto vertexShader = parser.compileVertexShader("shader/testVert.vert", "main");
+		auto fragmentShader = parser.compileFragmentShader("shader/testFrag.frag", "main");
 
-		auto renderPass = device.createRenderPass(vertexShader, fragmentShader, swapChain);
+		auto program = device.createShaderProgram(vertexShader, fragmentShader);
+
+		auto renderPass = device.createRenderPass(program, swapChain);
 
 		auto graphicsQueue = device.createGraphicsQueue(swapChain);
 		size_t frameNo = 0;	//<-- for debugging
