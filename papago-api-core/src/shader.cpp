@@ -2,7 +2,7 @@
 #include "shader.hpp"
 #include <fstream>
 
-Shader::Shader(const vk::UniqueDevice& device, const std::string & filePath, std::string entryPoint ): m_entryPoint(entryPoint)
+Shader::Shader(const vk::UniqueDevice& device, const std::string & filePath, std::string entryPoint) : m_entryPoint(entryPoint)
 {
 	auto code = readFile(filePath);
 	vk::ShaderModuleCreateInfo createInfo = {};

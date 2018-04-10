@@ -96,6 +96,9 @@ int main()
 {
 	{
 
+		auto p = Parser("C:/VulkanSDK/1.0.65.0/Bin32/glslangValidator.exe");
+		p.compileVertexShader("shader/shader.vert");
+		
 		size_t winWidth = 800;
 		size_t winHeight = 600;
 		auto hwnd = StartWindow(winWidth, winHeight);
@@ -156,7 +159,7 @@ int main()
 			else {
 				auto cmd = device.createCommandBuffer(Usage::eReset);
 				cmd.begin(renderPass, swapChain, graphicsQueue.getCurrentFrameIndex());
-				cmd.setUniform("test", image, sampler2D);
+				//cmd.setUniform("test", image, sampler2D);
 				cmd.drawInstanced(3, 1, 0, 0);
 				cmd.end();
 				std::vector<CommandBuffer> commandBuffers;

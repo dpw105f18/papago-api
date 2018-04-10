@@ -1,14 +1,15 @@
 #pragma once
 #include <string>
 #include <map>
+class VertexShader;
+class FragmentShader;
 
 class Parser
 {
 public:
-	Parser(const std::string& filePath);
-	size_t getLocation(const std::string& name);
+	Parser(const std::string& compilerPath);
+	VertexShader compileVertexShader(const std::string& filePath);
+	//FragmentShader compileFragmentShader(const std::string& filePath);
 private:
-	void populateLocations();
-	std::map<std::string, size_t> m_locations;
-
+	std::string m_compilePath;
 };
