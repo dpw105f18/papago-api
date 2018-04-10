@@ -12,6 +12,11 @@ void BufferResource::destroy()
 
 }
 
+const vk::DescriptorBufferInfo & BufferResource::info() const
+{
+	return m_vkInfo;
+}
+
 BufferResource BufferResource::createBufferResource(
 	vk::PhysicalDevice		physicalDevice, 
 	const vk::UniqueDevice& device, 
@@ -39,5 +44,8 @@ BufferResource::BufferResource(
 	: Resource(physicalDevice, device, memoryFlags, memoryRequirements)
 	, m_vkBuffer(std::move(buffer))
 {
+	m_vkInfo.setBuffer(*m_vkBuffer)
+		.setOffset(0)
+		.setRange(memoryRequirements.size); // TODO: this might not be the best way to get the size - CW 2018-04-10
 	device->bindBufferMemory(*m_vkBuffer, *m_vkMemory, 0);
 }

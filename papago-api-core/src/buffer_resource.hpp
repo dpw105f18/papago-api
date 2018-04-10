@@ -10,9 +10,10 @@ public:
 
 	// Inherited via Resource
 	void destroy() override;
-
+	const vk::DescriptorBufferInfo& info() const;
 private:
 	vk::UniqueBuffer m_vkBuffer;
+	vk::DescriptorBufferInfo m_vkInfo;
 
 	static BufferResource createBufferResource(
 		vk::PhysicalDevice		physicalDevice,

@@ -69,3 +69,19 @@ void CommandBuffer::drawInstanced(size_t instanceVertexCount, size_t instanceCou
 	//TODO: choose the correct draw-command based on how the buffer has been used? -AM
 	m_vkCommandBuffer->draw(instanceVertexCount, instanceCount, startVertexLocation, startInstanceLocation);
 }
+
+void CommandBuffer::setUniform(const std::string &, const BufferResource & buffer)
+{
+	auto descriptorSet = vk::DescriptorSet();
+	auto binding = 0;
+
+	m_vkDevice->updateDescriptorSets(
+	{
+		vk::WriteDescriptorSet()
+			.setDstSet(descriptorSet)
+			.setDstBinding(binding)
+			.setDescriptorType(vk::DescriptorType::eUniformBuffer)
+			.setDescriptorCount(1)
+			.setPBufferInfo(&buffer.info())
+	}, {});
+}

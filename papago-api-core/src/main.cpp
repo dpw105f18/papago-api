@@ -137,6 +137,7 @@ int main()
 
 		auto graphicsQueue = device.createGraphicsQueue(swapChain);
 		size_t frameNo = 0;	//<-- for debugging
+		auto uniform_buffer = device.createUniformBuffer<sizeof(float[3])>();
 
 		while(true)
 		{
@@ -152,6 +153,7 @@ int main()
 			else {
 				auto cmd = device.createCommandBuffer(Usage::eReset);
 				cmd.begin(renderPass, swapChain, graphicsQueue.getCurrentFrameIndex());
+				cmd.setUniform("uniform", uniform_buffer);
 				cmd.drawInstanced(3, 1, 0, 0);
 				cmd.end();
 				std::vector<CommandBuffer> commandBuffers;
