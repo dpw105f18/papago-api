@@ -4,6 +4,7 @@
 #include "fragment_shader.hpp"
 
 ShaderProgram::ShaderProgram(const vk::UniqueDevice& device, VertexShader& vertexShader, FragmentShader& fragmentShader)
+	: m_vertexShader(vertexShader), m_fragmentShader(fragmentShader)
 {
 	//Module:
 	vk::ShaderModuleCreateInfo vertexInfo = {};

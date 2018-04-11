@@ -14,6 +14,9 @@ private:
 	vk::PipelineShaderStageCreateInfo m_vkVertexStageCreateInfo;
 	vk::PipelineShaderStageCreateInfo m_vkFragmentStageCreateInfo;
 
+	VertexShader& m_vertexShader;
+	FragmentShader& m_fragmentShader;
+
 	friend class Device;
 	friend class RenderPass;
 };

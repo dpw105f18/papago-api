@@ -15,6 +15,9 @@ RenderPass::RenderPass(
 	const vk::Extent2D& extent,
 	Format format)
 {
+	setupDescriptorSet(device, program.m_vertexShader, program.m_fragmentShader);
+
+
 	vk::PipelineShaderStageCreateInfo shaderStages[] = { 
 		program.m_vkVertexStageCreateInfo,
 		program.m_vkFragmentStageCreateInfo
@@ -62,10 +65,8 @@ RenderPass::RenderPass(
 
 	//TODO: expand once we have vkDescriptorSets (from Parser)
 	vk::PipelineLayoutCreateInfo pipelineLayoutInfo;
-	pipelineLayoutInfo.setSetLayoutCount(0)
-		.setPSetLayouts(nullptr)
-		.setPushConstantRangeCount(0)
-		.setPPushConstantRanges(nullptr);
+	pipelineLayoutInfo.setSetLayoutCount(1)
+		.setPSetLayouts(&m_vkDescriptorSetLayout.get());
 
 	m_vkPipelineLayout = device->createPipelineLayoutUnique(pipelineLayoutInfo);
 
@@ -148,4 +149,75 @@ vk::UniqueRenderPass RenderPass::createDummyRenderpass(const vk::UniqueDevice& d
 		.setPDependencies(&dependency);
 
 	return device->createRenderPassUnique(renderPassInfo);
+}
+
+void RenderPass::setupDescriptorSet(const vk::UniqueDevice &device, const VertexShader& vertexShader, const FragmentShader& fragmentShader)
+{
+	//Descriptor Set Layout
+	std::vector<vk::DescriptorSetLayoutBinding> vkBindings;
+	std::map<uint32_t, size_t> bindingMap;
+
+	auto vertexBindings = vertexShader.getBindings();
+	for (size_t i = 0; vertexBindings.size(); ++i) {
+		auto& vertexBinding = vertexBindings[i];
+
+		vk::DescriptorSetLayoutBinding binding = {};
+		binding.setBinding(vertexBinding.binding)
+			.setDescriptorCount(1) //TODO: can we assume 1 Descriptor per binding? -AM
+			.setDescriptorType(vertexBinding.type)
+			.setStageFlags(vk::ShaderStageFlagBits::eVertex);
+
+		vkBindings.emplace_back(binding);
+
+		bindingMap.insert(std::pair<uint32_t, size_t>{vertexBinding.binding, i});
+	}
+
+	auto fragmentBindings = fragmentShader.getBindings();
+	for (size_t i = 0; i < fragmentBindings.size(); ++i) {
+		//if the binding was used by VertexShader:
+		if (bindingMap.size() > 0 && bindingMap.find(i) == bindingMap.end()) {
+			vkBindings[i].stageFlags |= vk::ShaderStageFlagBits::eFragment;
+		}
+		else {
+			auto& fragmentBinding = fragmentBindings[i];
+			vk::DescriptorSetLayoutBinding binding = {};
+			binding.setBinding(fragmentBinding.binding)
+				.setDescriptorCount(1) //TODO: can we assume 1 Descriptor per binding? -AM
+				.setDescriptorType(fragmentBinding.type)
+				.setStageFlags(vk::ShaderStageFlagBits::eFragment);
+
+			vkBindings.emplace_back(binding);
+		}
+	}
+
+	vk::DescriptorSetLayoutCreateInfo layoutCreateInfo = {};
+	layoutCreateInfo.setBindingCount(vkBindings.size())
+		.setPBindings(vkBindings.data());
+
+	m_vkDescriptorSetLayout = device->createDescriptorSetLayoutUnique(layoutCreateInfo);
+
+
+	//Descriptor Pool:
+	auto poolSizes = std::vector<vk::DescriptorPoolSize>(vkBindings.size());
+	for (auto i = 0; i < vkBindings.size(); ++i) {
+		auto& vkBinding = vkBindings[i];
+		poolSizes[i].setDescriptorCount(1)
+			.setType(vkBinding.descriptorType);
+	}
+
+	vk::DescriptorPoolCreateInfo poolCreateInfo = {};
+	poolCreateInfo.setPoolSizeCount(poolSizes.size())
+		.setPPoolSizes(poolSizes.data())
+		.setMaxSets(1);	//TODO: keep this default value? -AM.
+
+	m_vkDescriptorPool = device->createDescriptorPoolUnique(poolCreateInfo);
+
+
+	//Descriptor Set:
+	vk::DescriptorSetAllocateInfo allocateInfo = {};
+	allocateInfo.setDescriptorPool(*m_vkDescriptorPool)
+		.setDescriptorSetCount(1)
+		.setPSetLayouts(&m_vkDescriptorSetLayout.get());
+
+	m_vkDescriptorSet = std::move(device->allocateDescriptorSetsUnique(allocateInfo)[0]);	//TODO: do we always want exactly one descriptor set? -AM
 }

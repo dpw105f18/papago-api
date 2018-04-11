@@ -136,8 +136,8 @@ int main()
 
 		auto dlData = bigUniform.download();
 
-		auto vertexShader = parser.compileVertexShader("shader/testVert.vert", "main");
-		auto fragmentShader = parser.compileFragmentShader("shader/testFrag.frag", "main");
+		auto vertexShader = parser.compileVertexShader("shader/textureVert.vert", "main");
+		auto fragmentShader = parser.compileFragmentShader("shader/textureFrag.frag", "main");
 
 		auto program = device.createShaderProgram(vertexShader, fragmentShader);
 

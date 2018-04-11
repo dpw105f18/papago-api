@@ -26,3 +26,13 @@ std::vector<char> Shader::readFile(const std::string & filePath)
 
 	return result;
 }
+
+std::vector<Binding> Shader::getBindings() const
+{
+	auto result = std::vector<Binding>();
+	result.reserve(m_bindings.size());
+	for (auto& pair : m_bindings) {
+		result.push_back(pair.second);
+	}
+	return result;
+}

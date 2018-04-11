@@ -17,6 +17,11 @@ private:
 	vk::UniqueRenderPass m_vkRenderPass;
 	vk::UniquePipeline m_vkGraphicsPipeline;
 	vk::UniquePipelineLayout m_vkPipelineLayout;
+	vk::UniqueDescriptorPool m_vkDescriptorPool;
+	vk::UniqueDescriptorSet m_vkDescriptorSet;
+	vk::UniqueDescriptorSetLayout m_vkDescriptorSetLayout;
+
+	void setupDescriptorSet(const vk::UniqueDevice&, const VertexShader& vertexShader, const FragmentShader& fragmentShader);
 
 	friend class Device;
 	friend class CommandBuffer;

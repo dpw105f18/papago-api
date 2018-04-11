@@ -3,6 +3,13 @@
 #include "parser.hpp"
 #include <string>
 #include <map>
+
+struct Binding
+{
+	uint32_t binding;
+	vk::DescriptorType type;
+};
+
 class Shader {
 public:
 
@@ -10,14 +17,11 @@ protected:
 	Shader(const std::string& filePath, const std::string entryPoint);
 	const std::string m_entryPoint;
 	std::vector<char> m_code;
+	std::vector<Binding> getBindings() const;
 
-	struct Binding
-	{
-		uint32_t binding;
-		vk::DescriptorType type;
-	};
 
 	std::map<std::string, Binding> m_bindings;
 private:
 	static std::vector<char> readFile(const std::string& filePath);	//TODO: move to a Parser-stub
+
 };
