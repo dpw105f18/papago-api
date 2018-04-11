@@ -9,7 +9,7 @@ public:
 
 	//TODO: remove "override"s - place functionality in SubCommandBuffer or redesign relationship. -AM
 	void begin(const RenderPass&);
-	void begin(RenderPass&, SwapChain&, uint32_t imageIndex);
+	void begin(RenderPass&, SwapChain&, uint32_t imageIndex, BufferResource& vertexBuffer);
 	void begin(const RenderPass&, ImageResource& depthStencilBuffer);
 	void begin(const RenderPass&, SwapChain&, ImageResource& depthStencilBuffer);
 

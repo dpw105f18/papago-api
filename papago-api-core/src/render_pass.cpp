@@ -2,6 +2,7 @@
 #include "render_pass.hpp"
 #include "vertex_shader.hpp"
 #include "fragment_shader.hpp"
+#include "vertex.hpp"
 
 RenderPass::operator vk::RenderPass&()
 {
@@ -21,12 +22,15 @@ RenderPass::RenderPass(
 		m_fragmentShader.m_vkStageCreateInfo 
 	};
 
-	//TODO: use our vertex buffer
+	//TODO: Find a better generic way to set attribute and binding descriptions up
+	auto attributeDescription = Vertex::getAttributeDescriptions();
+	auto bindingDescription = Vertex::getBindingDescription();
+
 	vk::PipelineVertexInputStateCreateInfo vertexInputInfo;
-	vertexInputInfo.setVertexBindingDescriptionCount(0)
-		.setPVertexBindingDescriptions(nullptr)
-		.setVertexAttributeDescriptionCount(0)
-		.setPVertexAttributeDescriptions(nullptr);
+	vertexInputInfo.setVertexBindingDescriptionCount(1)
+		.setPVertexBindingDescriptions(&bindingDescription)
+		.setVertexAttributeDescriptionCount(static_cast<uint32_t>(attributeDescription.size()))
+		.setPVertexAttributeDescriptions(attributeDescription.data()); 
 
 	vk::PipelineInputAssemblyStateCreateInfo inputAssembly;
 	inputAssembly.setTopology(vk::PrimitiveTopology::eTriangleList);	//<-- TODO: make setable
