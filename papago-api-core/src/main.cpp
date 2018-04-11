@@ -8,6 +8,7 @@
 #include "render_pass.hpp"
 #include "graphics_queue.hpp"
 #include "command_buffer.hpp"
+#include "parser.hpp"
 #include <WinUser.h>
 
 LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -94,6 +95,9 @@ struct UniformBufferObject{};
 int main()
 {
 	{
+
+		auto parser = Parser("C:/VulkanSDK/1.0.65.0/Bin32/glslangValidator.exe");
+		
 		size_t winWidth = 800;
 		size_t winHeight = 600;
 		auto hwnd = StartWindow(winWidth, winHeight);
@@ -126,14 +130,18 @@ int main()
 		auto sampler2D = device.createTextureSampler2D(Filter::eLinear, Filter::eLinear, TextureWrapMode::eMirroredRepeat, TextureWrapMode::eMirrorClampToEdge);
 		auto sampler1D = device.createTextureSampler1D(Filter::eNearest, Filter::eNearest, TextureWrapMode::eRepeat);
 
+		auto image = device.createTexture2D(100, 100, Format::eR8G8B8A8Unorm);
+
 		bigUniform.upload(bigData);
 
 		auto dlData = bigUniform.download();
 
-		auto vertexShader = device.createVertexShader("shader/vert.spv", "main");
-		auto fragmentShader = device.createFragmentShader("shader/frag.spv", "main");
+		auto vertexShader = parser.compileVertexShader("shader/testVert.vert", "main");
+		auto fragmentShader = parser.compileFragmentShader("shader/testFrag.frag", "main");
 
-		auto renderPass = device.createRenderPass(vertexShader, fragmentShader, swapChain);
+		auto program = device.createShaderProgram(vertexShader, fragmentShader);
+
+		auto renderPass = device.createRenderPass(program, swapChain);
 
 		auto graphicsQueue = device.createGraphicsQueue(swapChain);
 		size_t frameNo = 0;	//<-- for debugging
@@ -152,6 +160,7 @@ int main()
 			else {
 				auto cmd = device.createCommandBuffer(Usage::eReset);
 				cmd.begin(renderPass, swapChain, graphicsQueue.getCurrentFrameIndex());
+				//cmd.setUniform("test", image, sampler2D);
 				cmd.drawInstanced(3, 1, 0, 0);
 				cmd.end();
 				std::vector<CommandBuffer> commandBuffers;
