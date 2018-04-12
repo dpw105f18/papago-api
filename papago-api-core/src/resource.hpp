@@ -10,7 +10,7 @@ public:
 
 	virtual ~Resource() = default;
 	virtual void destroy() = 0;
-	void upload(const std::vector<char>& data);
+	virtual void upload(const std::vector<char>& data);
 	std::vector<char> download();
 	size_t getSize() const;
 protected:
@@ -24,11 +24,11 @@ protected:
 
 	vk::UniqueDeviceMemory m_vkMemory;
 	const vk::UniqueDevice& m_vkDevice;
-private:
 	static uint32_t findMemoryType(
 		const vk::PhysicalDevice&, 
 		uint32_t memoryTypeBits, 
 		const vk::MemoryPropertyFlags&);
 
+private:
 	size_t m_size;
 };

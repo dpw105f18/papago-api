@@ -36,3 +36,8 @@ std::vector<Binding> Shader::getBindings() const
 	}
 	return result;
 }
+
+bool Shader::bindingExists(const std::string & name)
+{
+	return m_bindings.find(name) != m_bindings.end();
+}

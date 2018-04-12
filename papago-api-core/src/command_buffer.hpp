@@ -31,6 +31,9 @@ public:
 	const vk::CommandBuffer* operator ->() const {
 		return &*m_vkCommandBuffer;
 	}
+	const vk::CommandBuffer& operator *() const {
+		return *m_vkCommandBuffer;
+	}
 
 private:
 	CommandBuffer(const vk::UniqueDevice& device, int queueFamilyIndex, Usage);
@@ -40,6 +43,8 @@ private:
 	Usage m_usage; //TODO: <-- use this! -AM
 
 	const vk::UniqueDevice& m_vkDevice;	//<-- used to update vkDescriptorSets. -AM
+	//TODO: Check that this is not null, when calling non-begin methods on the object. - Brandborg
+	RenderPass* m_renderPassPtr;
 
 	friend class Device;
 };

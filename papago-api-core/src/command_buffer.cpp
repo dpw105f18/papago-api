@@ -3,6 +3,8 @@
 #include "swap_chain.hpp"
 #include "render_pass.hpp"
 #include "sampler.hpp"
+#include "vertex_shader.hpp"
+#include "fragment_shader.hpp"
 
 CommandBuffer::operator vk::CommandBuffer&()
 {
@@ -29,9 +31,12 @@ CommandBuffer::CommandBuffer(const vk::UniqueDevice &device, int queueFamilyInde
 //TODO: make checks to see if cmd.begin(...) has been called before. -AM
 void CommandBuffer::begin(RenderPass & renderPass, SwapChain& swapChain, uint32_t imageIndex)
 {
+	m_renderPassPtr = &renderPass;
+
 	vk::Rect2D renderArea = {};
 	renderArea.setOffset({ 0,0 })
 		.setExtent(swapChain.m_vkExtent);
+
 
 
 	std::array<vk::ClearValue, 2> clearValues;
@@ -59,8 +64,40 @@ void CommandBuffer::begin(RenderPass & renderPass, SwapChain& swapChain, uint32_
 
 }
 
+void CommandBuffer::setUniform(const std::string & name, const ImageResource & image, Sampler & sampler)
+{
+
+	long binding = -1;
+	auto& shaderProgram = m_renderPassPtr->m_shaderProgram;
+
+	if (shaderProgram.m_vertexShader.bindingExists(name)) {
+		binding = shaderProgram.m_vertexShader.m_bindings[name].binding;
+	}
+	else if (shaderProgram.m_fragmentShader.bindingExists(name)) {
+		binding = shaderProgram.m_fragmentShader.m_bindings[name].binding;
+	}
+	else {
+		PAPAGO_ERROR("Invalid uniform name!");
+	}
+
+	vk::DescriptorImageInfo info = {};
+	info.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
+		.setImageView(*image.m_vkImageView)
+		.setSampler(static_cast<vk::Sampler>(sampler));
+
+	auto writeDescriptorSet = vk::WriteDescriptorSet(*m_renderPassPtr->m_vkDescriptorSet, binding)
+		.setDescriptorCount(1)
+		.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
+		.setPImageInfo(&info);
+
+	m_vkDevice->updateDescriptorSets({ writeDescriptorSet }, {});
+	m_vkCommandBuffer->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *m_renderPassPtr->m_vkPipelineLayout, 0, { *m_renderPassPtr->m_vkDescriptorSet }, { });
+}
+
+
 void CommandBuffer::end()
 {
+	m_renderPassPtr = nullptr;
 	m_vkCommandBuffer->endRenderPass();
 	m_vkCommandBuffer->end();
 }
@@ -69,24 +106,4 @@ void CommandBuffer::drawInstanced(size_t instanceVertexCount, size_t instanceCou
 {
 	//TODO: choose the correct draw-command based on how the buffer has been used? -AM
 	m_vkCommandBuffer->draw(instanceVertexCount, instanceCount, startVertexLocation, startInstanceLocation);
-}
-
-void CommandBuffer::setUniform(const std::string &name, const ImageResource &image, Sampler &sampler)
-{
-	//TODO: get DescriptorSet and location in shader from somewhere. -AM 
-	auto descriptorSet = vk::DescriptorSet();
-	auto binding = 0;
-
-
-	vk::DescriptorImageInfo info = {};
-	info.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
-		.setImageView(*image.m_vkImageView)
-		.setSampler(static_cast<vk::Sampler>(sampler));
-
-	auto writeDescriptorSet = vk::WriteDescriptorSet(descriptorSet, binding)
-		.setDescriptorCount(1)
-		.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
-		.setPImageInfo(&info);
-
-	m_vkDevice->updateDescriptorSets({ writeDescriptorSet }, {});
 }

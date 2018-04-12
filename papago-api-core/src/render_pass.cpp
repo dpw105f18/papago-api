@@ -3,17 +3,22 @@
 #include "vertex_shader.hpp"
 #include "fragment_shader.hpp"
 #include "shader_program.h"
+#include "image_resource.hpp"
+#include "sampler.hpp"
 
 RenderPass::operator vk::RenderPass&()
 {
 	return *m_vkRenderPass;
 }
 
+
+
 RenderPass::RenderPass(
 	const vk::UniqueDevice& device,
 	const ShaderProgram& program,
 	const vk::Extent2D& extent,
 	Format format)
+		:	m_shaderProgram(program), m_vkDevice(device)
 {
 	setupDescriptorSet(device, program.m_vertexShader, program.m_fragmentShader);
 
@@ -63,7 +68,6 @@ RenderPass::RenderPass(
 	colorBlending.setAttachmentCount(1)
 		.setPAttachments(&colorBlendAttatchment);
 
-	//TODO: expand once we have vkDescriptorSets (from Parser)
 	vk::PipelineLayoutCreateInfo pipelineLayoutInfo;
 	pipelineLayoutInfo.setSetLayoutCount(1)
 		.setPSetLayouts(&m_vkDescriptorSetLayout.get());
@@ -208,7 +212,8 @@ void RenderPass::setupDescriptorSet(const vk::UniqueDevice &device, const Vertex
 	vk::DescriptorPoolCreateInfo poolCreateInfo = {};
 	poolCreateInfo.setPoolSizeCount(poolSizes.size())
 		.setPPoolSizes(poolSizes.data())
-		.setMaxSets(1);	//TODO: keep this default value? -AM.
+		.setMaxSets(1)	//TODO: keep this default value? -AM.
+		.setFlags(vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet);
 
 	m_vkDescriptorPool = device->createDescriptorPoolUnique(poolCreateInfo);
 

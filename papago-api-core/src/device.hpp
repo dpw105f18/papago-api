@@ -88,6 +88,10 @@ private:
 
 	Surface& m_surface;
 
+	vk::Queue m_vkInternalQueue;
+	CommandBuffer m_internalCommandBuffer;
+
+	friend class ImageResource;
 };
 
 template<typename T>

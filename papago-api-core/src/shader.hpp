@@ -17,11 +17,12 @@ protected:
 	Shader(const std::string& filePath, const std::string entryPoint);
 	const std::string m_entryPoint;
 	std::vector<char> m_code;
-	std::vector<Binding> getBindings() const;
-
-
 	std::map<std::string, Binding> m_bindings;
+
+	std::vector<Binding> getBindings() const;
+	bool bindingExists(const std::string& name);
 private:
 	static std::vector<char> readFile(const std::string& filePath);	//TODO: move to a Parser-stub
 
+	friend class CommandBuffer;
 };

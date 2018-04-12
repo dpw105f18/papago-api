@@ -202,14 +202,14 @@ SwapChain Device::createSwapChain(const Format& format, size_t framebufferCount,
 		colorResources.emplace_back(
 			ImageResource::createColorResource(
 				images[i], 
-				m_vkDevice, 
+				*this, 
 				swapFormat.format,
 				resourceExtent));
 
 		//TODO: configurable amount of depth buffers?
 		depthResources.emplace_back(
 			ImageResource::createDepthResource(
-				m_vkPhysicalDevice, m_vkDevice, 
+				*this, 
 				resourceExtent,
 				formatCandidates));
 	}
@@ -291,7 +291,7 @@ ImageResource Device::createTexture2D(uint32_t width, uint32_t height, Format fo
 
 	auto image = m_vkDevice->createImage(info);
 	auto memoryRequirements = m_vkDevice->getImageMemoryRequirements(image);
-	return ImageResource(image, m_vkPhysicalDevice, m_vkDevice, vk::ImageAspectFlagBits::eColor, format, extent, memoryRequirements);
+	return ImageResource(image, *this, vk::ImageAspectFlagBits::eColor, format, extent, memoryRequirements);
 }
 
 ShaderProgram Device::createShaderProgram(VertexShader &vertexShader, FragmentShader &fragmentShader)
@@ -317,8 +317,9 @@ Device::Device(vk::PhysicalDevice physicalDevice, vk::UniqueDevice &device, Surf
 	: m_vkPhysicalDevice(physicalDevice)
 	, m_vkDevice(std::move(device))
 	, m_surface(surface)
+	, m_internalCommandBuffer(CommandBuffer{ m_vkDevice, findQueueFamilies(physicalDevice, surface).graphicsFamily, Usage::eReset })
 {
-
+	m_vkInternalQueue = m_vkDevice->getQueue(findQueueFamilies(physicalDevice, surface).graphicsFamily, 0);
 }
 
 Device::SwapChainSupportDetails Device::querySwapChainSupport(const vk::PhysicalDevice& physicalDevice, Surface& surface) 

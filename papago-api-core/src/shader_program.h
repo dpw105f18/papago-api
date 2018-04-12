@@ -3,6 +3,7 @@
 
 class VertexShader;
 class FragmentShader;
+class CommandBuffer;
 
 class ShaderProgram
 {
@@ -19,4 +20,5 @@ private:
 
 	friend class Device;
 	friend class RenderPass;
+	friend class CommandBuffer;
 };
