@@ -29,4 +29,5 @@ private:
 		vk::MemoryRequirements		memoryRequirements);
 
 	friend class Device;
+	friend class CommandBuffer;
 };

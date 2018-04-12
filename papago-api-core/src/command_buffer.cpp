@@ -27,7 +27,7 @@ CommandBuffer::CommandBuffer(const vk::UniqueDevice &device, int queueFamilyInde
 }
 
 //TODO: make checks to see if cmd.begin(...) has been called before. -AM
-void CommandBuffer::begin(RenderPass & renderPass, SwapChain& swapChain, uint32_t imageIndex)
+void CommandBuffer::begin(RenderPass & renderPass, SwapChain& swapChain, uint32_t imageIndex, BufferResource& vertexBuffer)
 {
 	vk::Rect2D renderArea = {};
 	renderArea.setOffset({ 0,0 })
@@ -40,6 +40,7 @@ void CommandBuffer::begin(RenderPass & renderPass, SwapChain& swapChain, uint32_
 	clearValues[1].setDepthStencil(vk::ClearDepthStencilValue{ 1.0, 0 });
 
 	vk::RenderPassBeginInfo renderPassBeginInfo = {};
+
 	renderPassBeginInfo.setRenderPass(static_cast<vk::RenderPass>(renderPass))
 		.setFramebuffer(*swapChain.m_framebuffers[imageIndex])
 		.setRenderArea(renderArea)
@@ -56,7 +57,13 @@ void CommandBuffer::begin(RenderPass & renderPass, SwapChain& swapChain, uint32_
 
 	//TODO: can we assume a graphics bindpoint and pipeline? -AM
 	m_vkCommandBuffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *renderPass.m_vkGraphicsPipeline);
+	
+	//TODO: find a better way to bind vertex buffers
+	VkDeviceSize offsets[] = { 0 };
+	VkBuffer vertexBuffers[] = { *vertexBuffer.m_vkBuffer };
 
+	//TODO: make it work with m_vkCommandBuffer->bindVertexBuffers(...);
+	vkCmdBindVertexBuffers(*m_vkCommandBuffer, 0, 1, vertexBuffers, offsets);
 }
 
 void CommandBuffer::end()

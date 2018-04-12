@@ -8,6 +8,7 @@
 #include "render_pass.hpp"
 #include "graphics_queue.hpp"
 #include "command_buffer.hpp"
+#include "vertex.hpp"
 #include "parser.hpp"
 #include <WinUser.h>
 
@@ -109,10 +110,13 @@ int main()
 		auto devices = Device::enumerateDevices(surface, features, { VK_KHR_SWAPCHAIN_EXTENSION_NAME, VK_KHR_SAMPLER_MIRROR_CLAMP_TO_EDGE_EXTENSION_NAME });
 		auto& device = devices[0];
 		auto swapChain = device.createSwapChain(Format::eR8G8B8Unorm, 3, SwapChainPresentMode::eMailbox);
-		auto vertexBuffer = device.createVertexBuffer(std::vector<float>{
-			0.0f, 0.5f, 0.0f,
-				0.5f, -0.4f, 0.0f,
-				-0.5f, -0.4f, 0.0f,
+		auto vertexBuffer = device.createVertexBuffer(std::vector<Vertex>{
+			{ 0.3f, -1.0f },
+			{ 0.52f, 0.4f },
+			{ -0.5f, 0.5f },
+			{ -0.3f, 1.0f },
+			{ -0.52f, -0.4f },
+			{ 0.5f, -0.5f },
 		});
 		auto indexBuffer = device.createIndexBuffer(std::vector<uint16_t>{
 			0, 1, 2
@@ -159,9 +163,8 @@ int main()
 			}
 			else {
 				auto cmd = device.createCommandBuffer(Usage::eReset);
-				cmd.begin(renderPass, swapChain, graphicsQueue.getCurrentFrameIndex());
-				//cmd.setUniform("test", image, sampler2D);
-				cmd.drawInstanced(3, 1, 0, 0);
+				cmd.begin(renderPass, swapChain, graphicsQueue.getCurrentFrameIndex(), vertexBuffer);
+				cmd.drawInstanced(vertexBuffer.getSize(), 1, 0, 0);
 				cmd.end();
 				std::vector<CommandBuffer> commandBuffers;
 				commandBuffers.push_back(std::move(cmd));

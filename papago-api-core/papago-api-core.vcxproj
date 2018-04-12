@@ -176,6 +176,7 @@
     <ClInclude Include="src\sub_command_buffer.hpp" />
     <ClInclude Include="src\surface.hpp" />
     <ClInclude Include="src\swap_chain.hpp" />
+    <ClInclude Include="src\vertex.hpp" />
     <ClInclude Include="src\vertex_shader.hpp" />
   </ItemGroup>
   <ItemGroup>
@@ -194,6 +195,7 @@
     <ClCompile Include="src\shader_program.cpp" />
     <ClCompile Include="src\surface.cpp" />
     <ClCompile Include="src\swap_chain.cpp" />
+    <ClCompile Include="src\vertex.cpp" />
     <ClCompile Include="src\vertex_shader.cpp" />
   </ItemGroup>
   <ItemGroup>
