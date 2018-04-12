@@ -25,6 +25,7 @@ FragmentShader Parser::compileFragmentShader(const std::string & filePath, const
 	auto result = FragmentShader(spvFile, entryPoint);
 	
 	//TODO: set binding information on [result]
+	result.m_bindings.insert({ "texSampler", {0, vk::DescriptorType::eCombinedImageSampler} });
 	return result;
 }
 
@@ -37,6 +38,7 @@ std::string Parser::compile(const std::string & filePath)
 	auto fileName = filePath.substr(pathIndex, fileIndex - pathIndex);
 	auto spvFile = spirVPath + "/" + fileName + ".spv";
 
+	//TODO: append stage to spv filename (so test.vert and test.frag => testVert.spv and testFrag.spv). -AM.
 	// Is here or else c_str will point to junk
 	auto arg = std::string(" -V ")	//<-- compile using Vulkan semantics
 		+ std::string("-o ") + std::string("\"") + spvFile + std::string("\" ") //<-- output file = fileName.spv (in same folder as fileName.vert)

@@ -127,13 +127,19 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="shader\compile.bat">
-      <Filter>Resource Files</Filter>
-    </None>
     <None Include="shader\shader.frag">
       <Filter>Resource Files</Filter>
     </None>
     <None Include="shader\shader.vert">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="shader\textureFrag.frag">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="shader\textureVert.vert">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="fileMover.bat">
       <Filter>Resource Files</Filter>
     </None>
   </ItemGroup>

@@ -12,6 +12,10 @@
 #include "parser.hpp"
 #include <WinUser.h>
 
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
+
+
 LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	switch (msg)
@@ -93,6 +97,24 @@ HWND StartWindow(size_t width, size_t height)
 
 struct UniformBufferObject{};
 
+ImageResource createTexture(Device& device) {
+	int texWidth, texHeight, texChannels;
+	auto pixels = stbi_load("textures/eldorado.jpg", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+	if (!pixels) {
+		throw new std::runtime_error("Failed to load texture image!");
+	}
+
+	auto input = std::vector<char>();
+	input.resize(texWidth * texHeight * 4);
+	memcpy(input.data(), pixels, input.size());
+	stbi_image_free(pixels);
+
+	auto imageResource = device.createTexture2D(texWidth, texHeight, Format::eR8G8B8A8Unorm);
+	imageResource.upload(input);
+
+	return imageResource;
+}
+
 int main()
 {
 	{
@@ -134,14 +156,14 @@ int main()
 		auto sampler2D = device.createTextureSampler2D(Filter::eLinear, Filter::eLinear, TextureWrapMode::eMirroredRepeat, TextureWrapMode::eMirrorClampToEdge);
 		auto sampler1D = device.createTextureSampler1D(Filter::eNearest, Filter::eNearest, TextureWrapMode::eRepeat);
 
-		auto image = device.createTexture2D(100, 100, Format::eR8G8B8A8Unorm);
+		auto image = createTexture(device);
 
 		bigUniform.upload(bigData);
 
 		auto dlData = bigUniform.download();
 
-		auto vertexShader = parser.compileVertexShader("shader/testVert.vert", "main");
-		auto fragmentShader = parser.compileFragmentShader("shader/testFrag.frag", "main");
+		auto vertexShader = parser.compileVertexShader("shader/textureVert.vert", "main");
+		auto fragmentShader = parser.compileFragmentShader("shader/textureFrag.frag", "main");
 
 		auto program = device.createShaderProgram(vertexShader, fragmentShader);
 
@@ -149,6 +171,8 @@ int main()
 
 		auto graphicsQueue = device.createGraphicsQueue(swapChain);
 		size_t frameNo = 0;	//<-- for debugging
+		
+
 
 		while(true)
 		{
@@ -163,8 +187,9 @@ int main()
 			}
 			else {
 				auto cmd = device.createCommandBuffer(Usage::eReset);
-				cmd.begin(renderPass, swapChain, graphicsQueue.getCurrentFrameIndex(), vertexBuffer);
-				cmd.drawInstanced(vertexBuffer.getSize(), 1, 0, 0);
+				cmd.begin(renderPass, swapChain, graphicsQueue.getCurrentFrameIndex());
+				cmd.setUniform("texSampler", image, sampler2D);
+				cmd.drawInstanced(3, 1, 0, 0);
 				cmd.end();
 				std::vector<CommandBuffer> commandBuffers;
 				commandBuffers.push_back(std::move(cmd));

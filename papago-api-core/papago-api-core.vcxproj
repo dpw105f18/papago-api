@@ -87,6 +87,7 @@
     <ExecutablePath>$(ProjectDir)bin\$(Configuration)\$(Platform);$(ExecutablePath)</ExecutablePath>
     <OutDir>$(ProjectDir)bin\$(Configuration)\$(Platform)\</OutDir>
     <IntDir>$(ProjectDir)obj\$(Configuration)\$(Platform)\</IntDir>
+    <IncludePath>$(ProjectDir)includes;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ExecutablePath>$(ProjectDir)bin\$(Configuration)\$(Platform);$(ExecutablePath)</ExecutablePath>
@@ -121,8 +122,7 @@
       <AdditionalDependencies>vulkan-1.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>
-      </Command>
+      <Command>.\fileMover.bat</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -199,9 +199,11 @@
     <ClCompile Include="src\vertex_shader.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="shader\compile.bat" />
+    <None Include="fileMover.bat" />
     <None Include="shader\shader.frag" />
     <None Include="shader\shader.vert" />
+    <None Include="shader\textureFrag.frag" />
+    <None Include="shader\textureVert.vert" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

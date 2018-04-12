@@ -10,6 +10,7 @@ public:
 	//TODO: remove "override"s - place functionality in SubCommandBuffer or redesign relationship. -AM
 	void begin(const RenderPass&);
 	void begin(RenderPass&, SwapChain&, uint32_t imageIndex, BufferResource& vertexBuffer);
+	void begin(RenderPass&, SwapChain&, uint32_t imageIndex);
 	void begin(const RenderPass&, ImageResource& depthStencilBuffer);
 	void begin(const RenderPass&, SwapChain&, ImageResource& depthStencilBuffer);
 
@@ -31,6 +32,9 @@ public:
 	const vk::CommandBuffer* operator ->() const {
 		return &*m_vkCommandBuffer;
 	}
+	const vk::CommandBuffer& operator *() const {
+		return *m_vkCommandBuffer;
+	}
 
 private:
 	CommandBuffer(const vk::UniqueDevice& device, int queueFamilyIndex, Usage);
@@ -40,6 +44,8 @@ private:
 	Usage m_usage; //TODO: <-- use this! -AM
 
 	const vk::UniqueDevice& m_vkDevice;	//<-- used to update vkDescriptorSets. -AM
+	//TODO: Check that this is not null, when calling non-begin methods on the object. - Brandborg
+	RenderPass* m_renderPassPtr;
 
 	friend class Device;
 };

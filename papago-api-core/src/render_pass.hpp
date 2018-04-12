@@ -5,6 +5,8 @@
 
 class FragmentShader;
 class VertexShader;
+class ImageResource;
+class Sampler;
 
 class RenderPass
 {
@@ -17,7 +19,16 @@ private:
 	vk::UniqueRenderPass m_vkRenderPass;
 	vk::UniquePipeline m_vkGraphicsPipeline;
 	vk::UniquePipelineLayout m_vkPipelineLayout;
+	vk::UniqueDescriptorPool m_vkDescriptorPool;
+	vk::UniqueDescriptorSet m_vkDescriptorSet;
+	vk::UniqueDescriptorSetLayout m_vkDescriptorSetLayout;
+	const vk::UniqueDevice& m_vkDevice;
+
+	const ShaderProgram& m_shaderProgram;
+
+	void setupDescriptorSet(const vk::UniqueDevice&, const VertexShader& vertexShader, const FragmentShader& fragmentShader);
 
 	friend class Device;
 	friend class CommandBuffer;
+	friend class ImageResource;
 };

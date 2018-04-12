@@ -2,8 +2,10 @@
 #include "shader_program.h"
 #include "vertex_shader.hpp"
 #include "fragment_shader.hpp"
+#include "command_buffer.hpp"
 
 ShaderProgram::ShaderProgram(const vk::UniqueDevice& device, VertexShader& vertexShader, FragmentShader& fragmentShader)
+	: m_vertexShader(vertexShader), m_fragmentShader(fragmentShader)
 {
 	//Module:
 	vk::ShaderModuleCreateInfo vertexInfo = {};
