@@ -7,7 +7,7 @@ class RenderPass;
 class ImageResource;
 class BufferResource;
 class Resource;
-class Sampler2D;
+class Sampler;
 class Color;	//<-- TODO: find out what to do about this
 class SwapChain;
 
@@ -26,7 +26,7 @@ public:
 	virtual void clearFrameBuffer(Color);
 	virtual void setDepthTest(DepthTest);
 	virtual void setUniform(const std::string&, const BufferResource&);
-	virtual void setUniform(const std::string&, const ImageResource&, const Sampler2D&);
+	virtual void setUniform(const std::string&, const ImageResource&, Sampler&);
 	virtual void setInput(const std::string&, const Resource&);
 	virtual void setInterleavedInput(const std::vector<const std::string>&, const Resource&);
 	virtual void setIndexBuffer(const Resource&);

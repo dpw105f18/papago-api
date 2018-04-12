@@ -2,6 +2,7 @@
 #include "command_buffer.hpp"
 #include "swap_chain.hpp"
 #include "render_pass.hpp"
+#include "sampler.hpp"
 
 CommandBuffer::operator vk::CommandBuffer&()
 {
@@ -9,7 +10,7 @@ CommandBuffer::operator vk::CommandBuffer&()
 }
 
 CommandBuffer::CommandBuffer(const vk::UniqueDevice &device, int queueFamilyIndex, Usage usage)
-	: m_usage(usage)
+	: m_usage(usage), m_vkDevice(device)
 {
 	vk::CommandPoolCreateInfo poolCreateInfo = {};
 	poolCreateInfo.setQueueFamilyIndex(queueFamilyIndex)
@@ -75,4 +76,24 @@ void CommandBuffer::drawInstanced(size_t instanceVertexCount, size_t instanceCou
 {
 	//TODO: choose the correct draw-command based on how the buffer has been used? -AM
 	m_vkCommandBuffer->draw(instanceVertexCount, instanceCount, startVertexLocation, startInstanceLocation);
+}
+
+void CommandBuffer::setUniform(const std::string &name, const ImageResource &image, Sampler &sampler)
+{
+	//TODO: get DescriptorSet and location in shader from somewhere. -AM 
+	auto descriptorSet = vk::DescriptorSet();
+	auto binding = 0;
+
+
+	vk::DescriptorImageInfo info = {};
+	info.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
+		.setImageView(*image.m_vkImageView)
+		.setSampler(static_cast<vk::Sampler>(sampler));
+
+	auto writeDescriptorSet = vk::WriteDescriptorSet(descriptorSet, binding)
+		.setDescriptorCount(1)
+		.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
+		.setPImageInfo(&info);
+
+	m_vkDevice->updateDescriptorSets({ writeDescriptorSet }, {});
 }

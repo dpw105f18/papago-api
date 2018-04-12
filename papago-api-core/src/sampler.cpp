@@ -13,6 +13,11 @@ Sampler::Sampler(SamplerD dimension)
 	m_vkSamplerCreateInfo.mipmapMode = vk::SamplerMipmapMode::eLinear;
 }
 
+Sampler::operator vk::Sampler&()
+{
+	return *m_vkTextureSampler;
+}
+
 Sampler& Sampler::setMagFilter(Filter filter)
 {
 	m_vkSamplerCreateInfo.magFilter = filter;

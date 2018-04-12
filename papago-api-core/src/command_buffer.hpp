@@ -19,7 +19,7 @@ public:
 	void clearFrameBuffer(Color);
 	void setDepthTest(DepthTest);
 	void setUniform(const std::string&, const BufferResource&);
-	void setUniform(const std::string&, const ImageResource&, const Sampler2D&);
+	void setUniform(const std::string&, const ImageResource&, Sampler&);
 	void setInput(const std::string&, const Resource&);
 	void setInterleavedInput(const std::vector<const std::string>&, const Resource&);
 	void setIndexBuffer(const Resource&);
@@ -38,6 +38,8 @@ private:
 	vk::UniqueCommandPool m_vkCommandPool;	//TODO: <-- make non-unique if we reuse command pools. -AM
 	vk::UniqueCommandBuffer m_vkCommandBuffer;
 	Usage m_usage; //TODO: <-- use this! -AM
+
+	const vk::UniqueDevice& m_vkDevice;	//<-- used to update vkDescriptorSets. -AM
 
 	friend class Device;
 };

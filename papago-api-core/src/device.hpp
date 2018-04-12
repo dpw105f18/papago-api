@@ -13,6 +13,7 @@ class Surface;
 class SwapChain;
 class ImageResource;
 class Sampler;
+class ShaderProgram;
 
 class Device {
 public:
@@ -23,14 +24,16 @@ public:
 	GraphicsQueue createGraphicsQueue(SwapChain&) const;
 	CommandBuffer createCommandBuffer(Usage) const;
 	SubCommandBuffer createSubCommandBuffer(Usage);
-	VertexShader createVertexShader(const std::string& filePath, const std::string& entryPoint) const;
-	FragmentShader createFragmentShader(const std::string& filePath, const std::string& entryPoint) const;
-	RenderPass createRenderPass(VertexShader&, FragmentShader&, const SwapChain&) const;
-	Sampler Device::createTextureSampler3D(Filter magFil, Filter minFil, TextureWrapMode modeU, TextureWrapMode modeV, TextureWrapMode modeW);
-	Sampler Device::createTextureSampler2D(Filter magFil, Filter minFil, TextureWrapMode modeU, TextureWrapMode modeV);
-	Sampler Device::createTextureSampler1D(Filter magFil, Filter minFil, TextureWrapMode modeU);
+	RenderPass createRenderPass(const ShaderProgram&, const SwapChain&) const;
+	Sampler createTextureSampler3D(Filter magFil, Filter minFil, TextureWrapMode modeU, TextureWrapMode modeV, TextureWrapMode modeW);
+	Sampler createTextureSampler2D(Filter magFil, Filter minFil, TextureWrapMode modeU, TextureWrapMode modeV);
+	Sampler createTextureSampler1D(Filter magFil, Filter minFil, TextureWrapMode modeU);
 	//drop the other create textureSampler idea below?
-	void Device::createTextureSampler(Sampler sampler);
+	void createTextureSampler(Sampler sampler);
+
+	ImageResource createTexture2D(uint32_t width, uint32_t height, Format format);
+
+	ShaderProgram createShaderProgram(VertexShader&, FragmentShader&);
 
 	template<typename T>
 	BufferResource createVertexBuffer(const std::vector<T>& vertexData) const;
