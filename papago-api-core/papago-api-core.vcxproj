@@ -87,7 +87,7 @@
     <ExecutablePath>$(ProjectDir)bin\$(Configuration)\$(Platform);$(ExecutablePath)</ExecutablePath>
     <OutDir>$(ProjectDir)bin\$(Configuration)\$(Platform)\</OutDir>
     <IntDir>$(ProjectDir)obj\$(Configuration)\$(Platform)\</IntDir>
-    <IncludePath>C:\Users\roger_000\Documents\Visual Studio 2017\Projects\papago-api\papago-api-core\includes;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir)includes;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ExecutablePath>$(ProjectDir)bin\$(Configuration)\$(Platform);$(ExecutablePath)</ExecutablePath>
