@@ -3,6 +3,7 @@
 #include "vertex_shader.hpp"
 #include "fragment_shader.hpp"
 #include "vertex.hpp"
+#include "shader_program.h"
 
 RenderPass::operator vk::RenderPass&()
 {
@@ -11,15 +12,13 @@ RenderPass::operator vk::RenderPass&()
 
 RenderPass::RenderPass(
 	const vk::UniqueDevice& device,
-	const VertexShader& vertexShader,
-	const FragmentShader& fragmentShader,
+	const ShaderProgram& program,
 	const vk::Extent2D& extent,
 	Format format)
-	: m_vertexShader(vertexShader), m_fragmentShader(fragmentShader)
 {
 	vk::PipelineShaderStageCreateInfo shaderStages[] = { 
-		m_vertexShader.m_vkStageCreateInfo, 
-		m_fragmentShader.m_vkStageCreateInfo 
+		program.m_vkVertexStageCreateInfo,
+		program.m_vkFragmentStageCreateInfo
 	};
 
 	//TODO: Find a better generic way to set attribute and binding descriptions up

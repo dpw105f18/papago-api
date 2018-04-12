@@ -65,6 +65,11 @@
     </ClInclude>
     <ClInclude Include="src\vertex.hpp">
       <Filter>Header Files</Filter>
+    <ClInclude Include="src\parser.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\shader_program.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -111,6 +116,11 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\vertex.cpp">
+      <Filter>Source Files</Filter>
+    <ClCompile Include="src\parser.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\shader_program.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

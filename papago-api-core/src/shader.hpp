@@ -1,17 +1,23 @@
 #pragma once
 #include "standard_header.hpp"
+#include "parser.hpp"
 #include <string>
+#include <map>
 class Shader {
 public:
-	Shader(const Shader&) = delete;
 
 protected:
-	Shader(const vk::UniqueDevice& device, const std::string& filePath, std::string entryPoint);
-	Shader(Shader&&) noexcept;
-	vk::UniqueShaderModule m_vkShader;
-	vk::PipelineShaderStageCreateInfo m_vkStageCreateInfo;	//<-- set by children
-	std::string m_entryPoint;
+	Shader(const std::string& filePath, const std::string entryPoint);
+	const std::string m_entryPoint;
+	std::vector<char> m_code;
 
+	struct Binding
+	{
+		uint32_t binding;
+		vk::DescriptorType type;
+	};
+
+	std::map<std::string, Binding> m_bindings;
 private:
 	static std::vector<char> readFile(const std::string& filePath);	//TODO: move to a Parser-stub
 };
