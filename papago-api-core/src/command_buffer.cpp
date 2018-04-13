@@ -97,11 +97,8 @@ void CommandBuffer::setUniform(const std::string & name, const ImageResource & i
 void CommandBuffer::setInput(const BufferResource& buffer)
 {
 	//TODO: find a more general way to fix offsets
-	VkDeviceSize offsets[] = { 0 };
-	VkBuffer vertexBuffers[] = { *buffer.m_vkBuffer };
-
 	//TODO: make it work with m_vkCommandBuffer->bindVertexBuffers(...);
-	vkCmdBindVertexBuffers(*m_vkCommandBuffer, 0, 1, vertexBuffers, offsets);
+	m_vkCommandBuffer->bindVertexBuffers(0, { *buffer.m_vkBuffer }, { 0 });
 }
 
 void CommandBuffer::end()
@@ -111,8 +108,19 @@ void CommandBuffer::end()
 	m_vkCommandBuffer->end();
 }
 
+void CommandBuffer::setIndexBuffer(const BufferResource &indexBuffer)
+{
+	// TODO: Retrieve wheter uint16 or uint32 is used for index buffer from somewhere - CW 2018-04-13
+	m_vkCommandBuffer->bindIndexBuffer(*indexBuffer.m_vkBuffer, indexBuffer.getSize(), vk::IndexType::eUint16);
+}
+
 void CommandBuffer::drawInstanced(size_t instanceVertexCount, size_t instanceCount, size_t startVertexLocation, size_t startInstanceLocation)
 {
 	//TODO: choose the correct draw-command based on how the buffer has been used? -AM
 	m_vkCommandBuffer->draw(instanceVertexCount, instanceCount, startVertexLocation, startInstanceLocation);
+}
+
+void CommandBuffer::drawIndexed(size_t indexCount, size_t instanceCount, size_t firstIndex, size_t vertexOffset, size_t firstInstance)
+{
+	m_vkCommandBuffer->drawIndexed(indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
 }

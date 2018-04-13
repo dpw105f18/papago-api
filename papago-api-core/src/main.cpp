@@ -162,7 +162,7 @@ int main()
 
 		auto dlData = bigUniform.download();
 
-		auto vertexShader = parser.compileVertexShader("shader/textureFrag.vert", "main");
+		auto vertexShader = parser.compileVertexShader("shader/textureVert.vert", "main");
 		auto fragmentShader = parser.compileFragmentShader("shader/textureFrag.frag", "main");
 
 		auto program = device.createShaderProgram(vertexShader, fragmentShader);
@@ -190,7 +190,9 @@ int main()
 				cmd.begin(renderPass, swapChain, graphicsQueue.getCurrentFrameIndex());
 				cmd.setInput(vertexBuffer);
 				cmd.setUniform("texSampler", image, sampler2D);
-				cmd.drawInstanced(vertexBuffer.getSize(), 1, 0, 0);
+				cmd.setIndexBuffer(indexBuffer);
+				cmd.drawIndexed(3); // TODO: Create a way to get this from the index buffer
+				//cmd.drawInstanced(vertexBuffer.getSize(), 1, 0, 0);
 				cmd.end();
 				std::vector<CommandBuffer> commandBuffers;
 				commandBuffers.push_back(std::move(cmd));
