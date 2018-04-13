@@ -111,7 +111,7 @@ void CommandBuffer::end()
 void CommandBuffer::setIndexBuffer(const BufferResource &indexBuffer)
 {
 	// TODO: Retrieve wheter uint16 or uint32 is used for index buffer from somewhere - CW 2018-04-13
-	m_vkCommandBuffer->bindIndexBuffer(*indexBuffer.m_vkBuffer, indexBuffer.getSize(), vk::IndexType::eUint16);
+	m_vkCommandBuffer->bindIndexBuffer(*indexBuffer.m_vkBuffer, 0, vk::IndexType::eUint16);
 }
 
 void CommandBuffer::drawInstanced(size_t instanceVertexCount, size_t instanceCount, size_t startVertexLocation, size_t startInstanceLocation)
