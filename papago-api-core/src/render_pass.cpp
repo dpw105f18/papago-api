@@ -53,7 +53,7 @@ RenderPass::RenderPass(
 	vk::PipelineRasterizationStateCreateInfo rasterizer;
 	rasterizer.setPolygonMode(vk::PolygonMode::eFill)
 		.setLineWidth(1.0f)
-		.setCullMode(vk::CullModeFlagBits::eBack)
+		.setCullMode(vk::CullModeFlagBits::eFront)
 		.setFrontFace(vk::FrontFace::eClockwise)
 		.setRasterizerDiscardEnable(VK_FALSE);
 
