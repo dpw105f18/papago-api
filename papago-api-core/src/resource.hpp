@@ -12,7 +12,6 @@ public:
 	virtual void destroy() = 0;
 	virtual void upload(const std::vector<char>& data);
 	std::vector<char> download();
-	size_t getSize() const;
 protected:
 	explicit Resource(const vk::UniqueDevice& device);
 
@@ -29,6 +28,6 @@ protected:
 		uint32_t memoryTypeBits, 
 		const vk::MemoryPropertyFlags&);
 
-private:
 	size_t m_size;
+private:
 };

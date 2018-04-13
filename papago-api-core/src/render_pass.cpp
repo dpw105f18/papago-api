@@ -31,11 +31,12 @@ RenderPass::RenderPass(
 	auto attributeDescription = Vertex::getAttributeDescriptions();
 	auto bindingDescription = Vertex::getBindingDescription();
 
+	//TODO: how to handle vertex buffer existence and count? -AM
 	vk::PipelineVertexInputStateCreateInfo vertexInputInfo;
-	vertexInputInfo.setVertexBindingDescriptionCount(0)
-		.setPVertexBindingDescriptions(nullptr)
-		.setVertexAttributeDescriptionCount(0)
-		.setPVertexAttributeDescriptions(nullptr); 
+	vertexInputInfo.setVertexBindingDescriptionCount(1)
+		.setPVertexBindingDescriptions(&bindingDescription)
+		.setVertexAttributeDescriptionCount(attributeDescription.size())
+		.setPVertexAttributeDescriptions(attributeDescription.data()); 
 
 	vk::PipelineInputAssemblyStateCreateInfo inputAssembly;
 	inputAssembly.setTopology(vk::PrimitiveTopology::eTriangleList);	//<-- TODO: make setable

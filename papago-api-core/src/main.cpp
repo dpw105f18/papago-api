@@ -133,19 +133,21 @@ int main()
 		auto& device = devices[0];
 		auto swapChain = device.createSwapChain(Format::eR8G8B8Unorm, 3, SwapChainPresentMode::eMailbox);
 		
-		/*
-		auto vertexBuffer = device.createVertexBuffer(std::vector<Vertex>{
+		auto vertices = std::vector<Vertex>{
 			{ 0.3f, -1.0f },
 			{ 0.52f, 0.4f },
 			{ -0.5f, 0.5f },
 			{ -0.3f, 1.0f },
 			{ -0.52f, -0.4f },
 			{ 0.5f, -0.5f },
-		});
+		};
+		auto vertexBuffer = device.createVertexBuffer(vertices);
+		/*
 		auto indexBuffer = device.createIndexBuffer(std::vector<uint16_t>{
 			0, 1, 2
 		});
 		*/
+		
 		auto uniformBuffer = device.createUniformBuffer<sizeof(UniformBufferObject)>();
 
 		auto bigUniform = device.createUniformBuffer<1000>();
@@ -174,9 +176,9 @@ int main()
 
 		auto graphicsQueue = device.createGraphicsQueue(swapChain);
 		size_t frameNo = 0;	//<-- for debugging
-		auto uniform_buffer = device.createUniformBuffer<sizeof(float[64])>();
+		auto uniform_buffer = device.createUniformBuffer<sizeof(float[3])>();
 
-		auto uniform_input_float = std::vector<float>({ 0.0f, 1.0f, 0.0f });
+		auto uniform_input_float = std::vector<float>({ 0.0f, 0.0f, 1.0f });
 		auto uniform_input_char = std::vector<char>(sizeof(float) * uniform_input_float.size());
 
 		// TODO: move into upload as template???
@@ -197,11 +199,12 @@ int main()
 			else {
 				auto cmd = device.createCommandBuffer(Usage::eReset);
 				cmd.begin(renderPass, swapChain, graphicsQueue.getCurrentFrameIndex());
-				
+				cmd.setInput(vertexBuffer);
 				//cmd.setUniform("texSampler", image, sampler2D);
-				cmd.setUniform("inColor", uniform_buffer);
+				
 
-				cmd.drawInstanced(3, 1, 0, 0);
+				cmd.setUniform("inColor", uniform_buffer);
+				cmd.drawInstanced(vertices.size(), 1, 0, 0);
 				cmd.end();
 				std::vector<CommandBuffer> commandBuffers;
 				commandBuffers.push_back(std::move(cmd));

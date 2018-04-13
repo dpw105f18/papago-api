@@ -10,7 +10,6 @@ public:
 
 	// Inherited via Resource
 	void destroy() override;
-	const vk::DescriptorBufferInfo& info() const;
 
 private:
 	vk::UniqueBuffer m_vkBuffer;
@@ -28,7 +27,8 @@ private:
 		const vk::PhysicalDevice&	physicalDevice,
 		vk::UniqueBuffer&&			buffer,
 		vk::MemoryPropertyFlags		memoryFlags,
-		vk::MemoryRequirements		memoryRequirements);
+		vk::MemoryRequirements		memoryRequirements,
+		size_t						range);
 
 	friend class Device;
 	friend class CommandBuffer;
