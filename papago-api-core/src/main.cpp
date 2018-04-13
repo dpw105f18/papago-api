@@ -188,6 +188,8 @@ int main()
 			else {
 				auto cmd = device.createCommandBuffer(Usage::eReset);
 				cmd.begin(renderPass, swapChain, graphicsQueue.getCurrentFrameIndex());
+				//setInput is not needed, just to test if it works
+				cmd.setInput(vertexBuffer);
 				cmd.setUniform("texSampler", image, sampler2D);
 				cmd.drawInstanced(3, 1, 0, 0);
 				cmd.end();

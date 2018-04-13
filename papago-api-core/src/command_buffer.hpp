@@ -21,7 +21,7 @@ public:
 	void setDepthTest(DepthTest);
 	void setUniform(const std::string&, const BufferResource&);
 	void setUniform(const std::string&, const ImageResource&, Sampler&);
-	void setInput(const std::string&, const Resource&);
+	void setInput(const BufferResource&);
 	void setInterleavedInput(const std::vector<const std::string>&, const Resource&);
 	void setIndexBuffer(const Resource&);
 	void drawInstanced(size_t instanceVertexCount, size_t instanceCount, size_t startVertexLocation, size_t startInstanceLocation);
