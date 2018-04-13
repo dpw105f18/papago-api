@@ -8,6 +8,7 @@
 #include "render_pass.hpp"
 #include "sampler.hpp"
 #include "graphics_queue.hpp"
+#include "shader_program.h"
 #include <set>
 
 
@@ -201,14 +202,14 @@ SwapChain Device::createSwapChain(const Format& format, size_t framebufferCount,
 		colorResources.emplace_back(
 			ImageResource::createColorResource(
 				images[i], 
-				m_vkDevice, 
+				*this, 
 				swapFormat.format,
 				resourceExtent));
 
 		//TODO: configurable amount of depth buffers?
 		depthResources.emplace_back(
 			ImageResource::createDepthResource(
-				m_vkPhysicalDevice, m_vkDevice, 
+				*this, 
 				resourceExtent,
 				formatCandidates));
 	}
@@ -229,15 +230,6 @@ CommandBuffer Device::createCommandBuffer(Usage usage) const
 	return { m_vkDevice, queueFamilyIndices.graphicsFamily, usage };
 }
 
-VertexShader Device::createVertexShader(const std::string & filePath, const std::string & entryPoint) const {
-	return {m_vkDevice, filePath, entryPoint };
-} 
-
-FragmentShader Device::createFragmentShader(const std::string & filePath, const std::string & entryPoint) const {
-	return { m_vkDevice, filePath, entryPoint }; 
-}
-
-
 Sampler Device::createTextureSampler3D(Filter magFilter, Filter minFilter, TextureWrapMode wrapU, TextureWrapMode wrapV, TextureWrapMode wrapW)
 {
 	//TODO: provide builder-pattern to API user -AM/AB
@@ -248,7 +240,7 @@ Sampler Device::createTextureSampler3D(Filter magFilter, Filter minFilter, Textu
 		.setTextureWrapV(wrapV)
 		.setTextureWrapW(wrapW);
 
-	sampler.vk_mTextureSampler = m_vkDevice->createSamplerUnique(sampler.m_vkSamplerCreateInfo);
+	sampler.m_vkTextureSampler = m_vkDevice->createSamplerUnique(sampler.m_vkSamplerCreateInfo);
 
 	return std::move(sampler);
 }
@@ -261,7 +253,7 @@ Sampler Device::createTextureSampler2D(Filter magFilter, Filter minFilter, Textu
 		.setTextureWrapU(wrapU)
 		.setTextureWrapV(wrapV);
 
-	sampler.vk_mTextureSampler = m_vkDevice->createSamplerUnique(sampler.m_vkSamplerCreateInfo);
+	sampler.m_vkTextureSampler = m_vkDevice->createSamplerUnique(sampler.m_vkSamplerCreateInfo);
 
 	return std::move(sampler);
 }
@@ -273,7 +265,7 @@ Sampler Device::createTextureSampler1D(Filter magFilter, Filter minFilter, Textu
 		.setMinFilter(minFilter)
 		.setTextureWrapU(wrapU);
 
-	sampler.vk_mTextureSampler = m_vkDevice->createSamplerUnique(sampler.m_vkSamplerCreateInfo);
+	sampler.m_vkTextureSampler = m_vkDevice->createSamplerUnique(sampler.m_vkSamplerCreateInfo);
 
 	return std::move(sampler);
 }
@@ -284,26 +276,50 @@ void Device::createTextureSampler(Sampler sampler)
 	m_vkDevice->createSamplerUnique(sampler.m_vkSamplerCreateInfo);
 }
 
+//TODO: remove 2D from method name and let dimension be determined by the (number of) arguments? -AM
+ImageResource Device::createTexture2D(uint32_t width, uint32_t height, Format format )
+{
+	vk::Extent3D extent = { width, height, 1 };
+	vk::ImageCreateInfo info;
+	info.setImageType(vk::ImageType::e2D)
+		.setExtent(extent)
+		.setFormat(format)
+		.setInitialLayout(vk::ImageLayout::eUndefined)
+		.setMipLevels(1)
+		.setArrayLayers(1)
+		.setUsage(vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled);
+
+	auto image = m_vkDevice->createImage(info);
+	auto memoryRequirements = m_vkDevice->getImageMemoryRequirements(image);
+	return ImageResource(image, *this, vk::ImageAspectFlagBits::eColor, format, extent, memoryRequirements);
+}
+
+ShaderProgram Device::createShaderProgram(VertexShader &vertexShader, FragmentShader &fragmentShader)
+{
+	return ShaderProgram(m_vkDevice, vertexShader, fragmentShader);
+}
+
 void Device::waitIdle()
 {
 	m_vkDevice->waitIdle();
 }
 
-RenderPass Device::createRenderPass(VertexShader &vertexShader, FragmentShader &fragmentShader, const SwapChain &swapChain) const
+RenderPass Device::createRenderPass(const ShaderProgram& program, const SwapChain &swapChain) const
 {
 	// TODO: Dangerous hacking, fix this by adding error handling instead of expecting there always being data available.
 	auto extent = swapChain.m_colorResources[0].m_vkExtent;
 	auto format = swapChain.m_colorResources[0].m_format;
 
-	return RenderPass(m_vkDevice, vertexShader, fragmentShader, { extent.width, extent.height }, format);
+	return RenderPass(m_vkDevice, program, { extent.width, extent.height }, format);
 }
 
 Device::Device(vk::PhysicalDevice physicalDevice, vk::UniqueDevice &device, Surface &surface)
 	: m_vkPhysicalDevice(physicalDevice)
 	, m_vkDevice(std::move(device))
 	, m_surface(surface)
+	, m_internalCommandBuffer(CommandBuffer{ m_vkDevice, findQueueFamilies(physicalDevice, surface).graphicsFamily, Usage::eReset })
 {
-
+	m_vkInternalQueue = m_vkDevice->getQueue(findQueueFamilies(physicalDevice, surface).graphicsFamily, 0);
 }
 
 Device::SwapChainSupportDetails Device::querySwapChainSupport(const vk::PhysicalDevice& physicalDevice, Surface& surface) 

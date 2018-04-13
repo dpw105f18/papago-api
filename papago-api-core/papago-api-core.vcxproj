@@ -87,6 +87,7 @@
     <ExecutablePath>$(ProjectDir)bin\$(Configuration)\$(Platform);$(ExecutablePath)</ExecutablePath>
     <OutDir>$(ProjectDir)bin\$(Configuration)\$(Platform)\</OutDir>
     <IntDir>$(ProjectDir)obj\$(Configuration)\$(Platform)\</IntDir>
+    <IncludePath>$(ProjectDir)includes;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ExecutablePath>$(ProjectDir)bin\$(Configuration)\$(Platform);$(ExecutablePath)</ExecutablePath>
@@ -121,7 +122,7 @@
       <AdditionalDependencies>vulkan-1.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>./shader/compile.bat</Command>
+      <Command>.\fileMover.bat</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -165,14 +166,17 @@
     <ClInclude Include="src\fragment_shader.hpp" />
     <ClInclude Include="src\graphics_queue.hpp" />
     <ClInclude Include="src\image_resource.hpp" />
+    <ClInclude Include="src\parser.hpp" />
     <ClInclude Include="src\render_pass.hpp" />
     <ClInclude Include="src\resource.hpp" />
     <ClInclude Include="src\sampler.hpp" />
     <ClInclude Include="src\shader.hpp" />
+    <ClInclude Include="src\shader_program.h" />
     <ClInclude Include="src\standard_header.hpp" />
     <ClInclude Include="src\sub_command_buffer.hpp" />
     <ClInclude Include="src\surface.hpp" />
     <ClInclude Include="src\swap_chain.hpp" />
+    <ClInclude Include="src\vertex.hpp" />
     <ClInclude Include="src\vertex_shader.hpp" />
   </ItemGroup>
   <ItemGroup>
@@ -183,18 +187,25 @@
     <ClCompile Include="src\graphics_queue.cpp" />
     <ClCompile Include="src\image_resource.cpp" />
     <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\parser.cpp" />
     <ClCompile Include="src\sampler.cpp" />
     <ClCompile Include="src\render_pass.cpp" />
     <ClCompile Include="src\resource.cpp" />
     <ClCompile Include="src\shader.cpp" />
+    <ClCompile Include="src\shader_program.cpp" />
     <ClCompile Include="src\surface.cpp" />
     <ClCompile Include="src\swap_chain.cpp" />
+    <ClCompile Include="src\vertex.cpp" />
     <ClCompile Include="src\vertex_shader.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="shader\compile.bat" />
+    <None Include="fileMover.bat" />
     <None Include="shader\shader.frag" />
     <None Include="shader\shader.vert" />
+    <None Include="shader\textureFrag.frag" />
+    <None Include="shader\textureVert.vert" />
+    <None Include="shader\uniformFrag.frag" />
+    <None Include="shader\uniformVert.vert" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

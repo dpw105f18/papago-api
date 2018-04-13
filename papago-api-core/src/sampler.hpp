@@ -8,6 +8,8 @@ public:
 
 	Sampler(SamplerD dimension);
 
+	explicit operator vk::Sampler&();
+
 	Sampler& setMagFilter(Filter filter);
 	Sampler& setMinFilter(Filter filter);
 	Sampler& setTextureWrapU(TextureWrapMode mode);
@@ -17,7 +19,7 @@ public:
 private:
 	friend class Device;
 	vk::SamplerCreateInfo m_vkSamplerCreateInfo;
-	vk::UniqueSampler vk_mTextureSampler;
+	vk::UniqueSampler m_vkTextureSampler;
 	SamplerD m_dimension;
 
 };

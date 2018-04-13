@@ -17,6 +17,7 @@ const vk::DescriptorBufferInfo & BufferResource::info() const
 	return m_vkInfo;
 }
 
+
 BufferResource BufferResource::createBufferResource(
 	vk::PhysicalDevice		physicalDevice, 
 	const vk::UniqueDevice& device, 

@@ -7,6 +7,7 @@ ImageResource::ImageResource(ImageResource&& other) noexcept
 	, m_vkImageView(std::move(other.m_vkImageView))
 	, m_format(other.m_format)
 	, m_vkExtent(other.m_vkExtent)
+	, m_device(other.m_device)
 {
 	other.m_format = Format();
 	other.m_vkExtent = vk::Extent3D();
@@ -20,23 +21,84 @@ ImageResource::~ImageResource()
 	}
 }
 
+void ImageResource::upload(const std::vector<char>& data)
+{
+	//Transition image so host can upload
+	auto& commandBuffer = m_device.m_internalCommandBuffer;
+	vk::CommandBufferBeginInfo beginInfo = {};
+	beginInfo.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
+	commandBuffer->begin(beginInfo);
+	//TODO: don't assume Image is eUndefined at all times
+	transition<vk::ImageLayout::eUndefined, vk::ImageLayout::eTransferDstOptimal>(commandBuffer);
+	
+
+	//Do the actual uploading
+	//TODO: use BufferResource? -AM
+	vk::BufferCreateInfo bufferInfo = {};
+	bufferInfo.setSize(data.size())
+		.setUsage(vk::BufferUsageFlagBits::eTransferSrc);
+
+	auto buffer = m_vkDevice->createBufferUnique(bufferInfo);
+
+	auto memoryRequirements = m_vkDevice->getBufferMemoryRequirements(*buffer);
+	auto memoryType = findMemoryType(m_device.m_vkPhysicalDevice, memoryRequirements.memoryTypeBits, vk::MemoryPropertyFlagBits::eHostCoherent | vk::MemoryPropertyFlagBits::eHostVisible);
+	vk::MemoryAllocateInfo allocateInfo = {};
+	allocateInfo.setAllocationSize(memoryRequirements.size)
+		.setMemoryTypeIndex(memoryType);
+
+	auto memory = m_vkDevice->allocateMemoryUnique(allocateInfo);
+
+	m_device.m_vkDevice->bindBufferMemory(*buffer, *memory, 0);
+	auto map = m_vkDevice->mapMemory(*memory, 0, VK_WHOLE_SIZE);
+	memcpy(map, data.data(), data.size());
+	m_vkDevice->unmapMemory(*memory);
+	
+	vk::BufferImageCopy region;
+	region.bufferOffset = 0;
+	region.bufferRowLength = 0;
+	region.bufferImageHeight = 0;
+	region.imageSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
+	region.imageSubresource.mipLevel = 0;
+	region.imageSubresource.baseArrayLayer = 0;
+	region.imageSubresource.layerCount = 1;
+	region.imageOffset = vk::Offset3D{ 0,0,0 };
+	region.imageExtent = m_vkExtent;	//TODO: what if texture image is smaller/larger than ImageResource? -AM
+
+	commandBuffer->copyBufferToImage(*buffer, m_vkImage, vk::ImageLayout::eTransferDstOptimal, { region });
+
+	//Transition so shader can read
+	
+	transition<vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eShaderReadOnlyOptimal>(commandBuffer);
+	commandBuffer->end();
+
+	//execute everything
+	vk::SubmitInfo submitInfo = {};
+	submitInfo.setCommandBufferCount(1)
+		.setPCommandBuffers(&*commandBuffer);
+
+	m_device.m_vkInternalQueue.submit(submitInfo, vk::Fence());
+	m_device.m_vkInternalQueue.waitIdle();
+
+	//cleanup
+	commandBuffer->reset(vk::CommandBufferResetFlagBits::eReleaseResources);
+}
+
 void ImageResource::destroy()
 {
 }
 
 ImageResource ImageResource::createDepthResource(
-	const vk::PhysicalDevice &physicalDevice, 
-	const vk::UniqueDevice &device, 
+	const Device& device, 
 	vk::Extent3D extent,
 	const std::vector<Format>& formatCandidates)
 {
 	auto format = findSupportedFormat(
-		physicalDevice, 
+		device.m_vkPhysicalDevice, 
 		formatCandidates, 
 		vk::ImageTiling::eOptimal, 
 		vk::FormatFeatureFlagBits::eDepthStencilAttachment);
 
-	auto image = device->createImage(vk::ImageCreateInfo()
+	auto image = device.m_vkDevice->createImage(vk::ImageCreateInfo()
 		.setImageType(vk::ImageType::e2D)
 		.setExtent(extent)
 		.setMipLevels(1)
@@ -46,12 +108,11 @@ ImageResource ImageResource::createDepthResource(
 		.setUsage(vk::ImageUsageFlagBits::eDepthStencilAttachment)
 		.setSamples(vk::SampleCountFlagBits::e1));
 
-	auto memoryRequirements = device->getImageMemoryRequirements(image);
+	auto memoryRequirements = device.m_vkDevice->getImageMemoryRequirements(image);
 
 	return ImageResource(
 		image, 
-		physicalDevice, 
-		device, 
+		device,
 		vk::ImageAspectFlagBits::eDepth, 
 		format,
 		extent,
@@ -60,7 +121,7 @@ ImageResource ImageResource::createDepthResource(
 
 ImageResource ImageResource::createColorResource(
 	vk::Image image, 
-	const vk::UniqueDevice &device, 
+	const Device& device, 
 	Format format,
 	vk::Extent3D extent)
 {
@@ -70,32 +131,33 @@ ImageResource ImageResource::createColorResource(
 // Allocates memory to the image and creates an image view to the provided image
 ImageResource::ImageResource(
 	vk::Image& image,
-	const vk::PhysicalDevice& physicalDevice, 
-	const vk::UniqueDevice& device, 
+	const Device& device,
 	vk::ImageAspectFlags aspectFlags, 
 	Format format, 
 	vk::Extent3D extent,
 	vk::MemoryRequirements memoryRequirements) 
-		: Resource(physicalDevice, device, vk::MemoryPropertyFlagBits::eDeviceLocal, memoryRequirements)
+		: Resource(device.m_vkPhysicalDevice, device.m_vkDevice, vk::MemoryPropertyFlagBits::eDeviceLocal | vk::MemoryPropertyFlagBits::eHostVisible, memoryRequirements)
 		, m_vkImage(image)
 		, m_format(format)
 		, m_vkExtent(extent)
+		, m_device(device)
 {
-	device->bindImageMemory(m_vkImage, *m_vkMemory, 0);
+	m_vkDevice->bindImageMemory(m_vkImage, *m_vkMemory, 0);
 
-	createImageView(device, aspectFlags);
+	createImageView(m_vkDevice, aspectFlags);
 
 	//TODO: transition image (via command buffers)
 }
 
 // Does NOT allocate memory, this is assumed to already be allocated; but does create a VkImageView.
-ImageResource::ImageResource(vk::Image& image, const vk::UniqueDevice &device, Format format, vk::Extent3D extent)
-	: Resource(device)
+ImageResource::ImageResource(vk::Image& image, const Device& device, Format format, vk::Extent3D extent)
+	: Resource(device.m_vkDevice)
 	, m_vkImage(std::move(image))
 	, m_format(format)
 	, m_vkExtent(extent)
+	, m_device(device)
 {
-	createImageView(device);
+	createImageView(m_vkDevice);
 }
 
 Format ImageResource::findSupportedFormat(

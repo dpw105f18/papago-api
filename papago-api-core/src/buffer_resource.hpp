@@ -11,6 +11,7 @@ public:
 	// Inherited via Resource
 	void destroy() override;
 	const vk::DescriptorBufferInfo& info() const;
+
 private:
 	vk::UniqueBuffer m_vkBuffer;
 	vk::DescriptorBufferInfo m_vkInfo;
@@ -30,4 +31,5 @@ private:
 		vk::MemoryRequirements		memoryRequirements);
 
 	friend class Device;
+	friend class CommandBuffer;
 };

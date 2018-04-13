@@ -2,22 +2,9 @@
 #include "shader.hpp"
 #include <fstream>
 
-Shader::Shader(const vk::UniqueDevice& device, const std::string & filePath, std::string entryPoint ): m_entryPoint(entryPoint)
+Shader::Shader(const std::string & filePath, std::string entryPoint) : m_entryPoint(entryPoint)
 {
-	auto code = readFile(filePath);
-	vk::ShaderModuleCreateInfo createInfo = {};
-	createInfo.setCodeSize(code.size())
-		.setPCode(reinterpret_cast<const uint32_t*>(code.data()));
-
-	m_vkShader = device->createShaderModuleUnique(createInfo);
-}
-
-Shader::Shader(Shader &&other) noexcept
-	: m_entryPoint(std::move(other.m_entryPoint))
-	, m_vkStageCreateInfo(std::move(other.m_vkStageCreateInfo))
-	, m_vkShader(std::move(other.m_vkShader))
-{
-	m_vkStageCreateInfo.setPName(m_entryPoint.c_str());
+	m_code = readFile(filePath);
 }
 
 //if the return is empty, then an PAPAGO_ERROR might have occured
@@ -38,4 +25,19 @@ std::vector<char> Shader::readFile(const std::string & filePath)
 	}
 
 	return result;
+}
+
+std::vector<Binding> Shader::getBindings() const
+{
+	auto result = std::vector<Binding>();
+	result.reserve(m_bindings.size());
+	for (auto& pair : m_bindings) {
+		result.push_back(pair.second);
+	}
+	return result;
+}
+
+bool Shader::bindingExists(const std::string & name)
+{
+	return m_bindings.find(name) != m_bindings.end();
 }

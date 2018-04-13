@@ -63,6 +63,15 @@
     <ClInclude Include="src\sampler.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\vertex.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\parser.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\shader_program.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp">
@@ -107,15 +116,36 @@
     <ClCompile Include="src\command_buffer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\vertex.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\parser.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\shader_program.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="shader\compile.bat">
-      <Filter>Resource Files</Filter>
-    </None>
     <None Include="shader\shader.frag">
       <Filter>Resource Files</Filter>
     </None>
     <None Include="shader\shader.vert">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="shader\textureFrag.frag">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="shader\textureVert.vert">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="fileMover.bat">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="shader\uniformVert.vert">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="shader\uniformFrag.frag">
       <Filter>Resource Files</Filter>
     </None>
   </ItemGroup>

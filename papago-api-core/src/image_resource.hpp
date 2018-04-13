@@ -13,26 +13,26 @@ public:
 	template<vk::ImageLayout source, vk::ImageLayout destination>
 	void transition(const CommandBuffer&);
 
+	void upload(const std::vector<char>& data) override; 
+
 	// Inherited via Resource
 	void destroy() override;
 
 private:
 	static ImageResource createDepthResource(
-		const vk::PhysicalDevice&, 
-		const vk::UniqueDevice&, 
+		const Device& device,
 		vk::Extent3D, 
 		const std::vector<Format>& formatCandidates);
 
 	static ImageResource createColorResource(
 		vk::Image, 
-		const vk::UniqueDevice&,
+		const Device& device,
 		Format,
 		vk::Extent3D);
 
 	ImageResource(
 		vk::Image&,
-		const vk::PhysicalDevice&,
-		const vk::UniqueDevice&,
+		const Device&,
 		vk::ImageAspectFlags,
 		Format,
 		vk::Extent3D,
@@ -40,7 +40,7 @@ private:
 
 	ImageResource(
 		vk::Image&, 
-		const vk::UniqueDevice&, 
+		const Device&, 
 		Format,
 		vk::Extent3D);
 
@@ -59,10 +59,12 @@ private:
 	vk::UniqueImageView m_vkImageView;
 	Format m_format;
 	vk::Extent3D m_vkExtent;
+	const Device& m_device;
 
 	friend class SwapChain;
 	friend class Device;
 	friend class CommandBuffer;
+	friend class RenderPass;
 };
 
 template<>
