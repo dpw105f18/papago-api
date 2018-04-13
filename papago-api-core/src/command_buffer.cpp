@@ -29,48 +29,6 @@ CommandBuffer::CommandBuffer(const vk::UniqueDevice &device, int queueFamilyInde
 }
 
 //TODO: make checks to see if cmd.begin(...) has been called before. -AM
-void CommandBuffer::begin(RenderPass& renderPass, SwapChain& swapChain, uint32_t imageIndex, BufferResource& vertexBuffer)
-{
-	m_renderPassPtr = &renderPass;
-
-	vk::Rect2D renderArea = {};
-	renderArea.setOffset({ 0,0 })
-		.setExtent(swapChain.m_vkExtent);
-
-
-
-	std::array<vk::ClearValue, 2> clearValues;
-
-	clearValues[0].setColor(vk::ClearColorValue(std::array<float, 4>{0, 0, 0, 1}));
-	clearValues[1].setDepthStencil(vk::ClearDepthStencilValue{ 1.0, 0 });
-
-	vk::RenderPassBeginInfo renderPassBeginInfo = {};
-
-	renderPassBeginInfo.setRenderPass(static_cast<vk::RenderPass>(renderPass))
-		.setFramebuffer(*swapChain.m_framebuffers[imageIndex])
-		.setRenderArea(renderArea)
-		.setClearValueCount(clearValues.size())
-		.setPClearValues(clearValues.data());
-
-	//note: no clear-values because of the specific constructor overload...
-
-	vk::CommandBufferBeginInfo beginInfo = {};
-	beginInfo.setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);	//TODO: read from Usage in constructor? -AM
-
-	m_vkCommandBuffer->begin(beginInfo);
-	m_vkCommandBuffer->beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
-
-	//TODO: can we assume a graphics bindpoint and pipeline? -AM
-	m_vkCommandBuffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *renderPass.m_vkGraphicsPipeline);
-	
-	//TODO: find a better way to bind vertex buffers
-	VkDeviceSize offsets[] = { 0 };
-	VkBuffer vertexBuffers[] = { *vertexBuffer.m_vkBuffer };
-
-	//TODO: make it work with m_vkCommandBuffer->bindVertexBuffers(...);
-	vkCmdBindVertexBuffers(*m_vkCommandBuffer, 0, 1, vertexBuffers, offsets);
-}
-
 void CommandBuffer::begin(RenderPass& renderPass, SwapChain& swapChain, uint32_t imageIndex)
 {
 	m_renderPassPtr = &renderPass;
@@ -136,6 +94,15 @@ void CommandBuffer::setUniform(const std::string & name, const ImageResource & i
 	m_vkCommandBuffer->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *m_renderPassPtr->m_vkPipelineLayout, 0, { *m_renderPassPtr->m_vkDescriptorSet }, { });
 }
 
+void CommandBuffer::setInput(const BufferResource& buffer)
+{
+	//TODO: find a more general way to fix offsets
+	VkDeviceSize offsets[] = { 0 };
+	VkBuffer vertexBuffers[] = { *buffer.m_vkBuffer };
+
+	//TODO: make it work with m_vkCommandBuffer->bindVertexBuffers(...);
+	vkCmdBindVertexBuffers(*m_vkCommandBuffer, 0, 1, vertexBuffers, offsets);
+}
 
 void CommandBuffer::end()
 {
