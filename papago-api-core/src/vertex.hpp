@@ -12,7 +12,9 @@ struct vec3
 
 struct Vertex
 {
-	vec2 m_position;
+	vec3 m_position;
+	vec2 m_uv;
+
 	
 	static vk::VertexInputBindingDescription getBindingDescription() {
 		vk::VertexInputBindingDescription bindingDescription = {};
@@ -23,13 +25,18 @@ struct Vertex
 		return bindingDescription;
 	}
 
-	static std::array<vk::VertexInputAttributeDescription, 1> getAttributeDescriptions() {
-		std::array<vk::VertexInputAttributeDescription, 1> attributeDescriptions = {};
+	static std::array<vk::VertexInputAttributeDescription, 2> getAttributeDescriptions() {
+		std::array<vk::VertexInputAttributeDescription, 2> attributeDescriptions = {};
 
-		attributeDescriptions[0].binding = 0;
-		attributeDescriptions[0].location = 0;
-		attributeDescriptions[0].format = vk::Format::eR32G32Sfloat; //VK_FORMAT_R32G32_SFLOAT;
-		attributeDescriptions[0].offset = offsetof(Vertex, m_position);
+		attributeDescriptions[0].setBinding(0)
+			.setLocation(0)
+			.setFormat(vk::Format::eR32G32B32Sfloat)
+			.setOffset(offsetof(Vertex, m_position));
+
+		attributeDescriptions[1].setBinding(0)
+			.setLocation(1)
+			.setFormat(vk::Format::eR32G32Sfloat)
+			.setOffset(offsetof(Vertex, m_uv));
 
 		return attributeDescriptions;
 	}

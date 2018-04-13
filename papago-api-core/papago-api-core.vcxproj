@@ -202,6 +202,8 @@
     <None Include="fileMover.bat" />
     <None Include="shader\shader.frag" />
     <None Include="shader\shader.vert" />
+    <None Include="shader\stupidFrag.frag" />
+    <None Include="shader\stupidVert.vert" />
     <None Include="shader\textureFrag.frag" />
     <None Include="shader\textureVert.vert" />
     <None Include="shader\uniformFrag.frag" />

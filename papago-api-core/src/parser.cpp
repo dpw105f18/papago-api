@@ -30,7 +30,8 @@ FragmentShader Parser::compileFragmentShader(const std::string & filePath, const
 	//result.m_bindings.insert({ "texSampler", {0, vk::DescriptorType::eCombinedImageSampler} });
 	
 	// For uniform frag
-	result.m_bindings.insert({{ "inColor" }, { 0, vk::DescriptorType::eUniformBuffer}});
+	result.m_bindings.insert({{ "sam" }, { 0, vk::DescriptorType::eCombinedImageSampler}});
+	result.m_bindings.insert({ { "val" },{ 1, vk::DescriptorType::eUniformBuffer } });
 	
 	return result;
 }
