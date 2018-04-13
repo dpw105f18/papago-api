@@ -204,6 +204,8 @@
     <None Include="shader\shader.vert" />
     <None Include="shader\textureFrag.frag" />
     <None Include="shader\textureVert.vert" />
+    <None Include="shader\uniformFrag.frag" />
+    <None Include="shader\uniformVert.vert" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

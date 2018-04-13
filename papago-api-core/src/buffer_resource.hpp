@@ -13,6 +13,7 @@ public:
 
 private:
 	vk::UniqueBuffer m_vkBuffer;
+	vk::DescriptorBufferInfo m_vkInfo;
 
 	static BufferResource createBufferResource(
 		vk::PhysicalDevice		physicalDevice,
@@ -26,7 +27,8 @@ private:
 		const vk::PhysicalDevice&	physicalDevice,
 		vk::UniqueBuffer&&			buffer,
 		vk::MemoryPropertyFlags		memoryFlags,
-		vk::MemoryRequirements		memoryRequirements);
+		vk::MemoryRequirements		memoryRequirements,
+		size_t						range);
 
 	friend class Device;
 	friend class CommandBuffer;
