@@ -11,7 +11,6 @@ public:
 
 	//TODO: remove "override"s - place functionality in SubCommandBuffer or redesign relationship. -AM
 	void begin(const RenderPass&);
-	void begin(RenderPass&, SwapChain&, uint32_t imageIndex, BufferResource& vertexBuffer);
 	void begin(RenderPass&, SwapChain&, uint32_t imageIndex);
 	void begin(const RenderPass&, ImageResource& depthStencilBuffer);
 	void begin(const RenderPass&, SwapChain&, ImageResource& depthStencilBuffer);
@@ -25,8 +24,9 @@ public:
 	void setUniform(const std::string&, const ImageResource&, Sampler&);
 	void setInput(const BufferResource&);
 	void setInterleavedInput(const std::vector<const std::string>&, const Resource&);
-	void setIndexBuffer(const Resource&);
+	void setIndexBuffer(const BufferResource&);
 	void drawInstanced(size_t instanceVertexCount, size_t instanceCount, size_t startVertexLocation, size_t startInstanceLocation);
+	void drawIndexed(size_t indexCount, size_t instanceCount = 1, size_t firstIndex = 0, size_t vertexOffset = 0, size_t firstInstance = 0);
 	void setOutput(const std::string&, ImageResource&);
 	void executeSubCommands(std::vector<SubCommandBuffer>);
 

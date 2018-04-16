@@ -43,7 +43,8 @@ std::string Parser::compile(const std::string & filePath)
 
 	auto fileIndex = filePath.find_last_of('.');
 	auto fileName = filePath.substr(pathIndex, fileIndex - pathIndex);
-	auto spvFile = spirVPath + "/" + fileName + ".spv";
+	// '/' is already included in the spirVPath and thus is not needed here
+	auto spvFile = spirVPath + fileName + ".spv";
 
 	//TODO: append stage to spv filename (so test.vert and test.frag => testVert.spv and testFrag.spv). -AM.
 	// Is here or else c_str will point to junk

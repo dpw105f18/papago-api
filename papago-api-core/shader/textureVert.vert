@@ -7,11 +7,7 @@ out gl_PerVertex {
 
 layout(location = 0) out vec2 uv;
 
-vec2 positions[3] = vec2[](
-    vec2(0.0, -0.5),
-    vec2(0.5, 0.5),
-    vec2(-0.5, 0.5)
-);
+layout(location = 0) in vec2 position;
 
 vec2 uvs[3] = vec2[](
 	vec2(0.5, 1.0),
@@ -20,6 +16,6 @@ vec2 uvs[3] = vec2[](
 );
 
 void main() {
-    gl_Position = vec4(positions[gl_VertexIndex], 0.0, 1.0);
-	uv = uvs[gl_VertexIndex];
+    gl_Position = vec4(position, 0.0, 1.0);
+	uv = uvs[gl_VertexIndex%3];
 }

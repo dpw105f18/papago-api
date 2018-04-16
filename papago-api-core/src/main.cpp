@@ -138,17 +138,17 @@ int main()
 			{ { -0.5, -0.5, 0.5 }, { 0.0, 0.0 } },
 			{ { -0.5,  0.5, 0.5 }, { 0.0, 1.0 } },
 			{ {  0.5,  0.5, 0.5 }, { 1.0, 1.0 } },
-							
-			{ { -0.5, -0.5, 0.5 }, { 0.0, 0.0 } },
-			{ {  0.5,  0.5, 0.5 }, { 1.0, 1.0 } },
 			{ {  0.5, -0.5, 0.5 }, { 1.0, 0.0 } }
 		};
 		auto vertexBuffer = device.createVertexBuffer(vertices);
-		/*
-		auto indexBuffer = device.createIndexBuffer(std::vector<uint16_t>{
-			0, 1, 2
-		});
-		*/
+		
+		auto indices = std::vector<uint16_t>{
+			0, 1, 2,
+			0, 2, 3
+		};
+
+		auto indexBuffer = device.createIndexBuffer(indices);
+		
 		
 		auto uniformBuffer = device.createUniformBuffer<sizeof(UniformBufferObject)>();
 
@@ -195,9 +195,6 @@ int main()
 				auto cmd = device.createCommandBuffer(Usage::eReset);
 				cmd.begin(renderPass, swapChain, graphicsQueue.getCurrentFrameIndex());
 				cmd.setInput(vertexBuffer);
-				//cmd.setUniform("texSampler", image, sampler2D);
-				
-
 				auto uniform_input_float = std::vector<float>({ std::rand() * 1.0f / RAND_MAX, std::rand() * 1.0f / RAND_MAX, std::rand() * 1.0f / RAND_MAX });
 				auto uniform_input_char = std::vector<char>(sizeof(float) * uniform_input_float.size());
 
@@ -207,7 +204,9 @@ int main()
 
 				cmd.setUniform("val", uniform_buffer);
 				cmd.setUniform("sam", image, sampler2D);
-				cmd.drawInstanced(vertices.size(), 1, 0, 0);
+
+				cmd.setIndexBuffer(indexBuffer);
+				cmd.drawIndexed(indices.size()); 
 				cmd.end();
 				std::vector<CommandBuffer> commandBuffers;
 				commandBuffers.push_back(std::move(cmd));

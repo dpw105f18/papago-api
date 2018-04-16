@@ -81,16 +81,6 @@ void CommandBuffer::begin(RenderPass& renderPass, SwapChain& swapChain, uint32_t
 	m_vkCommandBuffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *renderPass.m_vkGraphicsPipeline);
 }
 
-void CommandBuffer:: setInput(const BufferResource& vertexBuffer)
-{
-	//TODO: find a better way to bind vertex buffers
-	VkDeviceSize offsets[] = { 0 };
-	VkBuffer vertexBuffers[] = { *vertexBuffer.m_vkBuffer };
-
-	//TODO: make it work with m_vkCommandBuffer->bindVertexBuffers(...);
-	vkCmdBindVertexBuffers(*m_vkCommandBuffer, 0, 1, vertexBuffers, offsets);
-}
-
 void CommandBuffer::setUniform(const std::string & name, const ImageResource & image, Sampler & sampler)
 {
 
@@ -110,12 +100,24 @@ void CommandBuffer::setUniform(const std::string & name, const ImageResource & i
 	m_vkCommandBuffer->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *m_renderPassPtr->m_vkPipelineLayout, 0, { *m_renderPassPtr->m_vkDescriptorSet }, { });
 }
 
+void CommandBuffer::setInput(const BufferResource& buffer)
+{
+	//TODO: find a more general way to fix offsets
+	//TODO: make it work with m_vkCommandBuffer->bindVertexBuffers(...);
+	m_vkCommandBuffer->bindVertexBuffers(0, { *buffer.m_vkBuffer }, { 0 });
+}
 
 void CommandBuffer::end()
 {
 	m_renderPassPtr = nullptr;
 	m_vkCommandBuffer->endRenderPass();
 	m_vkCommandBuffer->end();
+}
+
+void CommandBuffer::setIndexBuffer(const BufferResource &indexBuffer)
+{
+	// TODO: Retrieve wheter uint16 or uint32 is used for index buffer from somewhere - CW 2018-04-13
+	m_vkCommandBuffer->bindIndexBuffer(*indexBuffer.m_vkBuffer, 0, vk::IndexType::eUint16);
 }
 
 void CommandBuffer::drawInstanced(size_t instanceVertexCount, size_t instanceCount, size_t startVertexLocation, size_t startInstanceLocation)
@@ -139,5 +141,10 @@ void CommandBuffer::setUniform(const std::string & name, const BufferResource & 
 
 	m_vkDevice->updateDescriptorSets({writeDescriptorSet}, {});
 	m_vkCommandBuffer->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *m_renderPassPtr->m_vkPipelineLayout, 0, { *descriptorSet }, {});
+}
 
+
+void CommandBuffer::drawIndexed(size_t indexCount, size_t instanceCount, size_t firstIndex, size_t vertexOffset, size_t firstInstance)
+{
+	m_vkCommandBuffer->drawIndexed(indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
 }
