@@ -2,7 +2,6 @@
 #include "render_pass.hpp"
 #include "vertex_shader.hpp"
 #include "fragment_shader.hpp"
-#include "vertex.hpp"
 #include "shader_program.h"
 #include "image_resource.hpp"
 #include "sampler.hpp"
@@ -27,16 +26,27 @@ RenderPass::RenderPass(
 		program.m_vkFragmentStageCreateInfo
 	};
 
-	//TODO: Find a better generic way to set attribute and binding descriptions up
-	auto attributeDescription = Vertex::getAttributeDescriptions();
-	auto bindingDescription = Vertex::getBindingDescription();
+	
+	vk::PipelineVertexInputStateCreateInfo vertexInputInfo;
+	//do the shader require a vertex buffer?
+	auto attributeDescription = getAttributeDescriptions();
+
+	if (m_shaderProgram.m_vertexShader.m_input.size() > 0) {
+
+	auto bindingDescription = getBindingDescription();
 
 	//TODO: how to handle vertex buffer existence and count? -AM
-	vk::PipelineVertexInputStateCreateInfo vertexInputInfo;
 	vertexInputInfo.setVertexBindingDescriptionCount(1)
 		.setPVertexBindingDescriptions(&bindingDescription)
 		.setVertexAttributeDescriptionCount(attributeDescription.size())
 		.setPVertexAttributeDescriptions(attributeDescription.data()); 
+	}
+	else {
+		vertexInputInfo.setVertexBindingDescriptionCount(0)
+			.setPVertexBindingDescriptions(nullptr)
+			.setVertexAttributeDescriptionCount(0)
+			.setPVertexAttributeDescriptions(nullptr);
+	}
 
 	vk::PipelineInputAssemblyStateCreateInfo inputAssembly;
 	inputAssembly.setTopology(vk::PrimitiveTopology::eTriangleList);	//<-- TODO: make setable
@@ -228,4 +238,32 @@ void RenderPass::setupDescriptorSet(const vk::UniqueDevice &device, const Vertex
 		.setPSetLayouts(&m_vkDescriptorSetLayout.get());
 
 	m_vkDescriptorSet = std::move(device->allocateDescriptorSetsUnique(allocateInfo)[0]);	//TODO: do we always want exactly one descriptor set? -AM
+}
+
+vk::VertexInputBindingDescription RenderPass::getBindingDescription()
+{
+	auto& inputs = m_shaderProgram.m_vertexShader.m_input;
+	auto& lastInput = inputs.back();
+	vk::VertexInputBindingDescription bindingDescription = {};
+	bindingDescription.binding = 0;
+	bindingDescription.stride = lastInput.offset + lastInput.getFormatSize();
+	bindingDescription.inputRate = vk::VertexInputRate::eVertex; //VK_VERTEX_INPUT_RATE_VERTEX
+
+	return bindingDescription;
+}
+
+std::vector<vk::VertexInputAttributeDescription> RenderPass::getAttributeDescriptions()
+{
+	auto inputCount = m_shaderProgram.m_vertexShader.m_input.size();
+	auto attributeDescriptions = std::vector<vk::VertexInputAttributeDescription>(inputCount);
+
+	for (auto i = 0; i < inputCount; ++i) {
+		auto input = m_shaderProgram.m_vertexShader.m_input[i];
+		attributeDescriptions[i].setBinding(0)
+			.setLocation(i)
+			.setFormat(input.format)
+			.setOffset(input.offset);
+	}
+
+	return attributeDescriptions;
 }

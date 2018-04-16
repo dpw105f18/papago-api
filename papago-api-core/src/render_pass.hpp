@@ -27,6 +27,8 @@ private:
 	const ShaderProgram& m_shaderProgram;
 
 	void setupDescriptorSet(const vk::UniqueDevice&, const VertexShader& vertexShader, const FragmentShader& fragmentShader);
+	vk::VertexInputBindingDescription getBindingDescription();
+	std::vector<vk::VertexInputAttributeDescription> getAttributeDescriptions();
 
 	friend class Device;
 	friend class CommandBuffer;
