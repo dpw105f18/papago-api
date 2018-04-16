@@ -3,6 +3,8 @@
 #include "sub_command_buffer.hpp"
 #include "api_enums.hpp"
 
+class ShaderProgram;
+
 class CommandBuffer
 {
 public:
@@ -38,6 +40,9 @@ public:
 
 private:
 	CommandBuffer(const vk::UniqueDevice& device, int queueFamilyIndex, Usage);
+	
+	// TODO: Have program so that we only need to pass in the name - Brandborg
+	long getBinding(const ShaderProgram& program, const std::string& name);
 
 	vk::UniqueCommandPool m_vkCommandPool;	//TODO: <-- make non-unique if we reuse command pools. -AM
 	vk::UniqueCommandBuffer m_vkCommandBuffer;
@@ -46,6 +51,7 @@ private:
 	const vk::UniqueDevice& m_vkDevice;	//<-- used to update vkDescriptorSets. -AM
 	//TODO: Check that this is not null, when calling non-begin methods on the object. - Brandborg
 	RenderPass* m_renderPassPtr;
+	
 
 	friend class Device;
 };

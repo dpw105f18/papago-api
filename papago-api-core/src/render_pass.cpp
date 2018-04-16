@@ -12,8 +12,6 @@ RenderPass::operator vk::RenderPass&()
 	return *m_vkRenderPass;
 }
 
-
-
 RenderPass::RenderPass(
 	const vk::UniqueDevice& device,
 	const ShaderProgram& program,
@@ -33,10 +31,11 @@ RenderPass::RenderPass(
 	auto attributeDescription = Vertex::getAttributeDescriptions();
 	auto bindingDescription = Vertex::getBindingDescription();
 
+	//TODO: how to handle vertex buffer existence and count? -AM
 	vk::PipelineVertexInputStateCreateInfo vertexInputInfo;
 	vertexInputInfo.setVertexBindingDescriptionCount(1)
 		.setPVertexBindingDescriptions(&bindingDescription)
-		.setVertexAttributeDescriptionCount(static_cast<uint32_t>(attributeDescription.size()))
+		.setVertexAttributeDescriptionCount(attributeDescription.size())
 		.setPVertexAttributeDescriptions(attributeDescription.data()); 
 
 	vk::PipelineInputAssemblyStateCreateInfo inputAssembly;
@@ -54,7 +53,7 @@ RenderPass::RenderPass(
 	vk::PipelineRasterizationStateCreateInfo rasterizer;
 	rasterizer.setPolygonMode(vk::PolygonMode::eFill)
 		.setLineWidth(1.0f)
-		.setCullMode(vk::CullModeFlagBits::eBack)
+		.setCullMode(vk::CullModeFlagBits::eFront)
 		.setFrontFace(vk::FrontFace::eClockwise)
 		.setRasterizerDiscardEnable(VK_FALSE);
 

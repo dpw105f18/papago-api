@@ -23,7 +23,6 @@ std::vector<char> Resource::download()
 	return result;
 }
 
-size_t Resource::getSize() const { return m_size; }
 Resource::Resource(const vk::UniqueDevice& device) : m_vkMemory(nullptr), m_vkDevice(device), m_size(0) {}
 
 Resource::Resource(

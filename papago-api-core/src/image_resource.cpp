@@ -16,7 +16,7 @@ ImageResource::ImageResource(ImageResource&& other) noexcept
 ImageResource::~ImageResource()
 {
 	// HACK: If size is zero then memory was externally allocated
-	if (getSize()) {
+	if (m_size) {
 		m_vkDevice->destroyImage(m_vkImage);
 	}
 }

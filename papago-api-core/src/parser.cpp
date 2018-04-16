@@ -25,7 +25,14 @@ FragmentShader Parser::compileFragmentShader(const std::string & filePath, const
 	auto result = FragmentShader(spvFile, entryPoint);
 	
 	//TODO: set binding information on [result]
-	result.m_bindings.insert({ "texSampler", {0, vk::DescriptorType::eCombinedImageSampler} });
+	
+	// For texture frag
+	//result.m_bindings.insert({ "texSampler", {0, vk::DescriptorType::eCombinedImageSampler} });
+	
+	// For uniform frag
+	result.m_bindings.insert({{ "sam" }, { 0, vk::DescriptorType::eCombinedImageSampler}});
+	result.m_bindings.insert({ { "val" },{ 1, vk::DescriptorType::eUniformBuffer } });
+	
 	return result;
 }
 

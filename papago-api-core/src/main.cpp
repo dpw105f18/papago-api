@@ -132,17 +132,24 @@ int main()
 		auto devices = Device::enumerateDevices(surface, features, { VK_KHR_SWAPCHAIN_EXTENSION_NAME, VK_KHR_SAMPLER_MIRROR_CLAMP_TO_EDGE_EXTENSION_NAME });
 		auto& device = devices[0];
 		auto swapChain = device.createSwapChain(Format::eR8G8B8Unorm, 3, SwapChainPresentMode::eMailbox);
-		auto vertexBuffer = device.createVertexBuffer(std::vector<Vertex>{
-			{ 0.3f, -1.0f },
-			{ 0.52f, 0.4f },
-			{ -0.5f, 0.5f },
-			{ -0.3f, 1.0f },
-			{ -0.52f, -0.4f },
-			{ 0.5f, -0.5f },
-		});
-		auto indexBuffer = device.createIndexBuffer(std::vector<uint16_t>{
-			0, 1, 2
-		});
+
+		auto vertices = std::vector<Vertex>{
+			
+			{ { -0.5, -0.5, 0.5 }, { 0.0, 0.0 } },
+			{ { -0.5,  0.5, 0.5 }, { 0.0, 1.0 } },
+			{ {  0.5,  0.5, 0.5 }, { 1.0, 1.0 } },
+			{ {  0.5, -0.5, 0.5 }, { 1.0, 0.0 } }
+		};
+		auto vertexBuffer = device.createVertexBuffer(vertices);
+		
+		auto indices = std::vector<uint16_t>{
+			0, 1, 2,
+			0, 2, 3
+		};
+
+		auto indexBuffer = device.createIndexBuffer(indices);
+		
+		
 		auto uniformBuffer = device.createUniformBuffer<sizeof(UniformBufferObject)>();
 
 		auto bigUniform = device.createUniformBuffer<1000>();
@@ -162,8 +169,8 @@ int main()
 
 		auto dlData = bigUniform.download();
 
-		auto vertexShader = parser.compileVertexShader("shader/textureVert.vert", "main");
-		auto fragmentShader = parser.compileFragmentShader("shader/textureFrag.frag", "main");
+		auto vertexShader = parser.compileVertexShader("shader/stupidVert.vert", "main");
+		auto fragmentShader = parser.compileFragmentShader("shader/stupidFrag.frag", "main");
 
 		auto program = device.createShaderProgram(vertexShader, fragmentShader);
 
@@ -171,8 +178,7 @@ int main()
 
 		auto graphicsQueue = device.createGraphicsQueue(swapChain);
 		size_t frameNo = 0;	//<-- for debugging
-		
-
+		auto uniform_buffer = device.createUniformBuffer<sizeof(float[3])>();
 
 		while(true)
 		{
@@ -189,10 +195,18 @@ int main()
 				auto cmd = device.createCommandBuffer(Usage::eReset);
 				cmd.begin(renderPass, swapChain, graphicsQueue.getCurrentFrameIndex());
 				cmd.setInput(vertexBuffer);
-				cmd.setUniform("texSampler", image, sampler2D);
+				auto uniform_input_float = std::vector<float>({ std::rand() * 1.0f / RAND_MAX, std::rand() * 1.0f / RAND_MAX, std::rand() * 1.0f / RAND_MAX });
+				auto uniform_input_char = std::vector<char>(sizeof(float) * uniform_input_float.size());
+
+				// TODO: move into upload as template???
+				memcpy(uniform_input_char.data(), uniform_input_float.data(), uniform_input_char.size());
+				uniform_buffer.upload(uniform_input_char);
+
+				cmd.setUniform("val", uniform_buffer);
+				cmd.setUniform("sam", image, sampler2D);
+
 				cmd.setIndexBuffer(indexBuffer);
-				cmd.drawIndexed(3); // TODO: Create a way to get this from the index buffer
-				//cmd.drawInstanced(vertexBuffer.getSize(), 1, 0, 0);
+				cmd.drawIndexed(indices.size()); 
 				cmd.end();
 				std::vector<CommandBuffer> commandBuffers;
 				commandBuffers.push_back(std::move(cmd));

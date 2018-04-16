@@ -12,6 +12,7 @@ void BufferResource::destroy()
 
 }
 
+
 BufferResource BufferResource::createBufferResource(
 	vk::PhysicalDevice		physicalDevice, 
 	const vk::UniqueDevice& device, 
@@ -19,15 +20,15 @@ BufferResource BufferResource::createBufferResource(
 	vk::BufferUsageFlags	usageFlags, 
 	vk::MemoryPropertyFlags memoryFlags)
 {
-	auto vkBuffer = device->createBufferUnique(
-		vk::BufferCreateInfo()
-			.setSize(size)
-			.setUsage(usageFlags | vk::BufferUsageFlagBits::eTransferDst)
-	); // IMPROVEMENT : All buffers are currently assumed to be able to be uploaded to
+	auto bufferCreateInfo = vk::BufferCreateInfo()
+		.setSize(size)
+		.setUsage(usageFlags | vk::BufferUsageFlagBits::eTransferDst); //IMPROVEMENT: All buffers are currently assumed to be able to be uploaded to
+
+	auto vkBuffer = device->createBufferUnique(bufferCreateInfo); 
 
 	auto memoryRequirements = device->getBufferMemoryRequirements(*vkBuffer);
 
-	return BufferResource(device, physicalDevice, std::move(vkBuffer), memoryFlags, memoryRequirements);
+	return BufferResource(device, physicalDevice, std::move(vkBuffer), memoryFlags, memoryRequirements, size);
 }
 
 BufferResource::BufferResource(
@@ -35,9 +36,13 @@ BufferResource::BufferResource(
 	const vk::PhysicalDevice&	physicalDevice,
 	vk::UniqueBuffer&&			buffer,
 	vk::MemoryPropertyFlags		memoryFlags,
-	vk::MemoryRequirements		memoryRequirements)
-	: Resource(physicalDevice, device, memoryFlags, memoryRequirements)
-	, m_vkBuffer(std::move(buffer))
+	vk::MemoryRequirements		memoryRequirements,
+	size_t						range)
+		: Resource(physicalDevice, device, memoryFlags, memoryRequirements)
+		, m_vkBuffer(std::move(buffer))
 {
+	m_vkInfo.setBuffer(*m_vkBuffer)
+		.setOffset(0)
+		.setRange(range); 
 	device->bindBufferMemory(*m_vkBuffer, *m_vkMemory, 0);
 }
