@@ -8,7 +8,6 @@
 #include "render_pass.hpp"
 #include "graphics_queue.hpp"
 #include "command_buffer.hpp"
-#include "vertex.hpp"
 #include "parser.hpp"
 #include <WinUser.h>
 
@@ -96,6 +95,23 @@ HWND StartWindow(size_t width, size_t height)
 }
 
 struct UniformBufferObject{};
+
+struct vec2
+{
+	float x, y;
+};
+
+struct vec3
+{
+	float x, y, z;
+};
+
+struct Vertex
+{
+	vec3 m_position;
+	vec2 m_uv;
+};
+
 
 ImageResource createTexture(Device& device) {
 	int texWidth, texHeight, texChannels;

@@ -16,6 +16,9 @@ VertexShader Parser::compileVertexShader(const std::string &filePath, const std:
 	auto result = VertexShader(spvFile, entryPoint);
 
 	//TODO: set binding information on [result]
+
+	result.m_input.push_back({ 0, vk::Format::eR32G32B32Sfloat });	//<-- position
+	result.m_input.push_back({ sizeof(float) * 3, vk::Format::eR32G32Sfloat }); //<-- uv
 	return result;
 }
 
