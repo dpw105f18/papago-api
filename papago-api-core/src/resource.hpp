@@ -29,5 +29,8 @@ protected:
 		const vk::MemoryPropertyFlags&);
 
 	size_t m_size;
+	vk::Fence* m_vkFence;
+
 private:
+	friend class GraphicsQueue;
 };

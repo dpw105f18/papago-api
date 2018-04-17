@@ -11,6 +11,8 @@ public:
 	// Inherited via Resource
 	void destroy() override;
 
+	bool inUse();
+
 private:
 	vk::UniqueBuffer m_vkBuffer;
 	vk::DescriptorBufferInfo m_vkInfo;
@@ -32,4 +34,5 @@ private:
 
 	friend class Device;
 	friend class CommandBuffer;
+	friend class GraphicsQueue;
 };

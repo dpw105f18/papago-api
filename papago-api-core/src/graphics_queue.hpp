@@ -1,6 +1,7 @@
 #pragma once
 #include "standard_header.hpp"
 #include <vector>
+#include <set>
 
 class CommandBuffer;
 class SwapChain;

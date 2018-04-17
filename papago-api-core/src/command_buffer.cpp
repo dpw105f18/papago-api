@@ -64,7 +64,7 @@ void CommandBuffer::begin(RenderPass& renderPass, SwapChain& swapChain, uint32_t
 	vk::RenderPassBeginInfo renderPassBeginInfo = {};
 
 	renderPassBeginInfo.setRenderPass(static_cast<vk::RenderPass>(renderPass))
-		.setFramebuffer(*swapChain.m_framebuffers[imageIndex])
+		.setFramebuffer(*swapChain.m_vkFramebuffers[imageIndex])
 		.setRenderArea(renderArea)
 		.setClearValueCount(clearValues.size())
 		.setPClearValues(clearValues.data());
@@ -126,9 +126,8 @@ void CommandBuffer::drawInstanced(size_t instanceVertexCount, size_t instanceCou
 	m_vkCommandBuffer->draw(instanceVertexCount, instanceCount, startVertexLocation, startInstanceLocation);
 }
 
-void CommandBuffer::setUniform(const std::string & name, const BufferResource & buffer)
+void CommandBuffer::setUniform(const std::string & name, BufferResource & buffer)
 {
-	
 	auto binding = getBinding(m_renderPassPtr->m_shaderProgram, name);
 	auto& descriptorSet = m_renderPassPtr->m_vkDescriptorSet;
 
@@ -141,6 +140,8 @@ void CommandBuffer::setUniform(const std::string & name, const BufferResource & 
 
 	m_vkDevice->updateDescriptorSets({writeDescriptorSet}, {});
 	m_vkCommandBuffer->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *m_renderPassPtr->m_vkPipelineLayout, 0, { *descriptorSet }, {});
+
+	m_resourcesInUse.emplace(&buffer);
 }
 
 
