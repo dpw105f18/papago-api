@@ -1,7 +1,7 @@
 #include "standard_header.hpp"
 #include "resource.hpp"
 
-Resource::Resource(Resource&& other) noexcept: m_vkMemory(std::move(other.m_vkMemory)), m_vkDevice(other.m_vkDevice), m_size(other.m_size)
+Resource::Resource(Resource&& other) noexcept: m_vkMemory(std::move(other.m_vkMemory)), m_vkDevice(other.m_vkDevice), m_size(other.m_size), m_vkFence(other.m_vkFence)
 {
 	other.m_size = 0;
 	other.m_vkMemory = vk::UniqueDeviceMemory();
@@ -23,7 +23,7 @@ std::vector<char> Resource::download()
 	return result;
 }
 
-Resource::Resource(const vk::UniqueDevice& device) : m_vkMemory(nullptr), m_vkDevice(device), m_size(0) {}
+Resource::Resource(const vk::UniqueDevice& device) : m_vkMemory(nullptr), m_vkDevice(device), m_size(0), m_vkFence(vk::Fence()) {}
 
 Resource::Resource(
 	const vk::PhysicalDevice& physicalDevice, 
@@ -31,7 +31,8 @@ Resource::Resource(
 	vk::MemoryPropertyFlags flags, 
 	vk::MemoryRequirements memoryRequirements) 
 		: m_vkDevice(device), 
-		m_size(memoryRequirements.size)
+		m_size(memoryRequirements.size),
+			m_vkFence(vk::Fence())
 {
 	auto memoryType = findMemoryType(physicalDevice, memoryRequirements.memoryTypeBits, flags);
 	m_vkMemory = device->allocateMemoryUnique(

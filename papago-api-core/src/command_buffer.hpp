@@ -1,5 +1,6 @@
 #pragma once
 #include "standard_header.hpp"
+#include <set>
 #include "sub_command_buffer.hpp"
 #include "api_enums.hpp"
 
@@ -20,7 +21,7 @@ public:
 	void clearDepthBuffer(float value);
 	void clearFrameBuffer(Color);
 	void setDepthTest(DepthTest);
-	void setUniform(const std::string&, const BufferResource&);
+	void setUniform(const std::string&, BufferResource&);
 	void setUniform(const std::string&, const ImageResource&, Sampler&);
 	void setInput(const BufferResource&);
 	void setInterleavedInput(const std::vector<const std::string>&, const Resource&);
@@ -51,7 +52,9 @@ private:
 	const vk::UniqueDevice& m_vkDevice;	//<-- used to update vkDescriptorSets. -AM
 	//TODO: Check that this is not null, when calling non-begin methods on the object. - Brandborg
 	RenderPass* m_renderPassPtr;
-	
+
+	std::set<Resource*> m_resourcesInUse;
 
 	friend class Device;
+	friend class GraphicsQueue;
 };

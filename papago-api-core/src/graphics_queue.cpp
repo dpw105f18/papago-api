@@ -1,6 +1,7 @@
 #include "standard_header.hpp"
 #include "graphics_queue.hpp"
 #include "swap_chain.hpp"
+#include <iterator>
 
 void GraphicsQueue::submitCommands(std::vector<CommandBuffer>& commandBuffers)
 {
@@ -23,7 +24,26 @@ void GraphicsQueue::submitCommands(std::vector<CommandBuffer>& commandBuffers)
 		.setSignalSemaphoreCount(semaphores.size())
 		.setPSignalSemaphores(semaphores.data());
 
-	m_vkGraphicsQueue.submit(submitInfo, vk::Fence());
+	auto& fence = m_swapChain.m_vkFences[m_currentFrameIndex];
+	m_vkDevice->resetFences({*fence});
+
+	//TODO: Test if this works with several command buffers using the same resources. - Brandborg
+	std::set<Resource*> resources;
+	for (auto& cmd : commandBuffers) {
+		std::merge(resources.begin(), resources.end(), cmd.m_resourcesInUse.begin(), cmd.m_resourcesInUse.end(), std::inserter(resources, resources.begin()));
+	}
+
+	for (auto& resource : resources) {
+		resource->m_vkFence = *fence;
+	}
+
+	auto res = *resources.begin();
+	auto bo = reinterpret_cast<BufferResource*>(res)->inUse();
+
+
+	m_vkGraphicsQueue.submit(submitInfo, *fence);
+
+	bo = reinterpret_cast<BufferResource*>(res)->inUse();
 }
 
 void GraphicsQueue::present(std::vector<CommandBuffer>& commandBuffers)
@@ -48,6 +68,7 @@ void GraphicsQueue::present(std::vector<CommandBuffer>& commandBuffers)
 //TODO: switch getCurrentFrameIndex and getNextFrameIndex back. -AM
 uint32_t GraphicsQueue::getCurrentFrameIndex() {
 	
+	//TODO: Make sure that we handle the case, where framebuffer is not ready - Brandborg
 	auto result = m_vkDevice->acquireNextImageKHR(static_cast<vk::SwapchainKHR>(m_swapChain), 0, *m_vkImageAvailableSemaphore, vk::Fence());
 	m_currentFrameIndex = result.value;
 	return m_currentFrameIndex;

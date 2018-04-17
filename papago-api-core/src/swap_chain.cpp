@@ -21,8 +21,9 @@ SwapChain::SwapChain(
 	// the vk::RenderPass set on the Framebuffers is a guideline for what RenderPass' are compatible with them
 	// this _may_ be error-prone...
 	m_vkRenderPass = createDummyRenderPass(device);
+	auto swapChainSize = m_colorResources.size();
 
-	for (auto i = 0; i < m_colorResources.size(); ++i) {
+	for (auto i = 0; i < swapChainSize; ++i) {
 		std::vector<vk::ImageView> attachments = {
 			*m_colorResources[i].m_vkImageView,
 			*m_depthResources[i].m_vkImageView
@@ -36,7 +37,8 @@ SwapChain::SwapChain(
 			.setHeight(extent.height)
 			.setLayers(1);
 
-		m_framebuffers.emplace_back(device->createFramebufferUnique(framebufferCreateInfo));
+		m_vkFramebuffers.emplace_back(device->createFramebufferUnique(framebufferCreateInfo));
+		m_vkFences.emplace_back(device->createFenceUnique(vk::FenceCreateInfo{}));
 	}
 }
 
