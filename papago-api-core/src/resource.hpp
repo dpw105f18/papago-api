@@ -12,6 +12,7 @@ public:
 	virtual void destroy() = 0;
 	virtual void upload(const std::vector<char>& data);
 	std::vector<char> download();
+	bool inUse();
 protected:
 	explicit Resource(const vk::UniqueDevice& device);
 

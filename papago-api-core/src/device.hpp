@@ -24,6 +24,7 @@ public:
 	GraphicsQueue createGraphicsQueue(SwapChain&) const;
 	CommandBuffer createCommandBuffer(Usage) const;
 	SubCommandBuffer createSubCommandBuffer(Usage);
+	RenderPass createRenderPass(const ShaderProgram&, const ImageResource&) const;
 	RenderPass createRenderPass(const ShaderProgram&, const SwapChain&) const;
 	Sampler createTextureSampler3D(Filter magFil, Filter minFil, TextureWrapMode modeU, TextureWrapMode modeV, TextureWrapMode modeW);
 	Sampler createTextureSampler2D(Filter magFil, Filter minFil, TextureWrapMode modeU, TextureWrapMode modeV);
@@ -82,6 +83,8 @@ private:
 
 	static bool isPhysicalDeviceSuitable(const vk::PhysicalDevice& physicalDevice, Surface&, const std::vector<const char*> &);
 	static bool areExtensionsSupported(const vk::PhysicalDevice& physicalDevice, const std::vector<const char*> &extensions);
+
+	vk::UniqueRenderPass createDummyRenderpass(Format, bool withDepthBuffer = true) const;
 
 	vk::PhysicalDevice m_vkPhysicalDevice;
 	vk::UniqueDevice m_vkDevice;

@@ -12,8 +12,8 @@ public:
 
 	//TODO: remove "override"s - place functionality in SubCommandBuffer or redesign relationship. -AM
 	void begin(const RenderPass&);
-	void begin(RenderPass&, SwapChain&, uint32_t imageIndex);
-	void begin(const RenderPass&, ImageResource& depthStencilBuffer);
+	void begin(RenderPass&, SwapChain&, uint32_t imageIndex);	//TODO: <-- remove imageIndex. -AM
+	void begin(RenderPass&, ImageResource& renderTarget);		//TODO: use Format and Extent iso. ImageResource? -AM
 	void begin(const RenderPass&, SwapChain&, ImageResource& depthStencilBuffer);
 
 	void end();
@@ -22,7 +22,7 @@ public:
 	void clearFrameBuffer(Color);
 	void setDepthTest(DepthTest);
 	void setUniform(const std::string&, BufferResource&);
-	void setUniform(const std::string&, const ImageResource&, Sampler&);
+	void setUniform(const std::string&, ImageResource&, Sampler&);
 	void setInput(const BufferResource&);
 	void setInterleavedInput(const std::vector<const std::string>&, const Resource&);
 	void setIndexBuffer(const BufferResource&);

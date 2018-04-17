@@ -165,6 +165,65 @@ bool Device::areExtensionsSupported(const vk::PhysicalDevice & physicalDevice, c
 	return requiredExtensions.empty();
 }
 
+vk::UniqueRenderPass Device::createDummyRenderpass(Format format, bool withDepthBuffer) const
+{
+	vk::AttachmentDescription colorAttachment;
+	colorAttachment.setFormat(format)
+		.setSamples(vk::SampleCountFlagBits::e1)
+		.setLoadOp(vk::AttachmentLoadOp::eClear)
+		.setStoreOp(vk::AttachmentStoreOp::eStore)
+		.setStencilLoadOp(vk::AttachmentLoadOp::eLoad)
+		.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare)
+		.setInitialLayout(vk::ImageLayout::eUndefined)
+		.setFinalLayout(vk::ImageLayout::ePresentSrcKHR);
+
+	vk::AttachmentReference colorAttatchmentRef(0, vk::ImageLayout::eColorAttachmentOptimal);
+	
+	std::vector<vk::AttachmentDescription> attachments = { colorAttachment };
+	std::vector<vk::AttachmentReference> attachmentReferences = { colorAttatchmentRef };
+	
+
+	vk::SubpassDescription subpass = {};
+	subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics)
+		.setColorAttachmentCount(1)
+		.setPColorAttachments(&colorAttatchmentRef);
+
+	if (withDepthBuffer) {
+
+		vk::AttachmentDescription depthAttachment;
+		depthAttachment.setFormat(vk::Format::eD32Sfloat)
+		.setLoadOp(vk::AttachmentLoadOp::eClear) // Clear buffer data at load
+		.setStoreOp(vk::AttachmentStoreOp::eDontCare)
+		.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare)
+		.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare)
+		.setFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
+
+		attachments.push_back(depthAttachment);
+
+		vk::AttachmentReference depthAttachmentRef(1, vk::ImageLayout::eDepthStencilAttachmentOptimal);
+		attachmentReferences.push_back(depthAttachmentRef);
+
+		subpass.setPDepthStencilAttachment(&depthAttachmentRef);
+	}
+
+	vk::SubpassDependency dependency(VK_SUBPASS_EXTERNAL);
+	dependency.setSrcStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput)
+		.setSrcAccessMask(vk::AccessFlags())
+		.setDstStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput)
+		.setDstAccessMask(vk::AccessFlagBits::eColorAttachmentRead | vk::AccessFlagBits::eColorAttachmentWrite);
+
+
+	vk::RenderPassCreateInfo renderPassInfo;
+	renderPassInfo.setAttachmentCount(attachments.size())
+		.setPAttachments(attachments.data())
+		.setSubpassCount(1)
+		.setPSubpasses(&subpass)
+		.setDependencyCount(1)
+		.setPDependencies(&dependency);
+
+	return m_vkDevice->createRenderPassUnique(renderPassInfo);
+}
+
 // framebufferCount is a prefered minimum of buffers in the swapchain
 SwapChain Device::createSwapChain(const Format& format, size_t framebufferCount, SwapChainPresentMode preferredPresentMode)
 {
@@ -304,13 +363,22 @@ void Device::waitIdle()
 	m_vkDevice->waitIdle();
 }
 
+//NOTE: renderTarget is not actually the render target. It just contains format and extent info.
+RenderPass Device::createRenderPass(const ShaderProgram &program, const ImageResource& renderTarget) const
+{
+	auto extent = renderTarget.m_vkExtent;
+	auto vkPass = createDummyRenderpass(renderTarget.m_format, false);
+	return RenderPass(m_vkDevice, vkPass, program, { extent.width, extent.height });
+}
+
 RenderPass Device::createRenderPass(const ShaderProgram& program, const SwapChain &swapChain) const
 {
 	// TODO: Dangerous hacking, fix this by adding error handling instead of expecting there always being data available.
 	auto extent = swapChain.m_colorResources[0].m_vkExtent;
 	auto format = swapChain.m_colorResources[0].m_format;
 
-	return RenderPass(m_vkDevice, program, { extent.width, extent.height }, format);
+	auto vkPass = createDummyRenderpass(format);
+	return RenderPass(m_vkDevice, vkPass, program, { extent.width, extent.height });
 }
 
 Device::Device(vk::PhysicalDevice physicalDevice, vk::UniqueDevice &device, Surface &surface)

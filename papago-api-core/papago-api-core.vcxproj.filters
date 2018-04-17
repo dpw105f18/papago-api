@@ -148,5 +148,11 @@
     <None Include="shader\stupidFrag.frag">
       <Filter>Resource Files</Filter>
     </None>
+    <None Include="shader\colorVert.vert">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="shader\colorFrag.frag">
+      <Filter>Resource Files</Filter>
+    </None>
   </ItemGroup>
 </Project>

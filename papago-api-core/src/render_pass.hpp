@@ -14,8 +14,7 @@ public:
 	explicit operator vk::RenderPass&();
 
 private:
-	RenderPass(const vk::UniqueDevice&, const ShaderProgram&, const vk::Extent2D&, Format);
-	vk::UniqueRenderPass createDummyRenderpass(const vk::UniqueDevice&, Format);
+	RenderPass(const vk::UniqueDevice&, vk::UniqueRenderPass&, const ShaderProgram&, const vk::Extent2D&);
 	vk::UniqueRenderPass m_vkRenderPass;
 	vk::UniquePipeline m_vkGraphicsPipeline;
 	vk::UniquePipelineLayout m_vkPipelineLayout;

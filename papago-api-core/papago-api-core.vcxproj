@@ -199,6 +199,8 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="fileMover.bat" />
+    <None Include="shader\colorFrag.frag" />
+    <None Include="shader\colorVert.vert" />
     <None Include="shader\shader.frag" />
     <None Include="shader\shader.vert" />
     <None Include="shader\stupidFrag.frag" />

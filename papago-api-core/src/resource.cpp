@@ -23,6 +23,16 @@ std::vector<char> Resource::download()
 	return result;
 }
 
+bool Resource::inUse()
+{
+	if (m_vkFence != nullptr && m_vkDevice->getFenceStatus(*m_vkFence) == vk::Result::eNotReady) {
+		return true;
+	}
+	else {
+		return false;
+	}
+}
+
 Resource::Resource(const vk::UniqueDevice& device) 
 	: m_vkMemory(nullptr)
 	, m_vkDevice(device), 

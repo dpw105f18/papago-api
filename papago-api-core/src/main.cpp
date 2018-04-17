@@ -13,6 +13,7 @@
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
+#include "main.h"
 
 
 LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -131,12 +132,12 @@ ImageResource createTexture(Device& device) {
 	return imageResource;
 }
 
-int main()
+void oldMain()
 {
 	{
 
 		auto parser = Parser("C:/VulkanSDK/1.0.65.0/Bin32/glslangValidator.exe");
-		
+
 		size_t winWidth = 800;
 		size_t winHeight = 600;
 		auto hwnd = StartWindow(winWidth, winHeight);
@@ -150,22 +151,22 @@ int main()
 		auto swapChain = device.createSwapChain(Format::eR8G8B8Unorm, 3, SwapChainPresentMode::eMailbox);
 
 		auto vertices = std::vector<Vertex>{
-			
-			{ { -0.5, -0.5, 0.5 }, { 0.0, 0.0 } },
-			{ { -0.5,  0.5, 0.5 }, { 0.0, 1.0 } },
-			{ {  0.5,  0.5, 0.5 }, { 1.0, 1.0 } },
-			{ {  0.5, -0.5, 0.5 }, { 1.0, 0.0 } }
+
+			{ { -0.5, -0.5, 0.5 },{ 0.0, 0.0 } },
+			{ { -0.5,  0.5, 0.5 },{ 0.0, 1.0 } },
+			{ { 0.5,  0.5, 0.5 },{ 1.0, 1.0 } },
+			{ { 0.5, -0.5, 0.5 },{ 1.0, 0.0 } }
 		};
 		auto vertexBuffer = device.createVertexBuffer(vertices);
-		
+
 		auto indices = std::vector<uint16_t>{
 			0, 1, 2,
 			0, 2, 3
 		};
 
 		auto indexBuffer = device.createIndexBuffer(indices);
-		
-		
+
+
 		auto uniformBuffer = device.createUniformBuffer<sizeof(UniformBufferObject)>();
 
 		auto bigUniform = device.createUniformBuffer<1000>();
@@ -196,10 +197,10 @@ int main()
 		size_t frameNo = 0;	//<-- for debugging
 		auto uniform_buffer = device.createUniformBuffer<sizeof(float[3])>();
 
-		while(true)
+		while (true)
 		{
 			MSG msg;
-			if(PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
+			if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
 			{
 				if (msg.message == WM_QUIT) {
 					break;
@@ -228,7 +229,7 @@ int main()
 				cmd.setUniform("sam", image, sampler2D);
 
 				cmd.setIndexBuffer(indexBuffer);
-				cmd.drawIndexed(indices.size()); 
+				cmd.drawIndexed(indices.size());
 				cmd.end();
 				std::vector<CommandBuffer> commandBuffers;
 				commandBuffers.push_back(std::move(cmd));
@@ -238,5 +239,52 @@ int main()
 		}
 		device.waitIdle();
 	}
+}
+
+int main()
+{
+
+	auto hwnd = StartWindow(800, 600);
+	auto surface = Surface(800, 600, hwnd);
+	vk::PhysicalDeviceFeatures features = {};
+	features.samplerAnisotropy = VK_TRUE;
+	auto devices = Device::enumerateDevices(surface, features, { VK_KHR_SWAPCHAIN_EXTENSION_NAME, VK_KHR_SAMPLER_MIRROR_CLAMP_TO_EDGE_EXTENSION_NAME });
+	auto& device = devices[0];
+
+
+	auto vertices = std::vector<Vertex>{
+
+		{ { -0.5, -0.5, 0.5 },{ 0.0, 0.0 } },
+		{ { -0.5,  0.5, 0.5 },{ 0.0, 1.0 } },
+		{ { 0.5,  0.5, 0.5 },{ 1.0, 1.0 } },
+		{ { 0.5, -0.5, 0.5 },{ 1.0, 0.0 } }
+	};
+	auto vertexBuffer = device.createVertexBuffer(vertices);
+
+	auto indices = std::vector<uint16_t>{
+		0, 1, 2,
+		0, 2, 3
+	};
+	auto indexBuffer = device.createIndexBuffer(indices);
+
+	auto parser = Parser("C:/VulkanSDK/1.0.65.0/Bin32/glslangValidator.exe");
+	auto colVert = parser.compileVertexShader("shader/colorVert.vert", "main");
+	auto colFrag = parser.compileFragmentShader("shader/colorFrag.frag", "main");
+
+	auto colProgram = device.createShaderProgram(colVert, colFrag);
+
+	auto passOneTarget = device.createTexture2D(800, 600, Format::eR8G8B8A8Unorm);
+
+	auto collPass = device.createRenderPass(colProgram, passOneTarget);
+
+	auto stupidVert = parser.compileVertexShader("shader/stupidVert.vert", "main");
+	auto stupidFrag = parser.compileFragmentShader("shader/stupidFrag.frag", "main");
+
+	auto stupidProgram = device.createShaderProgram(stupidVert, stupidFrag);
+
+	auto swapChain = device.createSwapChain(Format::eR8G8B8A8Unorm, 3, SwapChainPresentMode::eMailbox);
+
+	auto stupidPass = device.createRenderPass(stupidProgram, swapChain);
+
 	std::cin.ignore();
 }

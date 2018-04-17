@@ -13,13 +13,12 @@ RenderPass::operator vk::RenderPass&()
 
 RenderPass::RenderPass(
 	const vk::UniqueDevice& device,
+	vk::UniqueRenderPass& vkRenderPass,
 	const ShaderProgram& program,
-	const vk::Extent2D& extent,
-	Format format)
-		:	m_shaderProgram(program), m_vkDevice(device)
+	const vk::Extent2D& extent)
+	: m_shaderProgram(program), m_vkDevice(device), m_vkRenderPass(std::move(vkRenderPass))
 {
 	setupDescriptorSet(device, program.m_vertexShader, program.m_fragmentShader);
-
 
 	vk::PipelineShaderStageCreateInfo shaderStages[] = { 
 		program.m_vkVertexStageCreateInfo,
@@ -87,8 +86,6 @@ RenderPass::RenderPass(
 
 	m_vkPipelineLayout = device->createPipelineLayoutUnique(pipelineLayoutInfo);
 
-	m_vkRenderPass =  createDummyRenderpass(device, format);
-
 	vk::PipelineMultisampleStateCreateInfo multisampleCreateInfo = {};
 	multisampleCreateInfo.setRasterizationSamples(vk::SampleCountFlagBits::e1)
 		.setMinSampleShading(1.0f);
@@ -114,58 +111,6 @@ RenderPass::RenderPass(
 		.setPDepthStencilState(&depthCreateInfo);
 
 	m_vkGraphicsPipeline = device->createGraphicsPipelineUnique(vk::PipelineCache(), pipelineCreateInfo);
-}
-
-//TODO: Make the creation of vkRenderPass more flexible. This dummy only makes one color-attachment and a depth-attachment
-vk::UniqueRenderPass RenderPass::createDummyRenderpass(const vk::UniqueDevice& device, Format format) {
-
-	vk::AttachmentDescription colorAttachment;
-	colorAttachment.setFormat(format)
-		.setSamples(vk::SampleCountFlagBits::e1)
-		.setLoadOp(vk::AttachmentLoadOp::eClear)
-		.setStoreOp(vk::AttachmentStoreOp::eStore)
-		.setStencilLoadOp(vk::AttachmentLoadOp::eLoad)
-		.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare)
-		.setInitialLayout(vk::ImageLayout::eUndefined)
-		.setFinalLayout(vk::ImageLayout::ePresentSrcKHR);
-
-	vk::AttachmentReference colorAttatchmentRef(0, vk::ImageLayout::eColorAttachmentOptimal);
-
-	vk::AttachmentDescription depthAttachment;
-	depthAttachment.setFormat(vk::Format::eD32Sfloat)
-		.setLoadOp(vk::AttachmentLoadOp::eClear) // Clear buffer data at load
-		.setStoreOp(vk::AttachmentStoreOp::eDontCare)
-		.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare)
-		.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare)
-		.setFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
-
-	vk::AttachmentReference depthAttachmentRef(1, vk::ImageLayout::eDepthStencilAttachmentOptimal);
-
-	std::vector<vk::AttachmentDescription> attachments = { colorAttachment, depthAttachment };
-	std::vector<vk::AttachmentReference> attachmentReferences = { colorAttatchmentRef, depthAttachmentRef };
-
-	vk::SubpassDescription subpass = {};
-	subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics)
-		.setColorAttachmentCount(1)
-		.setPColorAttachments(&colorAttatchmentRef)
-		.setPDepthStencilAttachment(&depthAttachmentRef);
-
-	vk::SubpassDependency dependency(VK_SUBPASS_EXTERNAL);
-	dependency.setSrcStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput)
-		.setSrcAccessMask(vk::AccessFlags())
-		.setDstStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput)
-		.setDstAccessMask(vk::AccessFlagBits::eColorAttachmentRead | vk::AccessFlagBits::eColorAttachmentWrite);
-
-
-	vk::RenderPassCreateInfo renderPassInfo;
-	renderPassInfo.setAttachmentCount(attachments.size())
-		.setPAttachments(attachments.data())
-		.setSubpassCount(1)
-		.setPSubpasses(&subpass)
-		.setDependencyCount(1)
-		.setPDependencies(&dependency);
-
-	return device->createRenderPassUnique(renderPassInfo);
 }
 
 void RenderPass::setupDescriptorSet(const vk::UniqueDevice &device, const VertexShader& vertexShader, const FragmentShader& fragmentShader)

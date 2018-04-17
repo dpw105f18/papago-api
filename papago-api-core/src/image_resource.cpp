@@ -146,6 +146,8 @@ ImageResource::ImageResource(
 
 	createImageView(m_vkDevice, aspectFlags);
 
+	
+
 	//TODO: transition image (via command buffers)
 }
 
@@ -190,4 +192,19 @@ void ImageResource::createImageView(const vk::UniqueDevice &device, vk::ImageAsp
 			.setLevelCount(1)
 			.setLayerCount(1))
 	);
+}
+
+vk::UniqueFramebuffer & ImageResource::createFramebuffer(vk::RenderPass & renderPass)
+{
+	vk::FramebufferCreateInfo fboCreate;
+	fboCreate.setAttachmentCount(1)
+		.setPAttachments(&m_vkImageView.get())
+		.setWidth(m_vkExtent.width)
+		.setHeight(m_vkExtent.height)
+		.setLayers(1) //TODO: <--- make setable? -AM
+		.setRenderPass(static_cast<vk::RenderPass>(renderPass));
+
+	m_vkFramebuffer = m_vkDevice->createFramebufferUnique(fboCreate);
+
+	return m_vkFramebuffer;
 }
