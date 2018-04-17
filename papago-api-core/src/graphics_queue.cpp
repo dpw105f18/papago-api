@@ -31,19 +31,15 @@ void GraphicsQueue::submitCommands(std::vector<CommandBuffer>& commandBuffers)
 	std::set<Resource*> resources;
 	for (auto& cmd : commandBuffers) {
 		std::merge(resources.begin(), resources.end(), cmd.m_resourcesInUse.begin(), cmd.m_resourcesInUse.end(), std::inserter(resources, resources.begin()));
+		cmd.m_resourcesInUse.clear();
 	}
 
 	for (auto& resource : resources) {
-		resource->m_vkFence = *fence;
+		resource->m_vkFence = &fence.get();
 	}
-
-	auto res = *resources.begin();
-	auto bo = reinterpret_cast<BufferResource*>(res)->inUse();
-
 
 	m_vkGraphicsQueue.submit(submitInfo, *fence);
 
-	bo = reinterpret_cast<BufferResource*>(res)->inUse();
 }
 
 void GraphicsQueue::present(std::vector<CommandBuffer>& commandBuffers)

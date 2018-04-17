@@ -200,7 +200,13 @@ int main()
 
 				// TODO: move into upload as template???
 				memcpy(uniform_input_char.data(), uniform_input_float.data(), uniform_input_char.size());
-				uniform_buffer.upload(uniform_input_char);
+
+				if (!uniform_buffer.inUse()) {
+					uniform_buffer.upload(uniform_input_char);
+				}
+				else {
+					auto d = "bug";
+				}
 
 				cmd.setUniform("val", uniform_buffer);
 				cmd.setUniform("sam", image, sampler2D);
@@ -212,7 +218,6 @@ int main()
 				commandBuffers.push_back(std::move(cmd));
 				graphicsQueue.present(commandBuffers);
 				frameNo++;
-				graphicsQueue.Wait();
 			}
 		}
 		device.waitIdle();

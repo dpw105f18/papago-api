@@ -128,7 +128,6 @@ void CommandBuffer::drawInstanced(size_t instanceVertexCount, size_t instanceCou
 
 void CommandBuffer::setUniform(const std::string & name, BufferResource & buffer)
 {
-	
 	auto binding = getBinding(m_renderPassPtr->m_shaderProgram, name);
 	auto& descriptorSet = m_renderPassPtr->m_vkDescriptorSet;
 
