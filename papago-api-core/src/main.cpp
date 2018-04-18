@@ -134,7 +134,6 @@ ImageResource createTexture(Device& device) {
 int main()
 {
 	{
-
 		auto parser = Parser("C:/VulkanSDK/1.0.65.0/Bin32/glslangValidator.exe");
 		
 		size_t winWidth = 800;
@@ -234,6 +233,7 @@ int main()
 				commandBuffers.push_back(std::move(cmd));
 				graphicsQueue.present(commandBuffers);
 				frameNo++;
+				graphicsQueue.Wait();
 			}
 		}
 		device.waitIdle();
