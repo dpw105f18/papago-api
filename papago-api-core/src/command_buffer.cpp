@@ -92,7 +92,7 @@ void CommandBuffer::begin(RenderPass &renderPass, ImageResource & renderTarget)
 
 	std::array<vk::ClearValue, 2> clearValues;
 
-	clearValues[0].setColor(vk::ClearColorValue(std::array<float, 4>{0, 0, 0, 1}));
+	clearValues[0].setColor(vk::ClearColorValue(std::array<float, 4>{1, 0, 0, 1}));
 	clearValues[1].setDepthStencil(vk::ClearDepthStencilValue{ 1.0, 0 });
 
 	auto& fbo = renderTarget.createFramebuffer(static_cast<vk::RenderPass>(renderPass));

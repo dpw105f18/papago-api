@@ -21,14 +21,14 @@ std::vector<Device> Device::enumerateDevices(Surface& surface, const vk::Physica
 #endif 
 
 	std::vector<Device> result;
-
+	const float queuePriority = 1.0f;
 	for (auto& physicalDevice : surface.m_vkInstance->enumeratePhysicalDevices()) {
 		if (! isPhysicalDeviceSuitable(physicalDevice, surface, extensions)) {
 			continue;
 		}
 
 		auto queueFamilyIndicies = findQueueFamilies(physicalDevice, surface);
-		auto queueCreateInfos = createQueueCreateInfos(queueFamilyIndicies);
+		auto queueCreateInfos = createQueueCreateInfos(queueFamilyIndicies, queuePriority);
 
 		auto logicalDevice = physicalDevice.createDeviceUnique(vk::DeviceCreateInfo()
 			.setEnabledExtensionCount(extensions.size())
@@ -75,7 +75,7 @@ Device::QueueFamilyIndices Device::findQueueFamilies(const vk::PhysicalDevice & 
 	return { graphicsQueueFamily, presentQueueFamily };
 }
   
-std::vector<vk::DeviceQueueCreateInfo> Device::createQueueCreateInfos(QueueFamilyIndices queueFamilyIndices)
+std::vector<vk::DeviceQueueCreateInfo> Device::createQueueCreateInfos(QueueFamilyIndices queueFamilyIndices, const float& queuePriority)
 {
 	std::set<int> uniqueQueueFamilyIndicies;
 	if (queueFamilyIndices.hasGraphicsFamily()) {
@@ -88,8 +88,6 @@ std::vector<vk::DeviceQueueCreateInfo> Device::createQueueCreateInfos(QueueFamil
 
 	auto queueCreateInfos = std::vector<vk::DeviceQueueCreateInfo>();
 	for (auto queueFamilyIndex : uniqueQueueFamilyIndicies) {
-		const float queuePriority = 1.0f;	//<-- TODO: should this be setable somehow?
-
 		queueCreateInfos.push_back(vk::DeviceQueueCreateInfo()
 			.setQueueCount(1)					//<-- TODO: setable?
 			.setPQueuePriorities(&queuePriority)
@@ -174,19 +172,26 @@ vk::UniqueRenderPass Device::createDummyRenderpass(Format format, bool withDepth
 		.setStoreOp(vk::AttachmentStoreOp::eStore)
 		.setStencilLoadOp(vk::AttachmentLoadOp::eLoad)
 		.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare)
-		.setInitialLayout(vk::ImageLayout::eUndefined)
-		.setFinalLayout(vk::ImageLayout::ePresentSrcKHR);
+		.setInitialLayout(vk::ImageLayout::eUndefined);
+
+	if (withDepthBuffer) {
+		colorAttachment.setFinalLayout(vk::ImageLayout::ePresentSrcKHR);
+	}
+	else {
+		colorAttachment.setFinalLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
+	}
 
 	vk::AttachmentReference colorAttatchmentRef(0, vk::ImageLayout::eColorAttachmentOptimal);
 	
 	std::vector<vk::AttachmentDescription> attachments = { colorAttachment };
-	std::vector<vk::AttachmentReference> attachmentReferences = { colorAttatchmentRef };
 	
 
 	vk::SubpassDescription subpass = {};
 	subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics)
 		.setColorAttachmentCount(1)
 		.setPColorAttachments(&colorAttatchmentRef);
+
+	auto depthAttachmentRef = vk::AttachmentReference();
 
 	if (withDepthBuffer) {
 
@@ -200,8 +205,7 @@ vk::UniqueRenderPass Device::createDummyRenderpass(Format format, bool withDepth
 
 		attachments.push_back(depthAttachment);
 
-		vk::AttachmentReference depthAttachmentRef(1, vk::ImageLayout::eDepthStencilAttachmentOptimal);
-		attachmentReferences.push_back(depthAttachmentRef);
+		depthAttachmentRef = vk::AttachmentReference(1, vk::ImageLayout::eDepthStencilAttachmentOptimal);
 
 		subpass.setPDepthStencilAttachment(&depthAttachmentRef);
 	}
@@ -346,7 +350,10 @@ ImageResource Device::createTexture2D(uint32_t width, uint32_t height, Format fo
 		.setInitialLayout(vk::ImageLayout::eUndefined)
 		.setMipLevels(1)
 		.setArrayLayers(1)
-		.setUsage(vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled);
+		.setUsage(vk::ImageUsageFlagBits::eTransferDst 
+			| vk::ImageUsageFlagBits::eSampled 
+			| vk::ImageUsageFlagBits::eColorAttachment
+			| vk::ImageUsageFlagBits::eTransferSrc);
 
 	auto image = m_vkDevice->createImage(info);
 	auto memoryRequirements = m_vkDevice->getImageMemoryRequirements(image);

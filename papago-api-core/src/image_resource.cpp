@@ -83,6 +83,68 @@ void ImageResource::upload(const std::vector<char>& data)
 	commandBuffer->reset(vk::CommandBufferResetFlagBits::eReleaseResources);
 }
 
+std::vector<char> ImageResource::download()
+{
+
+	//Transition image so host can upload
+	auto& commandBuffer = m_device.m_internalCommandBuffer;
+	vk::CommandBufferBeginInfo beginInfo = {};
+	beginInfo.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
+	commandBuffer->begin(beginInfo);
+	transition<vk::ImageLayout::eGeneral, vk::ImageLayout::eTransferSrcOptimal>(commandBuffer);
+
+
+	vk::BufferCreateInfo bufferInfo = {};
+	bufferInfo.setSize(m_size)
+		.setUsage(vk::BufferUsageFlagBits::eTransferDst);
+
+	auto buffer = m_vkDevice->createBufferUnique(bufferInfo);
+
+	auto memoryRequirements = m_vkDevice->getBufferMemoryRequirements(*buffer);
+	auto memoryType = findMemoryType(m_device.m_vkPhysicalDevice, memoryRequirements.memoryTypeBits, vk::MemoryPropertyFlagBits::eHostCoherent | vk::MemoryPropertyFlagBits::eHostVisible);
+	vk::MemoryAllocateInfo allocateInfo = {};
+	allocateInfo.setAllocationSize(memoryRequirements.size)
+		.setMemoryTypeIndex(memoryType);
+
+	auto memory = m_vkDevice->allocateMemoryUnique(allocateInfo);
+
+	m_device.m_vkDevice->bindBufferMemory(*buffer, *memory, 0);
+
+	vk::BufferImageCopy region;
+	region.bufferOffset = 0;
+	region.bufferRowLength = 0;
+	region.bufferImageHeight = 0;
+	region.imageSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
+	region.imageSubresource.mipLevel = 0;
+	region.imageSubresource.baseArrayLayer = 0;
+	region.imageSubresource.layerCount = 1;
+	region.imageOffset = vk::Offset3D{ 0,0,0 };
+	region.imageExtent = m_vkExtent;	//TODO: what if texture image is smaller/larger than ImageResource? -AM
+
+	commandBuffer->copyImageToBuffer(m_vkImage, vk::ImageLayout::eTransferSrcOptimal, *buffer, { region });
+
+	commandBuffer->end();
+
+	//execute everything
+	vk::SubmitInfo submitInfo = {};
+	submitInfo.setCommandBufferCount(1)
+		.setPCommandBuffers(&*commandBuffer);
+
+	m_device.m_vkInternalQueue.submit(submitInfo, vk::Fence());
+	m_device.m_vkInternalQueue.waitIdle();
+
+	//cleanup
+	commandBuffer->reset(vk::CommandBufferResetFlagBits::eReleaseResources);
+
+	//TODO: transfer image to something else? -AM
+
+	std::vector<char> result(m_size);
+	auto mappedMemory = m_vkDevice->mapMemory(*memory, 0, VK_WHOLE_SIZE);
+	memcpy(result.data(), mappedMemory, m_size);
+	m_vkDevice->unmapMemory(*memory);
+	return result;
+}
+
 void ImageResource::destroy()
 {
 }
@@ -136,7 +198,7 @@ ImageResource::ImageResource(
 	Format format, 
 	vk::Extent3D extent,
 	vk::MemoryRequirements memoryRequirements) 
-		: Resource(device.m_vkPhysicalDevice, device.m_vkDevice, vk::MemoryPropertyFlagBits::eDeviceLocal | vk::MemoryPropertyFlagBits::eHostVisible, memoryRequirements)
+		: Resource(device.m_vkPhysicalDevice, device.m_vkDevice, vk::MemoryPropertyFlagBits::eDeviceLocal | vk::MemoryPropertyFlagBits::eHostVisible , memoryRequirements)
 		, m_vkImage(image)
 		, m_format(format)
 		, m_vkExtent(extent)

@@ -15,6 +15,8 @@ public:
 
 	void upload(const std::vector<char>& data) override; 
 
+	std::vector<char> download() override;
+
 	// Inherited via Resource
 	void destroy() override;
 
@@ -137,6 +139,29 @@ inline void ImageResource::transition<vk::ImageLayout::eTransferDstOptimal, vk::
 
 }
 
+template<>
+inline void ImageResource::transition<vk::ImageLayout::eGeneral, vk::ImageLayout::eTransferSrcOptimal>(const CommandBuffer& commandBuffer)
+{
+	auto imageMemoryBarrier = vk::ImageMemoryBarrier(
+		vk::AccessFlags(),
+		vk::AccessFlags(),
+		vk::ImageLayout::eGeneral,
+		vk::ImageLayout::eTransferSrcOptimal,
+		VK_QUEUE_FAMILY_IGNORED,
+		VK_QUEUE_FAMILY_IGNORED,
+		m_vkImage,
+		{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
+
+	commandBuffer->pipelineBarrier(
+		vk::PipelineStageFlagBits::eBottomOfPipe,
+		vk::PipelineStageFlagBits::eTopOfPipe,
+		vk::DependencyFlags(),
+		{},
+		{},
+		{ imageMemoryBarrier });
+}
+
+//NOTE: this must always be on the bottom!
 template<vk::ImageLayout source, vk::ImageLayout destination>
 void ImageResource::transition(const CommandBuffer &)
 {

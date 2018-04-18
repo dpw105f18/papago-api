@@ -29,14 +29,15 @@ RenderPass::RenderPass(
 	vk::PipelineVertexInputStateCreateInfo vertexInputInfo;
 	//do the shader require a vertex buffer?
 	auto attributeDescription = getAttributeDescriptions();
+	auto bindingDescription = new vk::VertexInputBindingDescription();
 
 	if (m_shaderProgram.m_vertexShader.m_input.size() > 0) {
 
-	auto bindingDescription = getBindingDescription();
+	*bindingDescription = getBindingDescription();
 
 	//TODO: how to handle vertex buffer existence and count? -AM
 	vertexInputInfo.setVertexBindingDescriptionCount(1)
-		.setPVertexBindingDescriptions(&bindingDescription)
+		.setPVertexBindingDescriptions(bindingDescription)
 		.setVertexAttributeDescriptionCount(attributeDescription.size())
 		.setPVertexAttributeDescriptions(attributeDescription.data()); 
 	}
@@ -80,9 +81,12 @@ RenderPass::RenderPass(
 	colorBlending.setAttachmentCount(1)
 		.setPAttachments(&colorBlendAttatchment);
 
+	
 	vk::PipelineLayoutCreateInfo pipelineLayoutInfo;
-	pipelineLayoutInfo.setSetLayoutCount(1)
-		.setPSetLayouts(&m_vkDescriptorSetLayout.get());
+	if (m_vkDescriptorSetLayout) {
+		pipelineLayoutInfo.setSetLayoutCount(1)
+			.setPSetLayouts(&m_vkDescriptorSetLayout.get());
+	}
 
 	m_vkPipelineLayout = device->createPipelineLayoutUnique(pipelineLayoutInfo);
 
@@ -111,6 +115,8 @@ RenderPass::RenderPass(
 		.setPDepthStencilState(&depthCreateInfo);
 
 	m_vkGraphicsPipeline = device->createGraphicsPipelineUnique(vk::PipelineCache(), pipelineCreateInfo);
+
+	delete bindingDescription;
 }
 
 void RenderPass::setupDescriptorSet(const vk::UniqueDevice &device, const VertexShader& vertexShader, const FragmentShader& fragmentShader)
@@ -152,37 +158,39 @@ void RenderPass::setupDescriptorSet(const vk::UniqueDevice &device, const Vertex
 		}
 	}
 
-	vk::DescriptorSetLayoutCreateInfo layoutCreateInfo = {};
-	layoutCreateInfo.setBindingCount(vkBindings.size())
-		.setPBindings(vkBindings.data());
+	if (0 < vkBindings.size()) {
+		vk::DescriptorSetLayoutCreateInfo layoutCreateInfo = {};
+		layoutCreateInfo.setBindingCount(vkBindings.size())
+			.setPBindings(vkBindings.data());
 
-	m_vkDescriptorSetLayout = device->createDescriptorSetLayoutUnique(layoutCreateInfo);
+		m_vkDescriptorSetLayout = device->createDescriptorSetLayoutUnique(layoutCreateInfo);
 
 
-	//Descriptor Pool:
-	auto poolSizes = std::vector<vk::DescriptorPoolSize>(vkBindings.size());
-	for (auto i = 0; i < vkBindings.size(); ++i) {
-		auto& vkBinding = vkBindings[i];
-		poolSizes[i].setDescriptorCount(1)
-			.setType(vkBinding.descriptorType);
+		//Descriptor Pool:
+		auto poolSizes = std::vector<vk::DescriptorPoolSize>(vkBindings.size());
+		for (auto i = 0; i < vkBindings.size(); ++i) {
+			auto& vkBinding = vkBindings[i];
+			poolSizes[i].setDescriptorCount(1)
+				.setType(vkBinding.descriptorType);
+		}
+
+		vk::DescriptorPoolCreateInfo poolCreateInfo = {};
+		poolCreateInfo.setPoolSizeCount(poolSizes.size())
+			.setPPoolSizes(poolSizes.data())
+			.setMaxSets(1)	//TODO: keep this default value? -AM.
+			.setFlags(vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet);
+
+		m_vkDescriptorPool = device->createDescriptorPoolUnique(poolCreateInfo);
+
+
+		//Descriptor Set:
+		vk::DescriptorSetAllocateInfo allocateInfo = {};
+		allocateInfo.setDescriptorPool(*m_vkDescriptorPool)
+			.setDescriptorSetCount(1)
+			.setPSetLayouts(&m_vkDescriptorSetLayout.get());
+
+		m_vkDescriptorSet = std::move(device->allocateDescriptorSetsUnique(allocateInfo)[0]);	//TODO: do we always want exactly one descriptor set? -AM
 	}
-
-	vk::DescriptorPoolCreateInfo poolCreateInfo = {};
-	poolCreateInfo.setPoolSizeCount(poolSizes.size())
-		.setPPoolSizes(poolSizes.data())
-		.setMaxSets(1)	//TODO: keep this default value? -AM.
-		.setFlags(vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet);
-
-	m_vkDescriptorPool = device->createDescriptorPoolUnique(poolCreateInfo);
-
-
-	//Descriptor Set:
-	vk::DescriptorSetAllocateInfo allocateInfo = {};
-	allocateInfo.setDescriptorPool(*m_vkDescriptorPool)
-		.setDescriptorSetCount(1)
-		.setPSetLayouts(&m_vkDescriptorSetLayout.get());
-
-	m_vkDescriptorSet = std::move(device->allocateDescriptorSetsUnique(allocateInfo)[0]);	//TODO: do we always want exactly one descriptor set? -AM
 }
 
 vk::VertexInputBindingDescription RenderPass::getBindingDescription()

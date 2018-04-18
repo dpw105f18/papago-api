@@ -5,8 +5,9 @@
 
 void GraphicsQueue::submitCommands(std::vector<CommandBuffer>& commandBuffers)
 {
-	std::vector<vk::Semaphore> semaphores = { *m_vkRenderFinishSemaphore };
-	std::vector<vk::Semaphore> waitSemaphores = { *m_vkImageAvailableSemaphore };
+	m_vkGraphicsQueue.waitIdle();
+	std::vector<vk::Semaphore> semaphores = { *m_vkRenderFinishSemaphore};
+	std::vector<vk::Semaphore> waitSemaphores = { *m_vkImageAvailableSemaphore};
 	std::vector<vk::PipelineStageFlags> waitStages = { vk::PipelineStageFlagBits::eColorAttachmentOutput };
 	std::vector<vk::CommandBuffer> vkCommandBuffers;
 	vkCommandBuffers.reserve(commandBuffers.size());
@@ -42,15 +43,13 @@ void GraphicsQueue::submitCommands(std::vector<CommandBuffer>& commandBuffers)
 
 }
 
-void GraphicsQueue::present(std::vector<CommandBuffer>& commandBuffers)
+void GraphicsQueue::present()
 {
 	m_vkPresentQueue.waitIdle();
-	auto imageIndices = getNextFrameIndex();
 	std::vector<vk::Semaphore> semaphores = { *m_vkRenderFinishSemaphore };
 	std::vector<vk::SwapchainKHR> swapchains = { static_cast<vk::SwapchainKHR>(m_swapChain) };
 
-	submitCommands(commandBuffers);
-
+	auto imageIndices = getNextFrameIndex();
 	vk::PresentInfoKHR presentInfo = {};
 	presentInfo.setWaitSemaphoreCount(semaphores.size())
 		.setPWaitSemaphores(semaphores.data())
@@ -71,7 +70,7 @@ uint32_t GraphicsQueue::getCurrentFrameIndex() {
 }
 
 //TODO: don't present this to API users. -AM
-void GraphicsQueue::Wait()
+void GraphicsQueue::wait()
 {
 	m_vkPresentQueue.waitIdle();
 }

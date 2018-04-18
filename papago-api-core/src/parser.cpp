@@ -17,8 +17,15 @@ VertexShader Parser::compileVertexShader(const std::string &filePath, const std:
 
 	//TODO: set binding information on [result]
 
-	result.m_input.push_back({ 0, vk::Format::eR32G32B32Sfloat });	//<-- position
-	result.m_input.push_back({ sizeof(float) * 3, vk::Format::eR32G32Sfloat }); //<-- uv
+	if (filePath == "shader/colorVert.vert") {
+
+		result.m_input.push_back({ 0, vk::Format::eR32G32B32Sfloat });	//<-- position
+	}
+	else if(filePath == std::string("shader/stupidVert.vert")){
+		
+		result.m_input.push_back({ 0, vk::Format::eR32G32B32Sfloat });	//<-- position
+		result.m_input.push_back({ sizeof(float) * 3, vk::Format::eR32G32Sfloat }); //<-- uv
+	}
 	return result;
 }
 
@@ -33,8 +40,13 @@ FragmentShader Parser::compileFragmentShader(const std::string & filePath, const
 	//result.m_bindings.insert({ "texSampler", {0, vk::DescriptorType::eCombinedImageSampler} });
 	
 	// For uniform frag
-	result.m_bindings.insert({{ "sam" }, { 0, vk::DescriptorType::eCombinedImageSampler}});
-	result.m_bindings.insert({ { "val" },{ 1, vk::DescriptorType::eUniformBuffer } });
+	if (filePath == std::string("shader/colorFrag.frag")) {
+	
+	}
+	else if(filePath == std::string("shader/stupidFrag.frag")){
+		result.m_bindings.insert({ { "sam" },{ 0, vk::DescriptorType::eCombinedImageSampler } });
+		result.m_bindings.insert({ { "val" },{ 1, vk::DescriptorType::eUniformBuffer } });
+	}
 	
 	return result;
 }

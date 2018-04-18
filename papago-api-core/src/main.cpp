@@ -13,7 +13,6 @@
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
-#include "main.h"
 
 
 LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -132,115 +131,6 @@ ImageResource createTexture(Device& device) {
 	return imageResource;
 }
 
-void oldMain()
-{
-	{
-
-		auto parser = Parser("C:/VulkanSDK/1.0.65.0/Bin32/glslangValidator.exe");
-
-		size_t winWidth = 800;
-		size_t winHeight = 600;
-		auto hwnd = StartWindow(winWidth, winHeight);
-
-
-		auto surface = Surface(winWidth, winHeight, hwnd);
-		vk::PhysicalDeviceFeatures features = {};
-		features.samplerAnisotropy = VK_TRUE;
-		auto devices = Device::enumerateDevices(surface, features, { VK_KHR_SWAPCHAIN_EXTENSION_NAME, VK_KHR_SAMPLER_MIRROR_CLAMP_TO_EDGE_EXTENSION_NAME });
-		auto& device = devices[0];
-		auto swapChain = device.createSwapChain(Format::eR8G8B8Unorm, 3, SwapChainPresentMode::eMailbox);
-
-		auto vertices = std::vector<Vertex>{
-
-			{ { -0.5, -0.5, 0.5 },{ 0.0, 0.0 } },
-			{ { -0.5,  0.5, 0.5 },{ 0.0, 1.0 } },
-			{ { 0.5,  0.5, 0.5 },{ 1.0, 1.0 } },
-			{ { 0.5, -0.5, 0.5 },{ 1.0, 0.0 } }
-		};
-		auto vertexBuffer = device.createVertexBuffer(vertices);
-
-		auto indices = std::vector<uint16_t>{
-			0, 1, 2,
-			0, 2, 3
-		};
-
-		auto indexBuffer = device.createIndexBuffer(indices);
-
-
-		auto uniformBuffer = device.createUniformBuffer<sizeof(UniformBufferObject)>();
-
-		auto bigUniform = device.createUniformBuffer<1000>();
-
-		std::vector<char> bigData(1000);
-		for (auto i = 0; i < 1000; ++i) {
-			bigData[i] = i % 256;
-		}
-
-		auto sampler3D = device.createTextureSampler3D(Filter::eNearest, Filter::eNearest, TextureWrapMode::eClampToBorder, TextureWrapMode::eClampToEdge, TextureWrapMode::eRepeat);
-		auto sampler2D = device.createTextureSampler2D(Filter::eLinear, Filter::eLinear, TextureWrapMode::eMirroredRepeat, TextureWrapMode::eMirrorClampToEdge);
-		auto sampler1D = device.createTextureSampler1D(Filter::eNearest, Filter::eNearest, TextureWrapMode::eRepeat);
-
-		auto image = createTexture(device);
-
-		bigUniform.upload(bigData);
-
-		auto dlData = bigUniform.download();
-
-		auto vertexShader = parser.compileVertexShader("shader/stupidVert.vert", "main");
-		auto fragmentShader = parser.compileFragmentShader("shader/stupidFrag.frag", "main");
-
-		auto program = device.createShaderProgram(vertexShader, fragmentShader);
-
-		auto renderPass = device.createRenderPass(program, swapChain);
-
-		auto graphicsQueue = device.createGraphicsQueue(swapChain);
-		size_t frameNo = 0;	//<-- for debugging
-		auto uniform_buffer = device.createUniformBuffer<sizeof(float[3])>();
-
-		while (true)
-		{
-			MSG msg;
-			if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
-			{
-				if (msg.message == WM_QUIT) {
-					break;
-				}
-				TranslateMessage(&msg);
-				DispatchMessage(&msg);
-			}
-			else {
-				auto cmd = device.createCommandBuffer(Usage::eReset);
-				cmd.begin(renderPass, swapChain, graphicsQueue.getCurrentFrameIndex());
-				cmd.setInput(vertexBuffer);
-				auto uniform_input_float = std::vector<float>({ std::rand() * 1.0f / RAND_MAX, std::rand() * 1.0f / RAND_MAX, std::rand() * 1.0f / RAND_MAX });
-				auto uniform_input_char = std::vector<char>(sizeof(float) * uniform_input_float.size());
-
-				// TODO: move into upload as template???
-				memcpy(uniform_input_char.data(), uniform_input_float.data(), uniform_input_char.size());
-
-				if (!uniform_buffer.inUse()) {
-					uniform_buffer.upload(uniform_input_char);
-				}
-				else {
-					auto d = "bug";
-				}
-
-				cmd.setUniform("val", uniform_buffer);
-				cmd.setUniform("sam", image, sampler2D);
-
-				cmd.setIndexBuffer(indexBuffer);
-				cmd.drawIndexed(indices.size());
-				cmd.end();
-				std::vector<CommandBuffer> commandBuffers;
-				commandBuffers.push_back(std::move(cmd));
-				graphicsQueue.present(commandBuffers);
-				frameNo++;
-			}
-		}
-		device.waitIdle();
-	}
-}
-
 int main()
 {
 
@@ -252,12 +142,20 @@ int main()
 	auto& device = devices[0];
 
 
-	auto vertices = std::vector<Vertex>{
+	auto stupidVertices = std::vector<Vertex>{
 
 		{ { -0.5, -0.5, 0.5 },{ 0.0, 0.0 } },
 		{ { -0.5,  0.5, 0.5 },{ 0.0, 1.0 } },
 		{ { 0.5,  0.5, 0.5 },{ 1.0, 1.0 } },
 		{ { 0.5, -0.5, 0.5 },{ 1.0, 0.0 } }
+	};
+	auto stupidVertexBuffer = device.createVertexBuffer(stupidVertices);
+
+	auto vertices = std::vector<vec3>{
+		{-0.5, -0.5, 0.5},
+		{-0.5,  0.5, 0.5},
+		{ 0.5,  0.5, 0.5},
+		{ 0.5, -0.5, 0.5}
 	};
 	auto vertexBuffer = device.createVertexBuffer(vertices);
 
@@ -275,16 +173,88 @@ int main()
 
 	auto passOneTarget = device.createTexture2D(800, 600, Format::eR8G8B8A8Unorm);
 
-	auto collPass = device.createRenderPass(colProgram, passOneTarget);
+	auto colPass = device.createRenderPass(colProgram, passOneTarget);
 
+	auto swapChain = device.createSwapChain(Format::eR8G8B8A8Unorm, 3, SwapChainPresentMode::eMailbox);
+
+	//TODO: the following will not actually use the swapChain. -AM
+	auto graphicsQueue = device.createGraphicsQueue(swapChain);
+
+	
 	auto stupidVert = parser.compileVertexShader("shader/stupidVert.vert", "main");
 	auto stupidFrag = parser.compileFragmentShader("shader/stupidFrag.frag", "main");
 
 	auto stupidProgram = device.createShaderProgram(stupidVert, stupidFrag);
-
-	auto swapChain = device.createSwapChain(Format::eR8G8B8A8Unorm, 3, SwapChainPresentMode::eMailbox);
-
 	auto stupidPass = device.createRenderPass(stupidProgram, swapChain);
 
+
+	auto uniform_buffer = device.createUniformBuffer<sizeof(float[3])>();
+	auto sampler2D = device.createTextureSampler2D(Filter::eLinear, Filter::eLinear, TextureWrapMode::eMirroredRepeat, TextureWrapMode::eMirrorClampToEdge);
+
+	while (true)
+	{
+		MSG msg;
+		if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
+		{
+			if (msg.message == WM_QUIT) {
+				break;
+			}
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);
+		}
+		else {
+			auto cmd = device.createCommandBuffer(Usage::eReset);
+			cmd.begin(colPass, passOneTarget);
+
+			cmd.setInput(vertexBuffer);
+			cmd.setIndexBuffer(indexBuffer);
+			cmd.drawIndexed(indices.size());
+
+			cmd.end();
+
+			auto stupidCmd = device.createCommandBuffer(Usage::eReuse);
+			stupidCmd.begin(stupidPass, swapChain, graphicsQueue.getCurrentFrameIndex());
+
+			auto uniform_input_float = std::vector<float>({ std::rand() * 1.0f / RAND_MAX, std::rand() * 1.0f / RAND_MAX, std::rand() * 1.0f / RAND_MAX });
+			auto uniform_input_char = std::vector<char>(sizeof(float) * uniform_input_float.size());
+
+			// TODO: move into upload as template???
+			memcpy(uniform_input_char.data(), uniform_input_float.data(), uniform_input_char.size());
+
+			if (!uniform_buffer.inUse()) {
+				uniform_buffer.upload(uniform_input_char);
+			}
+			else {
+				auto d = "bug";
+			}
+
+			stupidCmd.setUniform("val", uniform_buffer);
+			stupidCmd.setUniform("sam", passOneTarget, sampler2D);
+
+			stupidCmd.setInput(stupidVertexBuffer);
+			stupidCmd.setIndexBuffer(indexBuffer);
+			stupidCmd.drawIndexed(indices.size());
+			stupidCmd.end();
+
+
+			std::vector<CommandBuffer> cmds;
+			cmds.push_back(std::move(cmd));
+			cmds.push_back(std::move(stupidCmd));
+			graphicsQueue.submitCommands(cmds);
+
+			graphicsQueue.present();
+			graphicsQueue.wait();
+
+			/*
+			if (!passOneTarget.inUse()) {
+				auto data = passOneTarget.download();
+				auto d = "bug";
+			}
+			else {
+				auto d = "bug";
+			}
+			*/
+		}
+	}//END while
 	std::cin.ignore();
 }

@@ -9,12 +9,12 @@ class SwapChain;
 class GraphicsQueue
 {
 public:
-	void present(std::vector<CommandBuffer>&);
+	void present();
 	uint32_t getCurrentFrameIndex();
-	void Wait();
+	void wait();
+	void submitCommands(std::vector<CommandBuffer>&);
 private:
 	uint32_t getNextFrameIndex();
-	void submitCommands(std::vector<CommandBuffer>&);
 	GraphicsQueue(const vk::UniqueDevice&, int graphicsQueueIndex, int presentQueueIndex, SwapChain&);
 	void createSemaphores(const vk::UniqueDevice&);
 
