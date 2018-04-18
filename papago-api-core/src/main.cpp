@@ -133,17 +133,14 @@ ImageResource createTexture(Device& device) {
 
 int main()
 {
-
 	auto hwnd = StartWindow(800, 600);
 	auto surface = Surface(800, 600, hwnd);
-	vk::PhysicalDeviceFeatures features = {};
-	features.samplerAnisotropy = VK_TRUE;
+	Features features = {};
+	features.samplerAnisotropy = true;
 	auto devices = Device::enumerateDevices(surface, features, { VK_KHR_SWAPCHAIN_EXTENSION_NAME, VK_KHR_SAMPLER_MIRROR_CLAMP_TO_EDGE_EXTENSION_NAME });
 	auto& device = devices[0];
 
-
 	auto stupidVertices = std::vector<Vertex>{
-
 		{ { -0.5, -0.5, 0.5 },{ 0.0, 0.0 } },
 		{ { -0.5,  0.5, 0.5 },{ 0.0, 1.0 } },
 		{ { 0.5,  0.5, 0.5 },{ 1.0, 1.0 } },
@@ -165,6 +162,7 @@ int main()
 	};
 	auto indexBuffer = device.createIndexBuffer(indices);
 
+	// PASS 1
 	auto parser = Parser("C:/VulkanSDK/1.0.65.0/Bin32/glslangValidator.exe");
 	auto colVert = parser.compileVertexShader("shader/colorVert.vert", "main");
 	auto colFrag = parser.compileFragmentShader("shader/colorFrag.frag", "main");
@@ -173,19 +171,20 @@ int main()
 
 	auto passOneTarget = device.createTexture2D(800, 600, Format::eR8G8B8A8Unorm);
 
-	auto colPass = device.createRenderPass(colProgram, passOneTarget);
+	auto colPass = device.createRenderPass(colProgram, passOneTarget.getWidth(), passOneTarget.getHeight(), passOneTarget.getFormat(), false);
 
+	
+	// PASS 2
 	auto swapChain = device.createSwapChain(Format::eR8G8B8A8Unorm, 3, SwapChainPresentMode::eMailbox);
 
-	//TODO: the following will not actually use the swapChain. -AM
 	auto graphicsQueue = device.createGraphicsQueue(swapChain);
-
 	
 	auto stupidVert = parser.compileVertexShader("shader/stupidVert.vert", "main");
 	auto stupidFrag = parser.compileFragmentShader("shader/stupidFrag.frag", "main");
 
 	auto stupidProgram = device.createShaderProgram(stupidVert, stupidFrag);
-	auto stupidPass = device.createRenderPass(stupidProgram, swapChain);
+	auto stupidPass = device.createRenderPass(stupidProgram, swapChain.getWidth(), swapChain.getHeight(), swapChain.getFormat(), true);
+
 
 
 	auto uniform_buffer = device.createUniformBuffer<sizeof(float[3])>();

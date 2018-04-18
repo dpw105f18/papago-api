@@ -17,15 +17,14 @@ class ShaderProgram;
 
 class Device {
 public:
-	static std::vector<Device> enumerateDevices(Surface& surface, const vk::PhysicalDeviceFeatures &features, const std::vector<const char*> &extensions);
+	static std::vector<Device> enumerateDevices(Surface& surface, const Features &features, const std::vector<const char*> &extensions);
 	Device(vk::PhysicalDevice, vk::UniqueDevice&, Surface&);
 
 	SwapChain createSwapChain(const Format&, size_t framebufferCount, SwapChainPresentMode);
 	GraphicsQueue createGraphicsQueue(SwapChain&) const;
 	CommandBuffer createCommandBuffer(Usage) const;
 	SubCommandBuffer createSubCommandBuffer(Usage);
-	RenderPass createRenderPass(const ShaderProgram&, const ImageResource&) const;
-	RenderPass createRenderPass(const ShaderProgram&, const SwapChain&) const;
+	RenderPass createRenderPass(const ShaderProgram&, uint32_t width, uint32_t height, Format, bool enableDepthBuffer) const;
 	Sampler createTextureSampler3D(Filter magFil, Filter minFil, TextureWrapMode modeU, TextureWrapMode modeV, TextureWrapMode modeW);
 	Sampler createTextureSampler2D(Filter magFil, Filter minFil, TextureWrapMode modeU, TextureWrapMode modeV);
 	Sampler createTextureSampler1D(Filter magFil, Filter minFil, TextureWrapMode modeU);

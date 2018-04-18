@@ -7,6 +7,22 @@ SwapChain::operator vk::SwapchainKHR&()
 	return *m_vkSwapChain;
 }
 
+uint32_t SwapChain::getWidth() const
+{
+	return m_vkExtent.width;
+}
+
+uint32_t SwapChain::getHeight() const
+{
+	return m_vkExtent.height;
+}
+
+Format SwapChain::getFormat() const
+{
+	//TODO: make sure swapchain ALWAYS have at least one colorResource! -AM
+	return m_colorResources[0].getFormat();
+}
+
 SwapChain::SwapChain(
 	vk::UniqueDevice&			device, 
 	vk::UniqueSwapchainKHR&		swapChain, 

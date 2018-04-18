@@ -145,6 +145,21 @@ std::vector<char> ImageResource::download()
 	return result;
 }
 
+uint32_t ImageResource::getWidth() const
+{
+	return m_vkExtent.width;
+}
+
+uint32_t ImageResource::getHeight() const
+{
+	return m_vkExtent.height;
+}
+
+Format ImageResource::getFormat() const
+{
+	return m_format;
+}
+
 void ImageResource::destroy()
 {
 }

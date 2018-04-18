@@ -13,7 +13,7 @@
 
 
 //Provides a vector of devices with the given [features] and [extensions] enabled
-std::vector<Device> Device::enumerateDevices(Surface& surface, const vk::PhysicalDeviceFeatures &features, const std::vector<const char*> &extensions)
+std::vector<Device> Device::enumerateDevices(Surface& surface, const Features &features, const std::vector<const char*> &extensions)
 {
 	std::vector<const char*> enabledLayers;
 #ifdef PAPAGO_USE_VALIDATION_LAYERS
@@ -370,22 +370,10 @@ void Device::waitIdle()
 	m_vkDevice->waitIdle();
 }
 
-//NOTE: renderTarget is not actually the render target. It just contains format and extent info.
-RenderPass Device::createRenderPass(const ShaderProgram &program, const ImageResource& renderTarget) const
+RenderPass Device::createRenderPass(const ShaderProgram &program, uint32_t width, uint32_t height, Format format, bool enableDepthBuffer) const
 {
-	auto extent = renderTarget.m_vkExtent;
-	auto vkPass = createDummyRenderpass(renderTarget.m_format, false);
-	return RenderPass(m_vkDevice, vkPass, program, { extent.width, extent.height });
-}
-
-RenderPass Device::createRenderPass(const ShaderProgram& program, const SwapChain &swapChain) const
-{
-	// TODO: Dangerous hacking, fix this by adding error handling instead of expecting there always being data available.
-	auto extent = swapChain.m_colorResources[0].m_vkExtent;
-	auto format = swapChain.m_colorResources[0].m_format;
-
-	auto vkPass = createDummyRenderpass(format);
-	return RenderPass(m_vkDevice, vkPass, program, { extent.width, extent.height });
+	auto vkPass = createDummyRenderpass(format, enableDepthBuffer);
+	return RenderPass(m_vkDevice, vkPass, program, { width, height });
 }
 
 Device::Device(vk::PhysicalDevice physicalDevice, vk::UniqueDevice &device, Surface &surface)
