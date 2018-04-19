@@ -243,16 +243,6 @@ int main()
 
 			graphicsQueue.present();
 			graphicsQueue.wait();
-
-			/*
-			if (!passOneTarget.inUse()) {
-				auto data = passOneTarget.download();
-				auto d = "bug";
-			}
-			else {
-				auto d = "bug";
-			}
-			*/
 		}
 	}//END while
 	std::cin.ignore();
