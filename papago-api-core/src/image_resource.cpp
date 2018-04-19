@@ -29,7 +29,7 @@ void ImageResource::upload(const std::vector<char>& data)
 	beginInfo.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
 	commandBuffer->begin(beginInfo);
 	//TODO: don't assume Image is eUndefined at all times
-	transition<vk::ImageLayout::eUndefined, vk::ImageLayout::eTransferDstOptimal>(commandBuffer);
+	transition<vk::ImageLayout::eGeneral, vk::ImageLayout::eTransferDstOptimal>(commandBuffer);
 	
 
 	//Do the actual uploading
@@ -66,9 +66,8 @@ void ImageResource::upload(const std::vector<char>& data)
 
 	commandBuffer->copyBufferToImage(*buffer, m_vkImage, vk::ImageLayout::eTransferDstOptimal, { region });
 
-	//Transition so shader can read
-	
-	transition<vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eShaderReadOnlyOptimal>(commandBuffer);
+	//Transition to eGeneral, as that is our "default" layout
+	transition<vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eGeneral>(commandBuffer);
 	commandBuffer->end();
 
 	//execute everything
@@ -93,9 +92,15 @@ std::vector<char> ImageResource::download()
 	commandBuffer->begin(beginInfo);
 	transition<vk::ImageLayout::eGeneral, vk::ImageLayout::eTransferSrcOptimal>(commandBuffer);
 
+	auto bufferSize = m_size;
+	//if image came from swapchain (i.e. m_image == 0)
+	if (bufferSize == 0) {
+		auto memoryRequirements = m_vkDevice->getImageMemoryRequirements(m_vkImage);
+		bufferSize = memoryRequirements.size;
+	}
 
 	vk::BufferCreateInfo bufferInfo = {};
-	bufferInfo.setSize(m_size)
+	bufferInfo.setSize(bufferSize)
 		.setUsage(vk::BufferUsageFlagBits::eTransferDst);
 
 	auto buffer = m_vkDevice->createBufferUnique(bufferInfo);
@@ -122,6 +127,7 @@ std::vector<char> ImageResource::download()
 	region.imageExtent = m_vkExtent;	//TODO: what if texture image is smaller/larger than ImageResource? -AM
 
 	commandBuffer->copyImageToBuffer(m_vkImage, vk::ImageLayout::eTransferSrcOptimal, *buffer, { region });
+	transition<vk::ImageLayout::eTransferSrcOptimal, vk::ImageLayout::eGeneral>(commandBuffer);
 
 	commandBuffer->end();
 
@@ -136,11 +142,9 @@ std::vector<char> ImageResource::download()
 	//cleanup
 	commandBuffer->reset(vk::CommandBufferResetFlagBits::eReleaseResources);
 
-	//TODO: transfer image to something else? -AM
-
-	std::vector<char> result(m_size);
+	std::vector<char> result(bufferSize);
 	auto mappedMemory = m_vkDevice->mapMemory(*memory, 0, VK_WHOLE_SIZE);
-	memcpy(result.data(), mappedMemory, m_size);
+	memcpy(result.data(), mappedMemory, bufferSize);
 	m_vkDevice->unmapMemory(*memory);
 	return result;
 }
@@ -190,7 +194,7 @@ ImageResource ImageResource::createDepthResource(
 	return ImageResource(
 		image, 
 		device,
-		vk::ImageAspectFlagBits::eDepth, 
+		vk::ImageAspectFlagBits::eDepth | vk::ImageAspectFlagBits::eStencil, 
 		format,
 		extent,
 		memoryRequirements);
@@ -223,9 +227,25 @@ ImageResource::ImageResource(
 
 	createImageView(m_vkDevice, aspectFlags);
 
+	vk::CommandBufferBeginInfo info = {};
+	info.setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);
+	m_device.m_internalCommandBuffer->begin(info);
+	if (aspectFlags & vk::ImageAspectFlagBits::eDepth) {
+		transition<vk::ImageLayout::eUndefined, vk::ImageLayout::eDepthStencilAttachmentOptimal>(m_device.m_internalCommandBuffer);
+	}
+	else if (aspectFlags & vk::ImageAspectFlagBits::eColor) {
+		transition<vk::ImageLayout::eUndefined, vk::ImageLayout::eGeneral>(m_device.m_internalCommandBuffer);
+	}
 	
+	m_device.m_internalCommandBuffer->end();
 
-	//TODO: transition image (via command buffers)
+	vk::SubmitInfo submitInfo = {};
+	submitInfo.setCommandBufferCount(1)
+		.setPCommandBuffers(&*m_device.m_internalCommandBuffer);
+	m_device.m_vkInternalQueue.submit(submitInfo, vk::Fence());
+	m_device.m_vkInternalQueue.waitIdle();
+
+	m_device.m_internalCommandBuffer->reset(vk::CommandBufferResetFlagBits::eReleaseResources);
 }
 
 // Does NOT allocate memory, this is assumed to already be allocated; but does create a VkImageView.
@@ -237,6 +257,21 @@ ImageResource::ImageResource(vk::Image& image, const Device& device, Format form
 	, m_device(device)
 {
 	createImageView(m_vkDevice);
+
+	vk::CommandBufferBeginInfo info = {};
+	info.setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);
+	m_device.m_internalCommandBuffer->begin(info);
+	
+	transition<vk::ImageLayout::eUndefined, vk::ImageLayout::eGeneral>(m_device.m_internalCommandBuffer);
+
+	m_device.m_internalCommandBuffer->end();
+	vk::SubmitInfo submitInfo = {};
+	submitInfo.setCommandBufferCount(1)
+		.setPCommandBuffers(&*m_device.m_internalCommandBuffer);
+	m_device.m_vkInternalQueue.submit(submitInfo, vk::Fence());
+	m_device.m_vkInternalQueue.waitIdle();
+
+	m_device.m_internalCommandBuffer->reset(vk::CommandBufferResetFlagBits::eReleaseResources);
 }
 
 Format ImageResource::findSupportedFormat(

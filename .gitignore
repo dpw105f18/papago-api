@@ -261,3 +261,5 @@ __pycache__/
 *.pyc
 *.bak
 *.spv
+papago-api-core/lastFrame.png
+papago-api-core/passOneTarget.png

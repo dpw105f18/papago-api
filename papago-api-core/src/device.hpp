@@ -94,6 +94,7 @@ private:
 	CommandBuffer m_internalCommandBuffer;
 
 	friend class ImageResource;
+	friend class GraphicsQueue;
 };
 
 template<typename T>

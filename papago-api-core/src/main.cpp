@@ -12,7 +12,10 @@
 #include <WinUser.h>
 
 #define STB_IMAGE_IMPLEMENTATION
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#define STBI_MSC_SECURE_CRT
 #include <stb_image.h>
+#include <stb_image_write.h>
 
 
 LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -242,8 +245,31 @@ int main()
 			graphicsQueue.submitCommands(cmds);
 
 			graphicsQueue.present();
-			graphicsQueue.wait();
+		
 		}
 	}//END while
+
+	//write last frame as a PNG file:
+	auto img = passOneTarget.download();
+	stbi_write_png(
+		"passOneTarget.png", 
+		passOneTarget.getWidth(), 
+		passOneTarget.getHeight(), 
+		4,		//4 = RGBA format (see stb_image_write.h comment at top) 
+		img.data(), 
+		passOneTarget.getWidth() * 4	//stride in bytes
+	);
+	
+	auto& lastFrame = graphicsQueue.getLastRenderedImage();
+	auto img2 = lastFrame.download();
+	stbi_write_png(
+		"lastFrame.png",
+		lastFrame.getWidth(),
+		lastFrame.getHeight(),
+		4,		//4 = RGBA format (see stb_image_write.h comment at top) 
+		img2.data(),
+		lastFrame.getWidth() * 4	//stride in bytes
+	);
+	
 	std::cin.ignore();
 }

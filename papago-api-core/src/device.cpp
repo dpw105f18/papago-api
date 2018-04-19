@@ -112,7 +112,7 @@ vk::SwapchainCreateInfoKHR Device::createSwapChainCreateInfo(
 		.setImageColorSpace(swapFormat.colorSpace)
 		.setImageExtent(extent)
 		.setImageArrayLayers(1)
-		.setImageUsage(vk::ImageUsageFlagBits::eColorAttachment)
+		.setImageUsage(vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferSrc)
 		.setPreTransform(capabilities.currentTransform)
 		.setCompositeAlpha(vk::CompositeAlphaFlagBitsKHR::eOpaque)
 		.setPresentMode(presentMode)
@@ -172,16 +172,10 @@ vk::UniqueRenderPass Device::createDummyRenderpass(Format format, bool withDepth
 		.setStoreOp(vk::AttachmentStoreOp::eStore)
 		.setStencilLoadOp(vk::AttachmentLoadOp::eLoad)
 		.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare)
-		.setInitialLayout(vk::ImageLayout::eUndefined);
+		.setInitialLayout(vk::ImageLayout::eGeneral)
+		.setFinalLayout(vk::ImageLayout::eGeneral);
 
-	if (withDepthBuffer) {
-		colorAttachment.setFinalLayout(vk::ImageLayout::ePresentSrcKHR);
-	}
-	else {
-		colorAttachment.setFinalLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
-	}
-
-	vk::AttachmentReference colorAttatchmentRef(0, vk::ImageLayout::eColorAttachmentOptimal);
+	vk::AttachmentReference colorAttachmentRef(0, vk::ImageLayout::eColorAttachmentOptimal);
 	
 	std::vector<vk::AttachmentDescription> attachments = { colorAttachment };
 	
@@ -189,14 +183,21 @@ vk::UniqueRenderPass Device::createDummyRenderpass(Format format, bool withDepth
 	vk::SubpassDescription subpass = {};
 	subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics)
 		.setColorAttachmentCount(1)
-		.setPColorAttachments(&colorAttatchmentRef);
+		.setPColorAttachments(&colorAttachmentRef);
 
 	auto depthAttachmentRef = vk::AttachmentReference();
 
 	if (withDepthBuffer) {
 
+		auto format = ImageResource::findSupportedFormat(
+			m_vkPhysicalDevice, 
+			{ Format::eD32SfloatS8Uint, Format::eD24UnormS8Uint }, //TODO: make sure these formats matches the format for Depth/Stencil ImageResources
+			vk::ImageTiling::eOptimal, 
+			vk::FormatFeatureFlagBits::eDepthStencilAttachment
+		);
+			
 		vk::AttachmentDescription depthAttachment;
-		depthAttachment.setFormat(vk::Format::eD32Sfloat)
+		depthAttachment.setFormat(format)
 		.setLoadOp(vk::AttachmentLoadOp::eClear) // Clear buffer data at load
 		.setStoreOp(vk::AttachmentStoreOp::eDontCare)
 		.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare)
@@ -254,7 +255,6 @@ SwapChain Device::createSwapChain(const Format& format, size_t framebufferCount,
 	// Get image resources for framebuffers
 	std::vector<ImageResource> colorResources, depthResources;
 	std::vector<Format> formatCandidates = {
-		Format::eD32Sfloat, 
 		Format::eD32SfloatS8Uint, 
 		Format::eD24UnormS8Uint
 	};
@@ -284,7 +284,7 @@ SwapChain Device::createSwapChain(const Format& format, size_t framebufferCount,
 GraphicsQueue Device::createGraphicsQueue(SwapChain& swapChain) const
 {
 	auto queueFamilyIndices = findQueueFamilies(m_vkPhysicalDevice, m_surface);
-	return { m_vkDevice, queueFamilyIndices.graphicsFamily, queueFamilyIndices.presentFamily, swapChain };
+	return { *this, queueFamilyIndices.graphicsFamily, queueFamilyIndices.presentFamily, swapChain };
 }
 
 CommandBuffer Device::createCommandBuffer(Usage usage) const

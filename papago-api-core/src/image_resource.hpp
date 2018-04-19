@@ -75,13 +75,39 @@ private:
 	friend class RenderPass;
 };
 
+//create
 template<>
-inline void ImageResource::transition<vk::ImageLayout::eUndefined, vk::ImageLayout::eTransferDstOptimal>(const CommandBuffer & commandBuffer)
+inline void ImageResource::transition<vk::ImageLayout::eUndefined, vk::ImageLayout::eGeneral>(const CommandBuffer& commandBuffer)
+{
+	auto imageMemeoryBarrier = vk::ImageMemoryBarrier(
+		vk::AccessFlags(), //srcAccessMask
+		vk::AccessFlags(), //dstAccessMask
+		vk::ImageLayout::eUndefined, //oldLayout
+		vk::ImageLayout::eGeneral, //newLayout
+		VK_QUEUE_FAMILY_IGNORED,	//srcQueueFamilyIndex
+		VK_QUEUE_FAMILY_IGNORED,	//dstQueueFamliyIndex
+		m_vkImage, //image
+		{vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1} //subresourceRange
+	);
+
+	commandBuffer->pipelineBarrier(
+		vk::PipelineStageFlagBits::eTopOfPipe, //srcStageMask
+		vk::PipelineStageFlagBits::eBottomOfPipe, //dstStageMask
+		vk::DependencyFlags(), //dependencyFlags
+		{}, //memoryBarriers
+		{}, //bufferMemoryBarriers
+		{ imageMemeoryBarrier } //imageMemoryBarriers
+	);
+}
+
+//pre-upload
+template<>
+inline void ImageResource::transition<vk::ImageLayout::eGeneral, vk::ImageLayout::eTransferDstOptimal>(const CommandBuffer& commandBuffer)
 {
 	auto imageMemoryBarrier = vk::ImageMemoryBarrier(
 		vk::AccessFlags(),
-		vk::AccessFlagBits::eTransferWrite,
-		vk::ImageLayout::eUndefined,
+		vk::AccessFlags(),
+		vk::ImageLayout::eGeneral,
 		vk::ImageLayout::eTransferDstOptimal,
 		VK_QUEUE_FAMILY_IGNORED,
 		VK_QUEUE_FAMILY_IGNORED,
@@ -89,14 +115,190 @@ inline void ImageResource::transition<vk::ImageLayout::eUndefined, vk::ImageLayo
 		{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
 
 	commandBuffer->pipelineBarrier(
-		vk::PipelineStageFlagBits::eTopOfPipe, 
-		vk::PipelineStageFlagBits::eTransfer, 
-		vk::DependencyFlags(), 
-		{}, 
-		{}, 
+		vk::PipelineStageFlagBits::eBottomOfPipe,
+		vk::PipelineStageFlagBits::eTopOfPipe,
+		vk::DependencyFlags(),
+		{},
+		{},
 		{ imageMemoryBarrier });
 }
 
+
+//post-upload
+template<>
+inline void ImageResource::transition<vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eGeneral>(const CommandBuffer& commandBuffer)
+{
+	auto imageMemoryBarrier = vk::ImageMemoryBarrier(
+		vk::AccessFlags(),
+		vk::AccessFlags(),
+		vk::ImageLayout::eTransferDstOptimal,
+		vk::ImageLayout::eGeneral,
+		VK_QUEUE_FAMILY_IGNORED,
+		VK_QUEUE_FAMILY_IGNORED,
+		m_vkImage,
+		{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
+
+	commandBuffer->pipelineBarrier(
+		vk::PipelineStageFlagBits::eBottomOfPipe,
+		vk::PipelineStageFlagBits::eTopOfPipe,
+		vk::DependencyFlags(),
+		{},
+		{},
+		{ imageMemoryBarrier }
+	);
+}
+
+//pre-download
+template<>
+inline void ImageResource::transition<vk::ImageLayout::eGeneral, vk::ImageLayout::eTransferSrcOptimal>(const CommandBuffer& commandBuffer)
+{
+	auto imageMemeoryBarrier = vk::ImageMemoryBarrier(
+		vk::AccessFlags(), //srcAccessMask
+		vk::AccessFlags(), //dstAccessMask
+		vk::ImageLayout::eGeneral, //oldLayout
+		vk::ImageLayout::eTransferSrcOptimal, //newLayout
+		VK_QUEUE_FAMILY_IGNORED,	//srcQueueFamilyIndex
+		VK_QUEUE_FAMILY_IGNORED,	//dstQueueFamliyIndex
+		m_vkImage, //image
+		{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 } //subresourceRange
+	);
+
+	commandBuffer->pipelineBarrier(
+		vk::PipelineStageFlagBits::eTopOfPipe, //srcStageMask
+		vk::PipelineStageFlagBits::eBottomOfPipe, //dstStageMask
+		vk::DependencyFlags(), //dependencyFlags
+		{}, //memoryBarriers
+		{}, //bufferMemoryBarriers
+		{ imageMemeoryBarrier } //imageMemoryBarriers
+	);
+}
+
+//post-download
+template<>
+inline void ImageResource::transition<vk::ImageLayout::eTransferSrcOptimal, vk::ImageLayout::eGeneral>(const CommandBuffer& commandBuffer)
+{
+	auto imageMemeoryBarrier = vk::ImageMemoryBarrier(
+		vk::AccessFlags(), //srcAccessMask
+		vk::AccessFlags(), //dstAccessMask
+		vk::ImageLayout::eTransferSrcOptimal, //oldLayout
+		vk::ImageLayout::eGeneral, //newLayout
+		VK_QUEUE_FAMILY_IGNORED,	//srcQueueFamilyIndex
+		VK_QUEUE_FAMILY_IGNORED,	//dstQueueFamliyIndex
+		m_vkImage, //image
+		{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 } //subresourceRange
+	);
+
+	commandBuffer->pipelineBarrier(
+		vk::PipelineStageFlagBits::eTopOfPipe, //srcStageMask
+		vk::PipelineStageFlagBits::eBottomOfPipe, //dstStageMask
+		vk::DependencyFlags(), //dependencyFlags
+		{}, //memoryBarriers
+		{}, //bufferMemoryBarriers
+		{ imageMemeoryBarrier } //imageMemoryBarriers
+	);
+}
+
+//pre-setUniform
+template<>
+inline void ImageResource::transition<vk::ImageLayout::eGeneral, vk::ImageLayout::eShaderReadOnlyOptimal>(const CommandBuffer& commandBuffer)
+{
+	auto imageMemeoryBarrier = vk::ImageMemoryBarrier(
+		vk::AccessFlags(), //srcAccessMask
+		vk::AccessFlags(), //dstAccessMask
+		vk::ImageLayout::eGeneral, //oldLayout
+		vk::ImageLayout::eShaderReadOnlyOptimal, //newLayout
+		VK_QUEUE_FAMILY_IGNORED,	//srcQueueFamilyIndex
+		VK_QUEUE_FAMILY_IGNORED,	//dstQueueFamliyIndex
+		m_vkImage, //image
+		{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 } //subresourceRange
+	);
+
+	commandBuffer->pipelineBarrier(
+		vk::PipelineStageFlagBits::eTopOfPipe, //srcStageMask
+		vk::PipelineStageFlagBits::eBottomOfPipe, //dstStageMask
+		vk::DependencyFlags(), //dependencyFlags
+		{}, //memoryBarriers
+		{}, //bufferMemoryBarriers
+		{ imageMemeoryBarrier } //imageMemoryBarriers
+	);
+}
+
+//post-setUniform
+template<>
+inline void ImageResource::transition<vk::ImageLayout::eShaderReadOnlyOptimal, vk::ImageLayout::eGeneral>(const CommandBuffer& commandBuffer)
+{
+	auto imageMemeoryBarrier = vk::ImageMemoryBarrier(
+		vk::AccessFlags(), //srcAccessMask
+		vk::AccessFlags(), //dstAccessMask
+		vk::ImageLayout::eShaderReadOnlyOptimal, //oldLayout
+		vk::ImageLayout::eGeneral, //newLayout
+		VK_QUEUE_FAMILY_IGNORED,	//srcQueueFamilyIndex
+		VK_QUEUE_FAMILY_IGNORED,	//dstQueueFamliyIndex
+		m_vkImage, //image
+		{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 } //subresourceRange
+	);
+
+	commandBuffer->pipelineBarrier(
+		vk::PipelineStageFlagBits::eTopOfPipe, //srcStageMask
+		vk::PipelineStageFlagBits::eBottomOfPipe, //dstStageMask
+		vk::DependencyFlags(), //dependencyFlags
+		{}, //memoryBarriers
+		{}, //bufferMemoryBarriers
+		{ imageMemeoryBarrier } //imageMemoryBarriers
+	);
+}
+
+//pre-present
+template<>
+inline void ImageResource::transition<vk::ImageLayout::eGeneral, vk::ImageLayout::ePresentSrcKHR>(const CommandBuffer& commandBuffer)
+{
+	auto imageMemeoryBarrier = vk::ImageMemoryBarrier(
+		vk::AccessFlags(), //srcAccessMask
+		vk::AccessFlags(), //dstAccessMask
+		vk::ImageLayout::eGeneral, //oldLayout
+		vk::ImageLayout::ePresentSrcKHR, //newLayout
+		VK_QUEUE_FAMILY_IGNORED,	//srcQueueFamilyIndex
+		VK_QUEUE_FAMILY_IGNORED,	//dstQueueFamliyIndex
+		m_vkImage, //image
+		{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 } //subresourceRange
+	);
+
+	commandBuffer->pipelineBarrier(
+		vk::PipelineStageFlagBits::eTopOfPipe, //srcStageMask
+		vk::PipelineStageFlagBits::eBottomOfPipe, //dstStageMask
+		vk::DependencyFlags(), //dependencyFlags
+		{}, //memoryBarriers
+		{}, //bufferMemoryBarriers
+		{ imageMemeoryBarrier } //imageMemoryBarriers
+	);
+}
+
+//post-present
+template<>
+inline void ImageResource::transition<vk::ImageLayout::ePresentSrcKHR, vk::ImageLayout::eGeneral>(const CommandBuffer& commandBuffer)
+{
+	auto imageMemeoryBarrier = vk::ImageMemoryBarrier(
+		vk::AccessFlags(), //srcAccessMask
+		vk::AccessFlags(), //dstAccessMask
+		vk::ImageLayout::ePresentSrcKHR, //oldLayout
+		vk::ImageLayout::eGeneral, //newLayout
+		VK_QUEUE_FAMILY_IGNORED,	//srcQueueFamilyIndex
+		VK_QUEUE_FAMILY_IGNORED,	//dstQueueFamliyIndex
+		m_vkImage, //image
+		{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 } //subresourceRange
+	);
+
+	commandBuffer->pipelineBarrier(
+		vk::PipelineStageFlagBits::eTopOfPipe, //srcStageMask
+		vk::PipelineStageFlagBits::eBottomOfPipe, //dstStageMask
+		vk::DependencyFlags(), //dependencyFlags
+		{}, //memoryBarriers
+		{}, //bufferMemoryBarriers
+		{ imageMemeoryBarrier } //imageMemoryBarriers
+	);
+}
+
+//depth resource
 template<>
 inline void ImageResource::transition<vk::ImageLayout::eUndefined, vk::ImageLayout::eDepthStencilAttachmentOptimal>(const CommandBuffer & commandBuffer)
 {
@@ -119,51 +321,6 @@ inline void ImageResource::transition<vk::ImageLayout::eUndefined, vk::ImageLayo
 		{ imageMemoryBarrier });
 }
 
-template<>
-inline void ImageResource::transition<vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eShaderReadOnlyOptimal>(const CommandBuffer & commandBuffer)
-{
-	auto imageMemoryBarrier = vk::ImageMemoryBarrier(
-		vk::AccessFlagBits::eTransferWrite,
-		vk::AccessFlagBits::eShaderRead,
-		vk::ImageLayout::eTransferDstOptimal,
-		vk::ImageLayout::eShaderReadOnlyOptimal,
-		VK_QUEUE_FAMILY_IGNORED,
-		VK_QUEUE_FAMILY_IGNORED,
-		m_vkImage,
-		{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
-
-	commandBuffer->pipelineBarrier(
-		vk::PipelineStageFlagBits::eTransfer, 
-		vk::PipelineStageFlagBits::eFragmentShader,
-		vk::DependencyFlags(), 
-		{},
-		{}, 
-		{ imageMemoryBarrier });
-
-}
-
-template<>
-inline void ImageResource::transition<vk::ImageLayout::eGeneral, vk::ImageLayout::eTransferSrcOptimal>(const CommandBuffer& commandBuffer)
-{
-	auto imageMemoryBarrier = vk::ImageMemoryBarrier(
-		vk::AccessFlags(),
-		vk::AccessFlags(),
-		vk::ImageLayout::eGeneral,
-		vk::ImageLayout::eTransferSrcOptimal,
-		VK_QUEUE_FAMILY_IGNORED,
-		VK_QUEUE_FAMILY_IGNORED,
-		m_vkImage,
-		{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
-
-	commandBuffer->pipelineBarrier(
-		vk::PipelineStageFlagBits::eBottomOfPipe,
-		vk::PipelineStageFlagBits::eTopOfPipe,
-		vk::DependencyFlags(),
-		{},
-		{},
-		{ imageMemoryBarrier });
-}
-
 //NOTE: this must always be on the bottom!
 template<vk::ImageLayout source, vk::ImageLayout destination>
 void ImageResource::transition(const CommandBuffer &)
@@ -171,5 +328,5 @@ void ImageResource::transition(const CommandBuffer &)
 	std::stringstream stream;
 
 	stream << "Transition from " << to_string(source) << " to " << to_string(destination) << " not implemented.";
-	throw std::runtime_error(stream.str());
+	PAPAGO_ERROR(stream.str());
 }
