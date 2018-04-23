@@ -35,7 +35,7 @@ std::vector<std::unique_ptr<IDevice>> IDevice::enumerateDevices(ISurface & surfa
 }
 
 //Provides a vector of devices with the given [features] and [extensions] enabled
-std::vector<Device> Device::enumerateDevices(Surface& surface, const Features &features, const std::vector<const char*> &extensions)
+std::vector<Device> Device::enumerateDevices(Surface& surface, const vk::PhysicalDeviceFeatures &features, const std::vector<const char*> &extensions)
 {
 	std::vector<const char*> enabledLayers;
 #ifdef PAPAGO_USE_VALIDATION_LAYERS
@@ -186,7 +186,7 @@ bool Device::areExtensionsSupported(const vk::PhysicalDevice & physicalDevice, c
 	return requiredExtensions.empty();
 }
 
-vk::UniqueRenderPass Device::createVkRenderpass(Format format, bool withDepthBuffer) const
+vk::UniqueRenderPass Device::createVkRenderpass(vk::Format format, bool withDepthBuffer) const
 {
 	vk::AttachmentDescription colorAttachment;
 	colorAttachment.setFormat(format)
@@ -214,7 +214,7 @@ vk::UniqueRenderPass Device::createVkRenderpass(Format format, bool withDepthBuf
 
 		auto format = ImageResource::findSupportedFormat(
 			m_vkPhysicalDevice, 
-			{ Format::eD32SfloatS8Uint, Format::eD24UnormS8Uint }, //TODO: make sure these formats matches the format for Depth/Stencil ImageResources
+			{ vk::Format::eD32SfloatS8Uint, vk::Format::eD24UnormS8Uint }, //TODO: make sure these formats matches the format for Depth/Stencil ImageResources
 			vk::ImageTiling::eOptimal, 
 			vk::FormatFeatureFlagBits::eDepthStencilAttachment
 		);
@@ -277,9 +277,9 @@ std::unique_ptr<SwapChain> Device::createSwapChain(const vk::Format& format, siz
 
 	// Get image resources for framebuffers
 	std::vector<ImageResource> colorResources, depthResources;
-	std::vector<Format> formatCandidates = {
-		Format::eD32SfloatS8Uint, 
-		Format::eD24UnormS8Uint
+	std::vector<vk::Format> formatCandidates = {
+		vk::Format::eD32SfloatS8Uint,
+		vk::Format::eD24UnormS8Uint
 	};
 
 	auto resourceExtent = vk::Extent3D(extent.width, extent.height, 1);
@@ -417,7 +417,7 @@ void Device::waitIdle()
 	m_vkDevice->waitIdle();
 }
 
-RenderPass Device::createRenderPass(const ShaderProgram& program, uint32_t width, uint32_t height, Format format, bool enableDepthBuffer) const
+RenderPass Device::createRenderPass(const ShaderProgram& program, uint32_t width, uint32_t height, vk::Format format, bool enableDepthBuffer) const
 {
 	auto vkPass = createVkRenderpass(format, enableDepthBuffer);
 	return RenderPass(m_vkDevice, vkPass, program, { width, height });

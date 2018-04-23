@@ -5,10 +5,9 @@
 class VertexShader : public Shader, public IVertexShader
 {
 public:
-
-private:
 	VertexShader(const std::vector<char>& bytecode, const std::string& entryPoint);
 
+private:
 	struct Input
 	{
 		uint32_t offset;	//<-- offset in bytes from the beginning of the vertex data

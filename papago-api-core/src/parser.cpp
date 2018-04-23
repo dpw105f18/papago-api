@@ -8,38 +8,48 @@ Parser::Parser(const std::string & compilePath): m_compilePath(compilePath)
 {
 }
 
+#define STUPID_VERTEX_SHADER_HASH 0xa709c4e0b8ab6894
+#define COLOR_VERTEX_SHADER_HASH 0xf454a08ee86af30a
+
 std::unique_ptr<IVertexShader> Parser::compileVertexShader(const std::string &source, const std::string &entryPoint)
 {
 	auto byte_code = compile(source, "vert");
-  auto result = std::make_unique<VertexShader>(byte_code, entryPoint);
+	auto result = std::make_unique<VertexShader>(byte_code, entryPoint);
+	std::hash<std::string> hashFun;
+	auto hash = hashFun(source);
 
-	if (filePath == "shader/colorVert.vert") {
 
+	if (hash == STUPID_VERTEX_SHADER_HASH) {
 		result->m_input.push_back({ 0, vk::Format::eR32G32B32Sfloat });	//<-- position
 	}
-	else if(filePath == std::string("shader/stupidVert.vert")){
-		
+	else if(hash == COLOR_VERTEX_SHADER_HASH){
 		result->m_input.push_back({ 0, vk::Format::eR32G32B32Sfloat });	//<-- position
 		result->m_input.push_back({ sizeof(float) * 3, vk::Format::eR32G32Sfloat }); //<-- uv
 	}
 	return result;
 }
 
+#define STUPID_FRAGMENT_SHADER_HASH 0xfc0838ff5f18bfc2
+#define COLOR_FRAGMENT_SHADER_HASH 0xb810ed8016ecd8d6
+
 std::unique_ptr<IFragmentShader> Parser::compileFragmentShader(const std::string& source, const std::string& entryPoint)
 {
 	auto byte_code = compile(source, "frag");
 	auto result = std::make_unique<FragmentShader>(byte_code, entryPoint);
 	
+	std::hash<std::string> hashFun;
+	auto hash = hashFun(source);
+
 	//TODO: set binding information on [result]
 	
 	// For texture frag
 	//result.m_bindings.insert({ "texSampler", {0, vk::DescriptorType::eCombinedImageSampler} });
 	
 	// For uniform frag
-	if (filePath == std::string("shader/colorFrag.frag")) {
+	if (hash == COLOR_FRAGMENT_SHADER_HASH) {
 	
 	}
-	else if(filePath == std::string("shader/stupidFrag.frag")){
+	else if(hash == STUPID_FRAGMENT_SHADER_HASH){
 		result->m_bindings.insert({ { "sam" },{ 0, vk::DescriptorType::eCombinedImageSampler } });
 		result->m_bindings.insert({ { "val" },{ 1, vk::DescriptorType::eUniformBuffer } });
 	}

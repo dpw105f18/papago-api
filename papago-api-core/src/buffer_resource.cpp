@@ -27,7 +27,7 @@ std::unique_ptr<BufferResource> BufferResource::createBufferResource(
 
 	auto memoryRequirements = device->getBufferMemoryRequirements(*vkBuffer);
 
-	return std::make_unique<BufferResource>(device, physicalDevice, std::move(vkBuffer), memoryFlags, memoryRequirements);
+	return std::make_unique<BufferResource>(device, physicalDevice, std::move(vkBuffer), memoryFlags, memoryRequirements, size);
 }
 
 BufferResource::BufferResource(

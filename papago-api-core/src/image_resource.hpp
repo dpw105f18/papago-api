@@ -19,7 +19,7 @@ public:
 
 	uint32_t getWidth() const;
 	uint32_t getHeight() const;
-	Format getFormat() const;
+	vk::Format getFormat() const;
 
 	void destroy() override;
 

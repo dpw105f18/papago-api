@@ -11,7 +11,7 @@ public:
 
 	uint32_t getWidth() const;
 	uint32_t getHeight() const;
-	Format getFormat() const;
+	vk::Format getFormat() const;
 
 private:
 	vk::UniqueSwapchainKHR m_vkSwapChain;

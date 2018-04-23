@@ -11,7 +11,7 @@ ImageResource::ImageResource(ImageResource&& other) noexcept
 {
 	// m_vkImage isn't automatically set to a null handle when moved
 	other.m_vkImage = vk::Image();
-	other.m_format = Format();
+	other.m_format = vk::Format();
 	other.m_vkExtent = vk::Extent3D();
 }
 
@@ -161,7 +161,7 @@ uint32_t ImageResource::getHeight() const
 	return m_vkExtent.height;
 }
 
-Format ImageResource::getFormat() const
+vk::Format ImageResource::getFormat() const
 {
 	return m_format;
 }

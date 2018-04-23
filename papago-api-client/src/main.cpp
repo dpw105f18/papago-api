@@ -9,6 +9,7 @@
 #include <vector>
 #include <fstream>
 
+#include "ishader.hpp"
 #include "parser.hpp"
 #include "isampler.hpp"
 #include "isurface.hpp"
@@ -192,8 +193,10 @@ int main()
 
 		auto dlData = bigUniform.download();
 		*/
-		auto vertexShader = parser.compileVertexShader(readFile("shader/textureVert.vert"), "main");
-		auto fragmentShader = parser.compileFragmentShader(readFile("shader/textureFrag.frag"), "main");
+		auto vertexShader = parser.compileVertexShader(readFile("shader/stupidVert.vert"), "main");
+		vertexShader = parser.compileVertexShader(readFile("shader/colorVert.vert"), "main");
+		auto fragmentShader = parser.compileFragmentShader(readFile("shader/stupidFrag.frag"), "main");
+		fragmentShader = parser.compileFragmentShader(readFile("shader/colorFrag.frag"), "main");
 		/*
 		auto program = device.createShaderProgram(*vertexShader, *fragmentShader);
 
