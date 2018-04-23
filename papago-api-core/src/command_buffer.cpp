@@ -81,7 +81,42 @@ void CommandBuffer::begin(RenderPass& renderPass, SwapChain& swapChain, uint32_t
 	m_vkCommandBuffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *renderPass.m_vkGraphicsPipeline);
 }
 
-void CommandBuffer::setUniform(const std::string & name, const ImageResource & image, Sampler & sampler)
+void CommandBuffer::begin(RenderPass &renderPass, ImageResource & renderTarget)
+{
+	m_renderPassPtr = &renderPass;
+
+	vk::Rect2D renderArea = {};
+	renderArea.setOffset({ 0,0 })
+		.setExtent({renderTarget.m_vkExtent.width, renderTarget.m_vkExtent.height});
+
+
+	std::array<vk::ClearValue, 2> clearValues;
+
+	clearValues[0].setColor(vk::ClearColorValue(std::array<float, 4>{1, 0, 0, 1}));
+	clearValues[1].setDepthStencil(vk::ClearDepthStencilValue{ 1.0, 0 });
+
+	auto& fbo = renderTarget.createFramebuffer(static_cast<vk::RenderPass>(renderPass));
+
+	vk::RenderPassBeginInfo renderPassBeginInfo = {};
+	renderPassBeginInfo.setRenderPass(static_cast<vk::RenderPass>(renderPass))
+		.setFramebuffer(*fbo)
+		.setRenderArea(renderArea)
+		.setClearValueCount(clearValues.size())
+		.setPClearValues(clearValues.data());
+
+	//note: no clear-values because of the specific constructor overload...
+
+	vk::CommandBufferBeginInfo beginInfo = {};
+	beginInfo.setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);	//TODO: read from Usage in constructor? -AM
+
+	m_vkCommandBuffer->begin(beginInfo);
+	m_vkCommandBuffer->beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
+
+	//TODO: can we assume a graphics bindpoint and pipeline? -AM
+	m_vkCommandBuffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *renderPass.m_vkGraphicsPipeline);
+}
+
+void CommandBuffer::setUniform(const std::string & name, ImageResource & image, Sampler & sampler)
 {
 
 	auto binding = getBinding(m_renderPassPtr->m_shaderProgram, name);
@@ -98,6 +133,8 @@ void CommandBuffer::setUniform(const std::string & name, const ImageResource & i
 
 	m_vkDevice->updateDescriptorSets({ writeDescriptorSet }, {});
 	m_vkCommandBuffer->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *m_renderPassPtr->m_vkPipelineLayout, 0, { *m_renderPassPtr->m_vkDescriptorSet }, { });
+
+	m_resourcesInUse.emplace(&image);
 }
 
 void CommandBuffer::setInput(const BufferResource& buffer)

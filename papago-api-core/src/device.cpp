@@ -13,7 +13,7 @@
 
 
 //Provides a vector of devices with the given [features] and [extensions] enabled
-std::vector<Device> Device::enumerateDevices(Surface& surface, const vk::PhysicalDeviceFeatures &features, const std::vector<const char*> &extensions)
+std::vector<Device> Device::enumerateDevices(Surface& surface, const Features &features, const std::vector<const char*> &extensions)
 {
 	std::vector<const char*> enabledLayers;
 #ifdef PAPAGO_USE_VALIDATION_LAYERS
@@ -21,14 +21,14 @@ std::vector<Device> Device::enumerateDevices(Surface& surface, const vk::Physica
 #endif 
 
 	std::vector<Device> result;
-
+	const float queuePriority = 1.0f;
 	for (auto& physicalDevice : surface.m_vkInstance->enumeratePhysicalDevices()) {
 		if (! isPhysicalDeviceSuitable(physicalDevice, surface, extensions)) {
 			continue;
 		}
 
 		auto queueFamilyIndicies = findQueueFamilies(physicalDevice, surface);
-		auto queueCreateInfos = createQueueCreateInfos(queueFamilyIndicies);
+		auto queueCreateInfos = createQueueCreateInfos(queueFamilyIndicies, queuePriority);
 
 		auto logicalDevice = physicalDevice.createDeviceUnique(vk::DeviceCreateInfo()
 			.setEnabledExtensionCount(extensions.size())
@@ -75,7 +75,7 @@ Device::QueueFamilyIndices Device::findQueueFamilies(const vk::PhysicalDevice & 
 	return { graphicsQueueFamily, presentQueueFamily };
 }
   
-std::vector<vk::DeviceQueueCreateInfo> Device::createQueueCreateInfos(QueueFamilyIndices queueFamilyIndices)
+std::vector<vk::DeviceQueueCreateInfo> Device::createQueueCreateInfos(QueueFamilyIndices queueFamilyIndices, const float& queuePriority)
 {
 	std::set<int> uniqueQueueFamilyIndicies;
 	if (queueFamilyIndices.hasGraphicsFamily()) {
@@ -88,8 +88,6 @@ std::vector<vk::DeviceQueueCreateInfo> Device::createQueueCreateInfos(QueueFamil
 
 	auto queueCreateInfos = std::vector<vk::DeviceQueueCreateInfo>();
 	for (auto queueFamilyIndex : uniqueQueueFamilyIndicies) {
-		const float queuePriority = 1.0f;	//<-- TODO: should this be setable somehow?
-
 		queueCreateInfos.push_back(vk::DeviceQueueCreateInfo()
 			.setQueueCount(1)					//<-- TODO: setable?
 			.setPQueuePriorities(&queuePriority)
@@ -114,7 +112,8 @@ vk::SwapchainCreateInfoKHR Device::createSwapChainCreateInfo(
 		.setImageColorSpace(swapFormat.colorSpace)
 		.setImageExtent(extent)
 		.setImageArrayLayers(1)
-		.setImageUsage(vk::ImageUsageFlagBits::eColorAttachment)
+		// IMPROVEMENT: All images are assumed to be transfer sources, so it can be downloaded. Is it more efficient to not do that? - CW 2018-04-23
+		.setImageUsage(vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferSrc) 
 		.setPreTransform(capabilities.currentTransform)
 		.setCompositeAlpha(vk::CompositeAlphaFlagBitsKHR::eOpaque)
 		.setPresentMode(presentMode)
@@ -165,6 +164,72 @@ bool Device::areExtensionsSupported(const vk::PhysicalDevice & physicalDevice, c
 	return requiredExtensions.empty();
 }
 
+vk::UniqueRenderPass Device::createVkRenderpass(Format format, bool withDepthBuffer) const
+{
+	vk::AttachmentDescription colorAttachment;
+	colorAttachment.setFormat(format)
+		.setSamples(vk::SampleCountFlagBits::e1)
+		.setLoadOp(vk::AttachmentLoadOp::eClear)
+		.setStoreOp(vk::AttachmentStoreOp::eStore)
+		.setStencilLoadOp(vk::AttachmentLoadOp::eLoad)
+		.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare)
+		.setInitialLayout(vk::ImageLayout::eGeneral)
+		.setFinalLayout(vk::ImageLayout::eGeneral);
+
+	vk::AttachmentReference colorAttachmentRef(0, vk::ImageLayout::eColorAttachmentOptimal);
+	
+	std::vector<vk::AttachmentDescription> attachments = { colorAttachment };
+	
+
+	vk::SubpassDescription subpass = {};
+	subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics)
+		.setColorAttachmentCount(1)
+		.setPColorAttachments(&colorAttachmentRef);
+
+	auto depthAttachmentRef = vk::AttachmentReference();
+
+	if (withDepthBuffer) {
+
+		auto format = ImageResource::findSupportedFormat(
+			m_vkPhysicalDevice, 
+			{ Format::eD32SfloatS8Uint, Format::eD24UnormS8Uint }, //TODO: make sure these formats matches the format for Depth/Stencil ImageResources
+			vk::ImageTiling::eOptimal, 
+			vk::FormatFeatureFlagBits::eDepthStencilAttachment
+		);
+			
+		vk::AttachmentDescription depthAttachment;
+		depthAttachment.setFormat(format)
+			.setLoadOp(vk::AttachmentLoadOp::eClear) // Clear buffer data at load
+			.setStoreOp(vk::AttachmentStoreOp::eDontCare)
+			.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare)
+			.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare)
+			.setFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
+
+		attachments.push_back(depthAttachment);
+
+		depthAttachmentRef = vk::AttachmentReference(1, vk::ImageLayout::eDepthStencilAttachmentOptimal);
+
+		subpass.setPDepthStencilAttachment(&depthAttachmentRef);
+	}
+
+	vk::SubpassDependency dependency(VK_SUBPASS_EXTERNAL);
+	dependency.setSrcStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput)
+		.setSrcAccessMask(vk::AccessFlags())
+		.setDstStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput)
+		.setDstAccessMask(vk::AccessFlagBits::eColorAttachmentRead | vk::AccessFlagBits::eColorAttachmentWrite);
+
+
+	vk::RenderPassCreateInfo renderPassInfo;
+	renderPassInfo.setAttachmentCount(attachments.size())
+		.setPAttachments(attachments.data())
+		.setSubpassCount(1)
+		.setPSubpasses(&subpass)
+		.setDependencyCount(1)
+		.setPDependencies(&dependency);
+
+	return m_vkDevice->createRenderPassUnique(renderPassInfo);
+}
+
 // framebufferCount is a prefered minimum of buffers in the swapchain
 SwapChain Device::createSwapChain(const Format& format, size_t framebufferCount, SwapChainPresentMode preferredPresentMode)
 {
@@ -191,7 +256,6 @@ SwapChain Device::createSwapChain(const Format& format, size_t framebufferCount,
 	// Get image resources for framebuffers
 	std::vector<ImageResource> colorResources, depthResources;
 	std::vector<Format> formatCandidates = {
-		Format::eD32Sfloat, 
 		Format::eD32SfloatS8Uint, 
 		Format::eD24UnormS8Uint
 	};
@@ -215,13 +279,12 @@ SwapChain Device::createSwapChain(const Format& format, size_t framebufferCount,
 	}
 
 	return SwapChain(m_vkDevice, swapChain, colorResources, depthResources, extent);
-
 }
 
 GraphicsQueue Device::createGraphicsQueue(SwapChain& swapChain) const
 {
 	auto queueFamilyIndices = findQueueFamilies(m_vkPhysicalDevice, m_surface);
-	return { m_vkDevice, queueFamilyIndices.graphicsFamily, queueFamilyIndices.presentFamily, swapChain };
+	return { *this, queueFamilyIndices.graphicsFamily, queueFamilyIndices.presentFamily, swapChain };
 }
 
 CommandBuffer Device::createCommandBuffer(Usage usage) const
@@ -287,7 +350,10 @@ ImageResource Device::createTexture2D(uint32_t width, uint32_t height, Format fo
 		.setInitialLayout(vk::ImageLayout::eUndefined)
 		.setMipLevels(1)
 		.setArrayLayers(1)
-		.setUsage(vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled);
+		.setUsage(vk::ImageUsageFlagBits::eTransferDst 
+			| vk::ImageUsageFlagBits::eSampled 
+			| vk::ImageUsageFlagBits::eColorAttachment
+			| vk::ImageUsageFlagBits::eTransferSrc);
 
 	auto image = m_vkDevice->createImage(info);
 	auto memoryRequirements = m_vkDevice->getImageMemoryRequirements(image);
@@ -304,13 +370,10 @@ void Device::waitIdle()
 	m_vkDevice->waitIdle();
 }
 
-RenderPass Device::createRenderPass(const ShaderProgram& program, const SwapChain &swapChain) const
+RenderPass Device::createRenderPass(const ShaderProgram& program, uint32_t width, uint32_t height, Format format, bool enableDepthBuffer) const
 {
-	// TODO: Dangerous hacking, fix this by adding error handling instead of expecting there always being data available.
-	auto extent = swapChain.m_colorResources[0].m_vkExtent;
-	auto format = swapChain.m_colorResources[0].m_format;
-
-	return RenderPass(m_vkDevice, program, { extent.width, extent.height }, format);
+	auto vkPass = createVkRenderpass(format, enableDepthBuffer);
+	return RenderPass(m_vkDevice, vkPass, program, { width, height });
 }
 
 Device::Device(vk::PhysicalDevice physicalDevice, vk::UniqueDevice &device, Surface &surface)

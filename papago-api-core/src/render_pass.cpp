@@ -13,33 +13,32 @@ RenderPass::operator vk::RenderPass&()
 
 RenderPass::RenderPass(
 	const vk::UniqueDevice& device,
+	vk::UniqueRenderPass& vkRenderPass,
 	const ShaderProgram& program,
-	const vk::Extent2D& extent,
-	Format format)
-		:	m_shaderProgram(program), m_vkDevice(device)
+	const vk::Extent2D& extent)
+	: m_shaderProgram(program), m_vkDevice(device), m_vkRenderPass(std::move(vkRenderPass))
 {
 	setupDescriptorSet(device, program.m_vertexShader, program.m_fragmentShader);
-
 
 	vk::PipelineShaderStageCreateInfo shaderStages[] = { 
 		program.m_vkVertexStageCreateInfo,
 		program.m_vkFragmentStageCreateInfo
 	};
-
 	
 	vk::PipelineVertexInputStateCreateInfo vertexInputInfo;
 	//do the shader require a vertex buffer?
 	auto attributeDescription = getAttributeDescriptions();
+	vk::VertexInputBindingDescription bindingDescription;
 
 	if (m_shaderProgram.m_vertexShader.m_input.size() > 0) {
 
-	auto bindingDescription = getBindingDescription();
+		bindingDescription = getBindingDescription();
 
-	//TODO: how to handle vertex buffer existence and count? -AM
-	vertexInputInfo.setVertexBindingDescriptionCount(1)
-		.setPVertexBindingDescriptions(&bindingDescription)
-		.setVertexAttributeDescriptionCount(attributeDescription.size())
-		.setPVertexAttributeDescriptions(attributeDescription.data()); 
+		//TODO: how to handle vertex buffer existence and count? -AM
+		vertexInputInfo.setVertexBindingDescriptionCount(1)
+			.setPVertexBindingDescriptions(&bindingDescription)
+			.setVertexAttributeDescriptionCount(attributeDescription.size())
+			.setPVertexAttributeDescriptions(attributeDescription.data()); 
 	}
 	else {
 		vertexInputInfo.setVertexBindingDescriptionCount(0)
@@ -81,13 +80,14 @@ RenderPass::RenderPass(
 	colorBlending.setAttachmentCount(1)
 		.setPAttachments(&colorBlendAttatchment);
 
+	
 	vk::PipelineLayoutCreateInfo pipelineLayoutInfo;
-	pipelineLayoutInfo.setSetLayoutCount(1)
-		.setPSetLayouts(&m_vkDescriptorSetLayout.get());
+	if (m_vkDescriptorSetLayout) {
+		pipelineLayoutInfo.setSetLayoutCount(1)
+			.setPSetLayouts(&m_vkDescriptorSetLayout.get());
+	}
 
 	m_vkPipelineLayout = device->createPipelineLayoutUnique(pipelineLayoutInfo);
-
-	m_vkRenderPass =  createDummyRenderpass(device, format);
 
 	vk::PipelineMultisampleStateCreateInfo multisampleCreateInfo = {};
 	multisampleCreateInfo.setRasterizationSamples(vk::SampleCountFlagBits::e1)
@@ -114,58 +114,6 @@ RenderPass::RenderPass(
 		.setPDepthStencilState(&depthCreateInfo);
 
 	m_vkGraphicsPipeline = device->createGraphicsPipelineUnique(vk::PipelineCache(), pipelineCreateInfo);
-}
-
-//TODO: Make the creation of vkRenderPass more flexible. This dummy only makes one color-attachment and a depth-attachment
-vk::UniqueRenderPass RenderPass::createDummyRenderpass(const vk::UniqueDevice& device, Format format) {
-
-	vk::AttachmentDescription colorAttachment;
-	colorAttachment.setFormat(format)
-		.setSamples(vk::SampleCountFlagBits::e1)
-		.setLoadOp(vk::AttachmentLoadOp::eClear)
-		.setStoreOp(vk::AttachmentStoreOp::eStore)
-		.setStencilLoadOp(vk::AttachmentLoadOp::eLoad)
-		.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare)
-		.setInitialLayout(vk::ImageLayout::eUndefined)
-		.setFinalLayout(vk::ImageLayout::ePresentSrcKHR);
-
-	vk::AttachmentReference colorAttatchmentRef(0, vk::ImageLayout::eColorAttachmentOptimal);
-
-	vk::AttachmentDescription depthAttachment;
-	depthAttachment.setFormat(vk::Format::eD32Sfloat)
-		.setLoadOp(vk::AttachmentLoadOp::eClear) // Clear buffer data at load
-		.setStoreOp(vk::AttachmentStoreOp::eDontCare)
-		.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare)
-		.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare)
-		.setFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
-
-	vk::AttachmentReference depthAttachmentRef(1, vk::ImageLayout::eDepthStencilAttachmentOptimal);
-
-	std::vector<vk::AttachmentDescription> attachments = { colorAttachment, depthAttachment };
-	std::vector<vk::AttachmentReference> attachmentReferences = { colorAttatchmentRef, depthAttachmentRef };
-
-	vk::SubpassDescription subpass = {};
-	subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics)
-		.setColorAttachmentCount(1)
-		.setPColorAttachments(&colorAttatchmentRef)
-		.setPDepthStencilAttachment(&depthAttachmentRef);
-
-	vk::SubpassDependency dependency(VK_SUBPASS_EXTERNAL);
-	dependency.setSrcStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput)
-		.setSrcAccessMask(vk::AccessFlags())
-		.setDstStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput)
-		.setDstAccessMask(vk::AccessFlagBits::eColorAttachmentRead | vk::AccessFlagBits::eColorAttachmentWrite);
-
-
-	vk::RenderPassCreateInfo renderPassInfo;
-	renderPassInfo.setAttachmentCount(attachments.size())
-		.setPAttachments(attachments.data())
-		.setSubpassCount(1)
-		.setPSubpasses(&subpass)
-		.setDependencyCount(1)
-		.setPDependencies(&dependency);
-
-	return device->createRenderPassUnique(renderPassInfo);
 }
 
 void RenderPass::setupDescriptorSet(const vk::UniqueDevice &device, const VertexShader& vertexShader, const FragmentShader& fragmentShader)
@@ -207,37 +155,39 @@ void RenderPass::setupDescriptorSet(const vk::UniqueDevice &device, const Vertex
 		}
 	}
 
-	vk::DescriptorSetLayoutCreateInfo layoutCreateInfo = {};
-	layoutCreateInfo.setBindingCount(vkBindings.size())
-		.setPBindings(vkBindings.data());
+	if (!vkBindings.empty()) {
+		vk::DescriptorSetLayoutCreateInfo layoutCreateInfo = {};
+		layoutCreateInfo.setBindingCount(vkBindings.size())
+			.setPBindings(vkBindings.data());
 
-	m_vkDescriptorSetLayout = device->createDescriptorSetLayoutUnique(layoutCreateInfo);
+		m_vkDescriptorSetLayout = device->createDescriptorSetLayoutUnique(layoutCreateInfo);
 
 
-	//Descriptor Pool:
-	auto poolSizes = std::vector<vk::DescriptorPoolSize>(vkBindings.size());
-	for (auto i = 0; i < vkBindings.size(); ++i) {
-		auto& vkBinding = vkBindings[i];
-		poolSizes[i].setDescriptorCount(1)
-			.setType(vkBinding.descriptorType);
+		//Descriptor Pool:
+		auto poolSizes = std::vector<vk::DescriptorPoolSize>(vkBindings.size());
+		for (auto i = 0; i < vkBindings.size(); ++i) {
+			auto& vkBinding = vkBindings[i];
+			poolSizes[i].setDescriptorCount(1)
+				.setType(vkBinding.descriptorType);
+		}
+
+		vk::DescriptorPoolCreateInfo poolCreateInfo = {};
+		poolCreateInfo.setPoolSizeCount(poolSizes.size())
+			.setPPoolSizes(poolSizes.data())
+			.setMaxSets(1)	//TODO: keep this default value? -AM.
+			.setFlags(vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet);
+
+		m_vkDescriptorPool = device->createDescriptorPoolUnique(poolCreateInfo);
+
+
+		//Descriptor Set:
+		vk::DescriptorSetAllocateInfo allocateInfo = {};
+		allocateInfo.setDescriptorPool(*m_vkDescriptorPool)
+			.setDescriptorSetCount(1)
+			.setPSetLayouts(&m_vkDescriptorSetLayout.get());
+
+		m_vkDescriptorSet = std::move(device->allocateDescriptorSetsUnique(allocateInfo)[0]);	//TODO: do we always want exactly one descriptor set? -AM
 	}
-
-	vk::DescriptorPoolCreateInfo poolCreateInfo = {};
-	poolCreateInfo.setPoolSizeCount(poolSizes.size())
-		.setPPoolSizes(poolSizes.data())
-		.setMaxSets(1)	//TODO: keep this default value? -AM.
-		.setFlags(vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet);
-
-	m_vkDescriptorPool = device->createDescriptorPoolUnique(poolCreateInfo);
-
-
-	//Descriptor Set:
-	vk::DescriptorSetAllocateInfo allocateInfo = {};
-	allocateInfo.setDescriptorPool(*m_vkDescriptorPool)
-		.setDescriptorSetCount(1)
-		.setPSetLayouts(&m_vkDescriptorSetLayout.get());
-
-	m_vkDescriptorSet = std::move(device->allocateDescriptorSetsUnique(allocateInfo)[0]);	//TODO: do we always want exactly one descriptor set? -AM
 }
 
 vk::VertexInputBindingDescription RenderPass::getBindingDescription()

@@ -12,17 +12,6 @@ void BufferResource::destroy()
 
 }
 
-bool BufferResource::inUse()
-{
-	
-	if (m_vkFence != nullptr && m_vkDevice->getFenceStatus(*m_vkFence) == vk::Result::eNotReady) {
-		return true;
-	}
-	else {
-		return false;
-	}
-}
-
 
 BufferResource BufferResource::createBufferResource(
 	vk::PhysicalDevice		physicalDevice, 

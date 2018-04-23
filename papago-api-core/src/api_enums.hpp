@@ -44,3 +44,7 @@ enum class Usage {
 using TextureWrapMode = vk::SamplerAddressMode;
 
 using CommandBufferUsage = vk::CommandPoolCreateFlagBits;
+
+//****************************** NON-ENUM ******************************
+//TODO: move these to own/other hpp files:
+using Features = vk::PhysicalDeviceFeatures;

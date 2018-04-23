@@ -1,10 +1,12 @@
 #include "standard_header.hpp"
 #include "resource.hpp"
 
-Resource::Resource(Resource&& other) noexcept: m_vkMemory(std::move(other.m_vkMemory)), m_vkDevice(other.m_vkDevice), m_size(other.m_size), m_vkFence(std::move(other.m_vkFence))
+Resource::Resource(Resource&& other) noexcept
+	: m_vkMemory(std::move(other.m_vkMemory))
+	, m_vkDevice(other.m_vkDevice)
+	, m_size(std::move(other.m_size))
+	, m_vkFence(std::move(other.m_vkFence))
 {
-	other.m_size = 0;
-	other.m_vkMemory = vk::UniqueDeviceMemory();
 }
 
 void Resource::upload(const std::vector<char>& data)
@@ -23,10 +25,16 @@ std::vector<char> Resource::download()
 	return result;
 }
 
+bool Resource::inUse()
+{
+	return m_vkFence
+		&& m_vkDevice->getFenceStatus(*m_vkFence) == vk::Result::eNotReady;
+}
+
 Resource::Resource(const vk::UniqueDevice& device) 
 	: m_vkMemory(nullptr)
-	, m_vkDevice(device), 
-	m_size(0) {}
+	, m_vkDevice(device)
+	, m_size(0) {}
 
 Resource::Resource(
 	const vk::PhysicalDevice& physicalDevice, 
