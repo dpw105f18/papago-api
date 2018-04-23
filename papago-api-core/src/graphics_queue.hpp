@@ -12,14 +12,17 @@ class GraphicsQueue
 {
 public:
 	void present();
-	uint32_t getCurrentFrameIndex();
+	uint32_t getNextFrameIndex();
 	void wait();
 	void submitCommands(std::vector<CommandBuffer>&);
 	ImageResource& getLastRenderedImage();
 private:
-	uint32_t getNextFrameIndex();
+	uint32_t getCurrentFrameIndex();
 	GraphicsQueue(const Device&, int graphicsQueueIndex, int presentQueueIndex, SwapChain&);
 	void createSemaphores(const vk::UniqueDevice&);
+
+	template<vk::ImageLayout from, vk::ImageLayout to>
+	static void transitionImageResources(const CommandBuffer&, const vk::Queue&, std::set<ImageResource*> resources);
 
 	SwapChain& m_swapChain;
 	vk::Queue m_vkGraphicsQueue;
@@ -33,3 +36,25 @@ private:
 
 	friend class Device;
 };
+
+template<vk::ImageLayout from, vk::ImageLayout to>
+inline void GraphicsQueue::transitionImageResources(const CommandBuffer& commandBuffer, const vk::Queue& queue, std::set<ImageResource*> resources) {
+	auto commandBeginInfo = vk::CommandBufferBeginInfo().setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);
+	commandBuffer->begin(commandBeginInfo);
+
+	//Transition submitted ImageResources to ePresentSrcKHR:
+	for (auto& resource : resources) {
+		resource->transition<from, to>(commandBuffer);
+	}
+
+	commandBuffer->end();
+
+	vk::SubmitInfo submitInfo = {};
+	submitInfo.setCommandBufferCount(1)
+		.setPCommandBuffers(&*commandBuffer);
+	queue.submit(submitInfo, vk::Fence());
+
+	queue.waitIdle();
+
+	commandBuffer->reset(vk::CommandBufferResetFlagBits::eReleaseResources);
+}

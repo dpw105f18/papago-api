@@ -321,7 +321,7 @@ inline void ImageResource::transition<vk::ImageLayout::eUndefined, vk::ImageLayo
 		{ imageMemoryBarrier });
 }
 
-//NOTE: this must always be on the bottom!
+//NOTE: this must always be after the other template definitions!
 template<vk::ImageLayout source, vk::ImageLayout destination>
 void ImageResource::transition(const CommandBuffer &)
 {

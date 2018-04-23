@@ -3,7 +3,6 @@
 #include "swap_chain.hpp"
 #include "device.hpp"
 #include <iterator>
-#include <typeinfo>
 
 void GraphicsQueue::submitCommands(std::vector<CommandBuffer>& commandBuffers)
 {
@@ -32,12 +31,15 @@ void GraphicsQueue::submitCommands(std::vector<CommandBuffer>& commandBuffers)
 
 	//TODO: Test if this works with several command buffers using the same resources. - Brandborg
 	for (auto& cmd : commandBuffers) {
-		std::merge(m_submittedResources.begin(), m_submittedResources.end(), cmd.m_resourcesInUse.begin(), cmd.m_resourcesInUse.end(), std::inserter(m_submittedResources, m_submittedResources.begin()));
+		std::merge(																	// Merge ..
+			ITERATE(m_submittedResources),											// .. this ..
+			ITERATE(cmd.m_resourcesInUse),											// .. and this ..
+			std::inserter(m_submittedResources, m_submittedResources.begin()));		// .. into that
 		cmd.m_resourcesInUse.clear();
 	}
 
 	for (auto& resource : m_submittedResources) {
-		resource->m_vkFence = &fence.get();
+		resource->m_vkFence = &(*fence);
 	}
 
 	m_vkGraphicsQueue.submit(submitInfo, *fence);
@@ -53,38 +55,25 @@ void GraphicsQueue::present()
 {
 	m_vkPresentQueue.waitIdle();
 
-	auto imageIndices = getNextFrameIndex();
+	auto imageIndex = getCurrentFrameIndex();
 	
-	//Transition Framebuffer images to ePresentSrcKHR:
-	auto& commandBuffer = m_device.m_internalCommandBuffer;
+	std::set<ImageResource*> imageResources;
+	imageResources.emplace(&m_swapChain.m_colorResources[imageIndex]);
 
-	auto commandBeginInfo = vk::CommandBufferBeginInfo().setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);
-	commandBuffer->begin(commandBeginInfo);
-
-	m_swapChain.m_colorResources[imageIndices].transition<vk::ImageLayout::eGeneral, vk::ImageLayout::ePresentSrcKHR>(commandBuffer);
-
-	//Transition submitted ImageResources to ePresentSrcKHR:
-	if (m_submittedResources.size() > 0) {
-		for (auto& resource : m_submittedResources) {
-			//TODO: separate the resourcesInUse on CommandBuffer into Buffer and Image iso this check? -AM
-			if (typeid(*resource) == typeid(ImageResource)) {
-				auto imageResource = reinterpret_cast<ImageResource*>(resource);
-
-				imageResource->transition<vk::ImageLayout::eGeneral, vk::ImageLayout::ePresentSrcKHR>(commandBuffer);
-			}
+	// Find image resources from the submitted resources 
+	for (auto& resource : m_submittedResources) {
+		//TODO: separate the resourcesInUse on CommandBuffer into Buffer and Image iso this check? -AM
+		if (typeid(*resource) == typeid(ImageResource)) {
+			auto imageResource = reinterpret_cast<ImageResource*>(resource);
+			imageResources.emplace(imageResource);
 		}
 	}
 
-	commandBuffer->end();
-
-	vk::SubmitInfo submitInfo = {};
-	submitInfo.setCommandBufferCount(1)
-		.setPCommandBuffers(&*commandBuffer);
-	m_device.m_vkInternalQueue.submit(submitInfo, vk::Fence());
-
-	m_device.m_vkInternalQueue.waitIdle();
-
-	commandBuffer->reset(vk::CommandBufferResetFlagBits::eReleaseResources);
+	transitionImageResources<vk::ImageLayout::eGeneral, vk::ImageLayout::ePresentSrcKHR>(
+		m_device.m_internalCommandBuffer, 
+		m_device.m_vkInternalQueue, 
+		imageResources
+	);
 
 	std::vector<vk::Semaphore> semaphores = { *m_vkRenderFinishSemaphore };
 	std::vector<vk::SwapchainKHR> swapchains = { static_cast<vk::SwapchainKHR>(m_swapChain) };
@@ -94,37 +83,22 @@ void GraphicsQueue::present()
 		.setPWaitSemaphores(semaphores.data())
 		.setSwapchainCount(1)
 		.setPSwapchains(swapchains.data())
-		.setPImageIndices(&imageIndices);
+		.setPImageIndices(&imageIndex);
 
 	auto res = m_vkPresentQueue.presentKHR(presentInfo);
 
-	//TODO: find a better way to know when ImageResources can safely be transitioned back to eGeneral layout
+	//TODO: find a better way to know when ImageResources can safely be transitioned back to eGeneral layout, Fences??
 	m_vkPresentQueue.waitIdle();
 
-	//Transition Frambuffer images and ImageResources back to eGeneral:
-	commandBuffer->begin(commandBeginInfo);
-	m_swapChain.m_colorResources[imageIndices].transition<vk::ImageLayout::ePresentSrcKHR, vk::ImageLayout::eGeneral>(commandBuffer);
-
-	if (m_submittedResources.size() > 0) {
-
-		for (auto& resource : m_submittedResources) {
-			//TODO: separate the resourcesInUse on CommandBuffer into Buffer and Image iso this check? -AM
-			if (typeid(*resource) == typeid(ImageResource)) {
-				auto imageResource = reinterpret_cast<ImageResource*>(resource);
-				imageResource->transition<vk::ImageLayout::ePresentSrcKHR, vk::ImageLayout::eGeneral>(commandBuffer);
-			}
-		}
-
-		commandBuffer->end();
-		m_device.m_vkInternalQueue.submit(submitInfo, vk::Fence());
-		m_device.m_vkInternalQueue.waitIdle();
-		commandBuffer->reset(vk::CommandBufferResetFlagBits::eReleaseResources);
-
-	}
+	transitionImageResources<vk::ImageLayout::ePresentSrcKHR, vk::ImageLayout::eGeneral>(
+		m_device.m_internalCommandBuffer,
+		m_device.m_vkInternalQueue,
+		imageResources
+	);
 }
 
 //TODO: switch getCurrentFrameIndex and getNextFrameIndex back. -AM
-uint32_t GraphicsQueue::getCurrentFrameIndex() {
+uint32_t GraphicsQueue::getNextFrameIndex() {
 	
 	//TODO: Make sure that we handle the case, where framebuffer is not ready - Brandborg
 	auto result = m_device.m_vkDevice->acquireNextImageKHR(static_cast<vk::SwapchainKHR>(m_swapChain), 0, *m_vkImageAvailableSemaphore, vk::Fence());
@@ -138,7 +112,7 @@ void GraphicsQueue::wait()
 	m_vkPresentQueue.waitIdle();
 }
 
-uint32_t GraphicsQueue::getNextFrameIndex()
+uint32_t GraphicsQueue::getCurrentFrameIndex()
 {
 	return m_currentFrameIndex;
 }

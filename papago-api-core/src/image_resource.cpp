@@ -124,7 +124,7 @@ std::vector<char> ImageResource::download()
 	region.imageSubresource.baseArrayLayer = 0;
 	region.imageSubresource.layerCount = 1;
 	region.imageOffset = vk::Offset3D{ 0,0,0 };
-	region.imageExtent = m_vkExtent;	//TODO: what if texture image is smaller/larger than ImageResource? -AM
+	region.imageExtent = m_vkExtent;
 
 	commandBuffer->copyImageToBuffer(m_vkImage, vk::ImageLayout::eTransferSrcOptimal, *buffer, { region });
 	transition<vk::ImageLayout::eTransferSrcOptimal, vk::ImageLayout::eGeneral>(commandBuffer);
@@ -217,7 +217,7 @@ ImageResource::ImageResource(
 	Format format, 
 	vk::Extent3D extent,
 	vk::MemoryRequirements memoryRequirements) 
-		: Resource(device.m_vkPhysicalDevice, device.m_vkDevice, vk::MemoryPropertyFlagBits::eDeviceLocal | vk::MemoryPropertyFlagBits::eHostVisible , memoryRequirements)
+		: Resource(device.m_vkPhysicalDevice, device.m_vkDevice, vk::MemoryPropertyFlagBits::eDeviceLocal | vk::MemoryPropertyFlagBits::eHostVisible, memoryRequirements)
 		, m_vkImage(image)
 		, m_format(format)
 		, m_vkExtent(extent)

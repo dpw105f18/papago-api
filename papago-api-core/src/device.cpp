@@ -112,7 +112,8 @@ vk::SwapchainCreateInfoKHR Device::createSwapChainCreateInfo(
 		.setImageColorSpace(swapFormat.colorSpace)
 		.setImageExtent(extent)
 		.setImageArrayLayers(1)
-		.setImageUsage(vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferSrc)
+		// IMPROVEMENT: All images are assumed to be transfer sources, so it can be downloaded. Is it more efficient to not do that? - CW 2018-04-23
+		.setImageUsage(vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferSrc) 
 		.setPreTransform(capabilities.currentTransform)
 		.setCompositeAlpha(vk::CompositeAlphaFlagBitsKHR::eOpaque)
 		.setPresentMode(presentMode)
@@ -163,7 +164,7 @@ bool Device::areExtensionsSupported(const vk::PhysicalDevice & physicalDevice, c
 	return requiredExtensions.empty();
 }
 
-vk::UniqueRenderPass Device::createDummyRenderpass(Format format, bool withDepthBuffer) const
+vk::UniqueRenderPass Device::createVkRenderpass(Format format, bool withDepthBuffer) const
 {
 	vk::AttachmentDescription colorAttachment;
 	colorAttachment.setFormat(format)
@@ -198,11 +199,11 @@ vk::UniqueRenderPass Device::createDummyRenderpass(Format format, bool withDepth
 			
 		vk::AttachmentDescription depthAttachment;
 		depthAttachment.setFormat(format)
-		.setLoadOp(vk::AttachmentLoadOp::eClear) // Clear buffer data at load
-		.setStoreOp(vk::AttachmentStoreOp::eDontCare)
-		.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare)
-		.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare)
-		.setFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
+			.setLoadOp(vk::AttachmentLoadOp::eClear) // Clear buffer data at load
+			.setStoreOp(vk::AttachmentStoreOp::eDontCare)
+			.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare)
+			.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare)
+			.setFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
 
 		attachments.push_back(depthAttachment);
 
@@ -370,9 +371,9 @@ void Device::waitIdle()
 	m_vkDevice->waitIdle();
 }
 
-RenderPass Device::createRenderPass(const ShaderProgram &program, uint32_t width, uint32_t height, Format format, bool enableDepthBuffer) const
+RenderPass Device::createRenderPass(const ShaderProgram& program, uint32_t width, uint32_t height, Format format, bool enableDepthBuffer) const
 {
-	auto vkPass = createDummyRenderpass(format, enableDepthBuffer);
+	auto vkPass = createVkRenderpass(format, enableDepthBuffer);
 	return RenderPass(m_vkDevice, vkPass, program, { width, height });
 }
 

@@ -83,7 +83,7 @@ private:
 	static bool isPhysicalDeviceSuitable(const vk::PhysicalDevice& physicalDevice, Surface&, const std::vector<const char*> &);
 	static bool areExtensionsSupported(const vk::PhysicalDevice& physicalDevice, const std::vector<const char*> &extensions);
 
-	vk::UniqueRenderPass createDummyRenderpass(Format, bool withDepthBuffer = true) const;
+	vk::UniqueRenderPass createVkRenderpass(Format, bool withDepthBuffer = true) const;
 
 	vk::PhysicalDevice m_vkPhysicalDevice;
 	vk::UniqueDevice m_vkDevice;

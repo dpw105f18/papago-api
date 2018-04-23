@@ -1,5 +1,4 @@
 #pragma once
-#include "standard_header.hpp"
 #include <set>
 #include "sub_command_buffer.hpp"
 #include "api_enums.hpp"
@@ -51,6 +50,7 @@ private:
 
 	const vk::UniqueDevice& m_vkDevice;	//<-- used to update vkDescriptorSets. -AM
 	//TODO: Check that this is not null, when calling non-begin methods on the object. - Brandborg
+	// TODO: Another approach could be to create another interface and expose it via builder pattern or lambda expressions - CW 2018-04-23
 	RenderPass* m_renderPassPtr;
 
 	std::set<Resource*> m_resourcesInUse;

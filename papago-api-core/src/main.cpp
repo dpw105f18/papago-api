@@ -17,7 +17,6 @@
 #include <stb_image.h>
 #include <stb_image_write.h>
 
-
 LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	switch (msg)
@@ -164,9 +163,9 @@ int main()
 		0, 2, 3
 	};
 	auto indexBuffer = device.createIndexBuffer(indices);
+	auto parser = Parser("C:/VulkanSDK/1.0.65.0/Bin32/glslangValidator.exe");
 
 	// PASS 1
-	auto parser = Parser("C:/VulkanSDK/1.0.65.0/Bin32/glslangValidator.exe");
 	auto colVert = parser.compileVertexShader("shader/colorVert.vert", "main");
 	auto colFrag = parser.compileFragmentShader("shader/colorFrag.frag", "main");
 
@@ -215,7 +214,7 @@ int main()
 			cmd.end();
 
 			auto stupidCmd = device.createCommandBuffer(Usage::eReuse);
-			stupidCmd.begin(stupidPass, swapChain, graphicsQueue.getCurrentFrameIndex());
+			stupidCmd.begin(stupidPass, swapChain, graphicsQueue.getNextFrameIndex());
 
 			auto uniform_input_float = std::vector<float>({ std::rand() * 1.0f / RAND_MAX, std::rand() * 1.0f / RAND_MAX, std::rand() * 1.0f / RAND_MAX });
 			auto uniform_input_char = std::vector<char>(sizeof(float) * uniform_input_float.size());
@@ -225,9 +224,6 @@ int main()
 
 			if (!uniform_buffer.inUse()) {
 				uniform_buffer.upload(uniform_input_char);
-			}
-			else {
-				auto d = "bug";
 			}
 
 			stupidCmd.setUniform("val", uniform_buffer);

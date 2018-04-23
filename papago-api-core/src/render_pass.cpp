@@ -24,22 +24,21 @@ RenderPass::RenderPass(
 		program.m_vkVertexStageCreateInfo,
 		program.m_vkFragmentStageCreateInfo
 	};
-
 	
 	vk::PipelineVertexInputStateCreateInfo vertexInputInfo;
 	//do the shader require a vertex buffer?
 	auto attributeDescription = getAttributeDescriptions();
-	auto bindingDescription = new vk::VertexInputBindingDescription();
+	vk::VertexInputBindingDescription bindingDescription;
 
 	if (m_shaderProgram.m_vertexShader.m_input.size() > 0) {
 
-	*bindingDescription = getBindingDescription();
+		bindingDescription = getBindingDescription();
 
-	//TODO: how to handle vertex buffer existence and count? -AM
-	vertexInputInfo.setVertexBindingDescriptionCount(1)
-		.setPVertexBindingDescriptions(bindingDescription)
-		.setVertexAttributeDescriptionCount(attributeDescription.size())
-		.setPVertexAttributeDescriptions(attributeDescription.data()); 
+		//TODO: how to handle vertex buffer existence and count? -AM
+		vertexInputInfo.setVertexBindingDescriptionCount(1)
+			.setPVertexBindingDescriptions(&bindingDescription)
+			.setVertexAttributeDescriptionCount(attributeDescription.size())
+			.setPVertexAttributeDescriptions(attributeDescription.data()); 
 	}
 	else {
 		vertexInputInfo.setVertexBindingDescriptionCount(0)
@@ -115,8 +114,6 @@ RenderPass::RenderPass(
 		.setPDepthStencilState(&depthCreateInfo);
 
 	m_vkGraphicsPipeline = device->createGraphicsPipelineUnique(vk::PipelineCache(), pipelineCreateInfo);
-
-	delete bindingDescription;
 }
 
 void RenderPass::setupDescriptorSet(const vk::UniqueDevice &device, const VertexShader& vertexShader, const FragmentShader& fragmentShader)
@@ -158,7 +155,7 @@ void RenderPass::setupDescriptorSet(const vk::UniqueDevice &device, const Vertex
 		}
 	}
 
-	if (0 < vkBindings.size()) {
+	if (!vkBindings.empty()) {
 		vk::DescriptorSetLayoutCreateInfo layoutCreateInfo = {};
 		layoutCreateInfo.setBindingCount(vkBindings.size())
 			.setPBindings(vkBindings.data());
