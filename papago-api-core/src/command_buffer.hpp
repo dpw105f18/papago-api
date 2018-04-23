@@ -1,6 +1,9 @@
 #pragma once
+#include <set>
 #include "sub_command_buffer.hpp"
 #include "api_enums.hpp"
+
+class ShaderProgram;
 
 class CommandBuffer
 {
@@ -8,8 +11,8 @@ public:
 
 	//TODO: remove "override"s - place functionality in SubCommandBuffer or redesign relationship. -AM
 	void begin(const RenderPass&);
-	void begin(RenderPass&, SwapChain&, uint32_t imageIndex);
-	void begin(const RenderPass&, ImageResource& depthStencilBuffer);
+	void begin(RenderPass&, SwapChain&, uint32_t imageIndex);	//TODO: <-- remove imageIndex. -AM
+	void begin(RenderPass&, ImageResource& renderTarget);		//TODO: use Format and Extent iso. ImageResource? -AM
 	void begin(const RenderPass&, SwapChain&, ImageResource& depthStencilBuffer);
 
 	void end();
@@ -17,8 +20,8 @@ public:
 	void clearDepthBuffer(float value);
 	void clearFrameBuffer(Color);
 	void setDepthTest(DepthTest);
-	void setUniform(const std::string&, const BufferResource&);
-	void setUniform(const std::string&, const ImageResource&, Sampler&);
+	void setUniform(const std::string&, BufferResource&);
+	void setUniform(const std::string&, ImageResource&, Sampler&);
 	void setInput(const BufferResource&);
 	void setInterleavedInput(const std::vector<const std::string>&, const Resource&);
 	void setIndexBuffer(const BufferResource&);
@@ -37,6 +40,9 @@ public:
 
 private:
 	CommandBuffer(const vk::UniqueDevice& device, int queueFamilyIndex, Usage);
+	
+	// TODO: Have program so that we only need to pass in the name - Brandborg
+	long getBinding(const ShaderProgram& program, const std::string& name);
 
 	vk::UniqueCommandPool m_vkCommandPool;	//TODO: <-- make non-unique if we reuse command pools. -AM
 	vk::UniqueCommandBuffer m_vkCommandBuffer;
@@ -44,7 +50,11 @@ private:
 
 	const vk::UniqueDevice& m_vkDevice;	//<-- used to update vkDescriptorSets. -AM
 	//TODO: Check that this is not null, when calling non-begin methods on the object. - Brandborg
+	// TODO: Another approach could be to create another interface and expose it via builder pattern or lambda expressions - CW 2018-04-23
 	RenderPass* m_renderPassPtr;
 
+	std::set<Resource*> m_resourcesInUse;
+
 	friend class Device;
+	friend class GraphicsQueue;
 };

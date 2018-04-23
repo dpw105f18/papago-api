@@ -20,6 +20,7 @@ public:
 
 private:
 	vk::UniqueBuffer m_vkBuffer;
+	vk::DescriptorBufferInfo m_vkInfo;
 
 	static std::unique_ptr<BufferResource> createBufferResource(
 		vk::PhysicalDevice		physicalDevice,
@@ -28,7 +29,15 @@ private:
 		vk::BufferUsageFlags	usageFlags,
 		vk::MemoryPropertyFlags memoryFlags);
 
+	BufferResource(
+		const vk::UniqueDevice&		device,
+		const vk::PhysicalDevice&	physicalDevice,
+		vk::UniqueBuffer&&			buffer,
+		vk::MemoryPropertyFlags		memoryFlags,
+		vk::MemoryRequirements		memoryRequirements,
+		size_t						range);
 
 	friend class Device;
 	friend class CommandBuffer;
+	friend class GraphicsQueue;
 };

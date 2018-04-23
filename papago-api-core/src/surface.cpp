@@ -127,12 +127,13 @@ Surface::Surface(uint32_t width, uint32_t height, HWND hwnd) : ISurface(width, h
 #ifdef PAPAGO_USE_VALIDATION_LAYERS
 	m_debugReportCallback = m_vkInstance->createDebugReportCallbackEXTUnique(
 		vk::DebugReportCallbackCreateInfoEXT()
-			.setFlags(
-				vk::DebugReportFlagBitsEXT::eWarning | 
-				vk::DebugReportFlagBitsEXT::eInformation | 
-				vk::DebugReportFlagBitsEXT::eError | 
-				vk::DebugReportFlagBitsEXT::ePerformanceWarning|
-				vk::DebugReportFlagBitsEXT::eDebug)
+			.setFlags(vk::DebugReportFlagBitsEXT() 
+				| vk::DebugReportFlagBitsEXT::eWarning
+				//| vk::DebugReportFlagBitsEXT::eInformation 
+				| vk::DebugReportFlagBitsEXT::eError
+				| vk::DebugReportFlagBitsEXT::ePerformanceWarning
+				//| vk::DebugReportFlagBitsEXT::eDebug
+			)
 			.setPfnCallback(VkDebugCallback));
 #endif
 

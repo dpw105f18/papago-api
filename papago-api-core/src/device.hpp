@@ -17,7 +17,7 @@ class ShaderProgram;
 
 class Device : public IDevice {
 public:
-	static std::vector<Device> enumerateDevices(Surface& surface, const vk::PhysicalDeviceFeatures &features, const std::vector<const char*> &extensions);
+	static std::vector<Device> enumerateDevices(Surface& surface, const Features &features, const std::vector<const char*> &extensions);
 	Device(vk::PhysicalDevice, vk::UniqueDevice&, Surface&);
 
 
@@ -26,7 +26,7 @@ public:
 	GraphicsQueue createGraphicsQueue(SwapChain&) const;
 	CommandBuffer createCommandBuffer(Usage) const;
 	SubCommandBuffer createSubCommandBuffer(Usage);
-	RenderPass createRenderPass(const ShaderProgram&, const SwapChain&) const;
+	RenderPass createRenderPass(const ShaderProgram&, uint32_t width, uint32_t height, Format, bool enableDepthBuffer) const;
 	std::unique_ptr<ISampler> createTextureSampler1D(Filter magFil, Filter minFil, TextureWrapMode modeU);
 	std::unique_ptr<ISampler> createTextureSampler2D(Filter magFil, Filter minFil, TextureWrapMode modeU, TextureWrapMode modeV);
 	std::unique_ptr<ISampler> createTextureSampler3D(Filter magFil, Filter minFil, TextureWrapMode modeU, TextureWrapMode modeV, TextureWrapMode modeW);
@@ -78,11 +78,13 @@ private:
 	static vk::SurfaceFormatKHR chooseSwapSurfaceFormat(vk::Format,  std::vector<vk::SurfaceFormatKHR>& availableFormats);
 	static vk::PresentModeKHR chooseSwapPresentMode(vk::PresentModeKHR, const std::vector<vk::PresentModeKHR>& availablePresentModes);
 	static vk::Extent2D chooseSwapChainExtent(uint32_t width, uint32_t height, const vk::SurfaceCapabilitiesKHR& availableCapabilities);
-	static std::vector<vk::DeviceQueueCreateInfo> createQueueCreateInfos(QueueFamilyIndices);
+	static std::vector<vk::DeviceQueueCreateInfo> createQueueCreateInfos(QueueFamilyIndices, const float&);
 	vk::SwapchainCreateInfoKHR createSwapChainCreateInfo(Surface&, const size_t& framebufferCount, const vk::SurfaceFormatKHR&, const vk::Extent2D&, const vk::SurfaceCapabilitiesKHR&, const vk::PresentModeKHR&) const;
 
 	static bool isPhysicalDeviceSuitable(const vk::PhysicalDevice& physicalDevice, Surface&, const std::vector<const char*> &);
 	static bool areExtensionsSupported(const vk::PhysicalDevice& physicalDevice, const std::vector<const char*> &extensions);
+
+	vk::UniqueRenderPass createVkRenderpass(Format, bool withDepthBuffer = true) const;
 
 	vk::PhysicalDevice m_vkPhysicalDevice;
 	vk::UniqueDevice m_vkDevice;
@@ -93,4 +95,5 @@ private:
 	CommandBuffer m_internalCommandBuffer;
 
 	friend class ImageResource;
+	friend class GraphicsQueue;
 };

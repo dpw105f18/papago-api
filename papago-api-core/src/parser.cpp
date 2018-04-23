@@ -11,19 +11,40 @@ Parser::Parser(const std::string & compilePath): m_compilePath(compilePath)
 std::unique_ptr<IVertexShader> Parser::compileVertexShader(const std::string &source, const std::string &entryPoint)
 {
 	auto byte_code = compile(source, "vert");
+  auto result = std::make_unique<VertexShader>(byte_code, entryPoint);
 
-	//TODO: set binding information on [result]
-	return std::make_unique<IVertexShader>(VertexShader(byte_code, entryPoint));
+	if (filePath == "shader/colorVert.vert") {
+
+		result->m_input.push_back({ 0, vk::Format::eR32G32B32Sfloat });	//<-- position
+	}
+	else if(filePath == std::string("shader/stupidVert.vert")){
+		
+		result->m_input.push_back({ 0, vk::Format::eR32G32B32Sfloat });	//<-- position
+		result->m_input.push_back({ sizeof(float) * 3, vk::Format::eR32G32Sfloat }); //<-- uv
+	}
+	return result;
 }
 
 std::unique_ptr<IFragmentShader> Parser::compileFragmentShader(const std::string& source, const std::string& entryPoint)
 {
 	auto byte_code = compile(source, "frag");
-	auto result = FragmentShader(byte_code, entryPoint);
+	auto result = std::make_unique<FragmentShader>(byte_code, entryPoint);
 	
 	//TODO: set binding information on [result]
-	result.m_bindings.insert({ "texSampler", {0, vk::DescriptorType::eCombinedImageSampler} });
-	return std::make_unique<IFragmentShader>(result);
+	
+	// For texture frag
+	//result.m_bindings.insert({ "texSampler", {0, vk::DescriptorType::eCombinedImageSampler} });
+	
+	// For uniform frag
+	if (filePath == std::string("shader/colorFrag.frag")) {
+	
+	}
+	else if(filePath == std::string("shader/stupidFrag.frag")){
+		result->m_bindings.insert({ { "sam" },{ 0, vk::DescriptorType::eCombinedImageSampler } });
+		result->m_bindings.insert({ { "val" },{ 1, vk::DescriptorType::eUniformBuffer } });
+	}
+	
+	return result;
 }
 
 std::vector<char> Parser::compile(const std::string& source, const std::string& shaderType)

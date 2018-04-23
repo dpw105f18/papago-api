@@ -7,6 +7,22 @@ SwapChain::operator vk::SwapchainKHR&()
 	return *m_vkSwapChain;
 }
 
+uint32_t SwapChain::getWidth() const
+{
+	return m_vkExtent.width;
+}
+
+uint32_t SwapChain::getHeight() const
+{
+	return m_vkExtent.height;
+}
+
+Format SwapChain::getFormat() const
+{
+	//TODO: make sure swapchain ALWAYS have at least one colorResource! -AM
+	return m_colorResources[0].getFormat();
+}
+
 SwapChain::SwapChain(
 	vk::UniqueDevice&			device, 
 	vk::UniqueSwapchainKHR&		swapChain, 
@@ -21,8 +37,9 @@ SwapChain::SwapChain(
 	// the vk::RenderPass set on the Framebuffers is a guideline for what RenderPass' are compatible with them
 	// this _may_ be error-prone...
 	m_vkRenderPass = createDummyRenderPass(device);
+	auto swapChainSize = m_colorResources.size();
 
-	for (auto i = 0; i < m_colorResources.size(); ++i) {
+	for (auto i = 0; i < swapChainSize; ++i) {
 		std::vector<vk::ImageView> attachments = {
 			*m_colorResources[i].m_vkImageView,
 			*m_depthResources[i].m_vkImageView
@@ -36,7 +53,8 @@ SwapChain::SwapChain(
 			.setHeight(extent.height)
 			.setLayers(1);
 
-		m_framebuffers.emplace_back(device->createFramebufferUnique(framebufferCreateInfo));
+		m_vkFramebuffers.emplace_back(device->createFramebufferUnique(framebufferCreateInfo));
+		m_vkFences.emplace_back(device->createFenceUnique(vk::FenceCreateInfo{}));
 	}
 }
 

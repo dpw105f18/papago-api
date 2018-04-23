@@ -13,8 +13,7 @@ public:
 	explicit operator vk::RenderPass&();
 
 private:
-	RenderPass(const vk::UniqueDevice&, const ShaderProgram&, const vk::Extent2D&, vk::Format);
-	vk::UniqueRenderPass createDummyRenderpass(const vk::UniqueDevice&, vk::Format);
+	RenderPass(const vk::UniqueDevice&, vk::UniqueRenderPass&, const ShaderProgram&, const vk::Extent2D&);
 	vk::UniqueRenderPass m_vkRenderPass;
 	vk::UniquePipeline m_vkGraphicsPipeline;
 	vk::UniquePipelineLayout m_vkPipelineLayout;
@@ -26,6 +25,8 @@ private:
 	const ShaderProgram& m_shaderProgram;
 
 	void setupDescriptorSet(const vk::UniqueDevice&, const VertexShader& vertexShader, const FragmentShader& fragmentShader);
+	vk::VertexInputBindingDescription getBindingDescription();
+	std::vector<vk::VertexInputAttributeDescription> getAttributeDescriptions();
 
 	friend class Device;
 	friend class CommandBuffer;
