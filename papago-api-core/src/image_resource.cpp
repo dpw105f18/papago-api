@@ -9,6 +9,8 @@ ImageResource::ImageResource(ImageResource&& other) noexcept
 	, m_vkExtent(other.m_vkExtent)
 	, m_device(other.m_device)
 {
+	// m_vkImage isn't automatically set to a null handle when moved
+	other.m_vkImage = vk::Image();
 	other.m_format = Format();
 	other.m_vkExtent = vk::Extent3D();
 }
@@ -16,7 +18,7 @@ ImageResource::ImageResource(ImageResource&& other) noexcept
 ImageResource::~ImageResource()
 {
 	// HACK: If size is zero then memory was externally allocated
-	if (m_size) {
+	if (m_size && m_vkImage) {
 		m_vkDevice->destroyImage(m_vkImage);
 	}
 }

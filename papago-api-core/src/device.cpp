@@ -279,7 +279,6 @@ SwapChain Device::createSwapChain(const Format& format, size_t framebufferCount,
 	}
 
 	return SwapChain(m_vkDevice, swapChain, colorResources, depthResources, extent);
-
 }
 
 GraphicsQueue Device::createGraphicsQueue(SwapChain& swapChain) const
