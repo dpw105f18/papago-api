@@ -13,8 +13,10 @@
 
 std::vector<std::unique_ptr<IDevice>> IDevice::enumerateDevices(ISurface & surface, const Features & features, const Extensions & extensions)
 {
+	// TODO: Support more features and extensions
 	vk::PhysicalDeviceFeatures vkFeatures = {};
 	vkFeatures.samplerAnisotropy = features.samplerAnisotropy;
+
 	std::vector<const char *> vkExtensions;
 	if (extensions.samplerMirrorClampToEdge) {
 		vkExtensions.push_back(VK_KHR_SAMPLER_MIRROR_CLAMP_TO_EDGE_EXTENSION_NAME);

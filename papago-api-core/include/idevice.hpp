@@ -79,6 +79,7 @@ inline std::unique_ptr<IBufferResource> IDevice::createIndexBuffer<uint16_t>(std
 	return createIndexBufferInternal(data);
 }
 
-template<class T> inline std::unique_ptr<IBufferResource> IDevice::createIndexBuffer(std::vector<T>) {
+template<class T>
+inline std::unique_ptr<IBufferResource> IDevice::createIndexBuffer(std::vector<T>) {
 	throw std::runtime_error("Only the types uint16 and uint32 can be used in index buffers.");
 }

@@ -7,6 +7,7 @@
 #include <stdexcept>
 #include <iostream>
 #include <vector>
+#include <fstream>
 
 #include "parser.hpp"
 #include "isampler.hpp"
@@ -132,7 +133,7 @@ std::unique_ptr<IImageResource> createTexture(IDevice& device) {
 	return imageResource;
 }
 
-/*
+
 std::string readFile(const std::string& file_path) {
 	std::ifstream stream(file_path, std::ios::ate);
 	auto size = stream.tellg();
@@ -141,7 +142,6 @@ std::string readFile(const std::string& file_path) {
 	stream.read(&result[0], size);
 	return result;
 }
-*/
 
 int main()
 {
@@ -171,6 +171,7 @@ int main()
 		auto indexBuffer = device->createIndexBuffer(std::vector<uint16_t>{
 			0, 1, 2
 		});
+
 		auto uniformBuffer = device->createUniformBuffer(sizeof(UniformBufferObject));
 
 		auto bigUniform = device->createUniformBuffer(1000);
@@ -190,10 +191,10 @@ int main()
 		bigUniform.upload(bigData);
 
 		auto dlData = bigUniform.download();
-
+		*/
 		auto vertexShader = parser.compileVertexShader(readFile("shader/textureVert.vert"), "main");
-		auto fragmentShader = parser.compileFragmentShader("shader/textureFrag.frag", "main");
-
+		auto fragmentShader = parser.compileFragmentShader(readFile("shader/textureFrag.frag"), "main");
+		/*
 		auto program = device.createShaderProgram(*vertexShader, *fragmentShader);
 
 		auto renderPass = device.createRenderPass(program, swapChain);
