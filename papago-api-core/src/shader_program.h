@@ -1,5 +1,4 @@
 #pragma once
-#include "standard_header.hpp"
 
 class VertexShader;
 class FragmentShader;

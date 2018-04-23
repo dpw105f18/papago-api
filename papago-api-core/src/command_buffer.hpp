@@ -1,5 +1,4 @@
 #pragma once
-#include "standard_header.hpp"
 #include "sub_command_buffer.hpp"
 #include "api_enums.hpp"
 

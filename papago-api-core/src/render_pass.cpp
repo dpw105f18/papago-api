@@ -2,7 +2,6 @@
 #include "render_pass.hpp"
 #include "vertex_shader.hpp"
 #include "fragment_shader.hpp"
-#include "vertex.hpp"
 #include "shader_program.h"
 #include "image_resource.hpp"
 #include "sampler.hpp"
@@ -18,7 +17,7 @@ RenderPass::RenderPass(
 	const vk::UniqueDevice& device,
 	const ShaderProgram& program,
 	const vk::Extent2D& extent,
-	Format format)
+	vk::Format format)
 		:	m_shaderProgram(program), m_vkDevice(device)
 {
 	setupDescriptorSet(device, program.m_vertexShader, program.m_fragmentShader);
@@ -30,8 +29,17 @@ RenderPass::RenderPass(
 	};
 
 	//TODO: Find a better generic way to set attribute and binding descriptions up
-	auto attributeDescription = Vertex::getAttributeDescriptions();
-	auto bindingDescription = Vertex::getBindingDescription();
+	std::vector<vk::VertexInputAttributeDescription> attributeDescription = {
+		vk::VertexInputAttributeDescription()
+			.setBinding(0)
+			.setLocation(0)
+			.setFormat(vk::Format::eR32G32Sfloat)
+			.setOffset(0)
+	};
+	auto bindingDescription = vk::VertexInputBindingDescription()
+		.setBinding(0)
+		.setInputRate(vk::VertexInputRate::eVertex)
+		.setStride(3*sizeof(float));
 
 	vk::PipelineVertexInputStateCreateInfo vertexInputInfo;
 	vertexInputInfo.setVertexBindingDescriptionCount(1)
@@ -108,7 +116,7 @@ RenderPass::RenderPass(
 }
 
 //TODO: Make the creation of vkRenderPass more flexible. This dummy only makes one color-attachment and a depth-attachment
-vk::UniqueRenderPass RenderPass::createDummyRenderpass(const vk::UniqueDevice& device, Format format) {
+vk::UniqueRenderPass RenderPass::createDummyRenderpass(const vk::UniqueDevice& device, vk::Format format) {
 
 	vk::AttachmentDescription colorAttachment;
 	colorAttachment.setFormat(format)

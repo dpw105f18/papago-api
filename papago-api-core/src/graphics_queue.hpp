@@ -1,5 +1,4 @@
 #pragma once
-#include "standard_header.hpp"
 #include <vector>
 
 class CommandBuffer;

@@ -1,6 +1,5 @@
 #pragma once
 #include <vector>
-#include "standard_header.hpp"
 
 class Resource
 {

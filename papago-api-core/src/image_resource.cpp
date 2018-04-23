@@ -9,7 +9,7 @@ ImageResource::ImageResource(ImageResource&& other) noexcept
 	, m_vkExtent(other.m_vkExtent)
 	, m_device(other.m_device)
 {
-	other.m_format = Format();
+	other.m_format = vk::Format();
 	other.m_vkExtent = vk::Extent3D();
 }
 
@@ -90,7 +90,7 @@ void ImageResource::destroy()
 ImageResource ImageResource::createDepthResource(
 	const Device& device, 
 	vk::Extent3D extent,
-	const std::vector<Format>& formatCandidates)
+	const std::vector<vk::Format>& formatCandidates)
 {
 	auto format = findSupportedFormat(
 		device.m_vkPhysicalDevice, 
@@ -122,7 +122,7 @@ ImageResource ImageResource::createDepthResource(
 ImageResource ImageResource::createColorResource(
 	vk::Image image, 
 	const Device& device, 
-	Format format,
+	vk::Format format,
 	vk::Extent3D extent)
 {
 	return ImageResource(image, device, format, extent);
@@ -133,7 +133,7 @@ ImageResource::ImageResource(
 	vk::Image& image,
 	const Device& device,
 	vk::ImageAspectFlags aspectFlags, 
-	Format format, 
+	vk::Format format, 
 	vk::Extent3D extent,
 	vk::MemoryRequirements memoryRequirements) 
 		: Resource(device.m_vkPhysicalDevice, device.m_vkDevice, vk::MemoryPropertyFlagBits::eDeviceLocal | vk::MemoryPropertyFlagBits::eHostVisible, memoryRequirements)
@@ -150,7 +150,7 @@ ImageResource::ImageResource(
 }
 
 // Does NOT allocate memory, this is assumed to already be allocated; but does create a VkImageView.
-ImageResource::ImageResource(vk::Image& image, const Device& device, Format format, vk::Extent3D extent)
+ImageResource::ImageResource(vk::Image& image, const Device& device, vk::Format format, vk::Extent3D extent)
 	: Resource(device.m_vkDevice)
 	, m_vkImage(std::move(image))
 	, m_format(format)
@@ -160,9 +160,9 @@ ImageResource::ImageResource(vk::Image& image, const Device& device, Format form
 	createImageView(m_vkDevice);
 }
 
-Format ImageResource::findSupportedFormat(
+vk::Format ImageResource::findSupportedFormat(
 	const vk::PhysicalDevice & physicalDevice, 
-	const std::vector<Format>& candidateFormats, 
+	const std::vector<vk::Format>& candidateFormats, 
 	vk::ImageTiling tiling, 
 	vk::FormatFeatureFlags features)
 {

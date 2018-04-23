@@ -1,5 +1,4 @@
 #pragma once
-#include "standard_header.hpp"
 #include "api_enums.hpp"
 #include "shader_program.h"
 
@@ -14,8 +13,8 @@ public:
 	explicit operator vk::RenderPass&();
 
 private:
-	RenderPass(const vk::UniqueDevice&, const ShaderProgram&, const vk::Extent2D&, Format);
-	vk::UniqueRenderPass createDummyRenderpass(const vk::UniqueDevice&, Format);
+	RenderPass(const vk::UniqueDevice&, const ShaderProgram&, const vk::Extent2D&, vk::Format);
+	vk::UniqueRenderPass createDummyRenderpass(const vk::UniqueDevice&, vk::Format);
 	vk::UniqueRenderPass m_vkRenderPass;
 	vk::UniquePipeline m_vkGraphicsPipeline;
 	vk::UniquePipelineLayout m_vkPipelineLayout;

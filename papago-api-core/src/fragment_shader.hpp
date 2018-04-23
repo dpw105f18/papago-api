@@ -1,11 +1,12 @@
 #pragma once
 #include "shader.hpp"
+#include "ishader.hpp"
 
-class FragmentShader : public Shader
+class FragmentShader : public Shader, public IFragmentShader
 {
 public:
 private:
-	FragmentShader(const std::string & filePath, const std::string& entryPoint);
+	FragmentShader(const std::vector<char>& bytecode, const std::string& entryPoint);
 	
 	friend class RenderPass;
 	friend class Parser;

@@ -1,19 +1,36 @@
-#include "standard_header.hpp"
-#include "device.hpp"
-#include "swap_chain.hpp"
-#include "surface.hpp"
-#include "sampler.hpp"
-#include "vertex_shader.hpp"
-#include "fragment_shader.hpp"
-#include "render_pass.hpp"
-#include "graphics_queue.hpp"
-#include "command_buffer.hpp"
-#include "vertex.hpp"
-#include "parser.hpp"
-#include <WinUser.h>
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
 
 #define STB_IMAGE_IMPLEMENTATION
-#include <stb_image.h>
+#include "external/stb_image.h"
+
+#include <stdexcept>
+#include <iostream>
+#include <vector>
+
+#include "parser.hpp"
+#include "isampler.hpp"
+#include "isurface.hpp"
+#include "iswapchain.hpp"
+#include "iimage_resource.hpp"
+#include "ibuffer_resource.hpp"
+#include "idevice.hpp"
+#include "api_enums.hpp"
+
+struct vec2
+{
+	float x, y;
+};
+
+struct vec3
+{
+	float x, y, z;
+};
+
+struct Vertex
+{
+	vec2 m_position;
+};
 
 
 LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -23,7 +40,7 @@ LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	case WM_KEYDOWN:
 		if (wParam == VK_ESCAPE)
 		{
-			if (MessageBox(nullptr, "Are you sure you want to quit?", "Quit", MB_YESNO | MB_ICONQUESTION) == IDYES) 
+			if (MessageBox(nullptr,L"Are you sure you want to quit?", L"Quit", MB_YESNO | MB_ICONQUESTION) == IDYES)
 			{
 				DestroyWindow(hwnd);
 			}
@@ -41,8 +58,8 @@ LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 HWND StartWindow(size_t width, size_t height)
 {
 	auto hInstance = GetModuleHandle(nullptr);
-	auto windowName = "test window name";
-	auto windowClassName = "testWindowClassName";
+	auto windowName = L"test window name";
+	auto windowClassName = L"testWindowClassName";
 
 
 	WNDCLASSEX wc = {};
@@ -68,7 +85,7 @@ HWND StartWindow(size_t width, size_t height)
 			windowClassName,
 			windowName,
 			WS_OVERLAPPEDWINDOW,
-			CW_USEDEFAULT, CW_USEDEFAULT, 
+			CW_USEDEFAULT, CW_USEDEFAULT,
 			width, height,
 			nullptr, nullptr,
 			hInstance, nullptr);
@@ -95,9 +112,9 @@ HWND StartWindow(size_t width, size_t height)
 	return nullptr;
 }
 
-struct UniformBufferObject{};
+struct UniformBufferObject {};
 
-ImageResource createTexture(Device& device) {
+std::unique_ptr<IImageResource> createTexture(IDevice& device) {
 	int texWidth, texHeight, texChannels;
 	auto pixels = stbi_load("textures/eldorado.jpg", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
 	if (!pixels) {
@@ -110,29 +127,40 @@ ImageResource createTexture(Device& device) {
 	stbi_image_free(pixels);
 
 	auto imageResource = device.createTexture2D(texWidth, texHeight, Format::eR8G8B8A8Unorm);
-	imageResource.upload(input);
+	imageResource->upload(input);
 
 	return imageResource;
 }
 
+/*
+std::string readFile(const std::string& file_path) {
+	std::ifstream stream(file_path, std::ios::ate);
+	auto size = stream.tellg();
+	stream.seekg(0);
+	std::string result = std::string(size, '\0');
+	stream.read(&result[0], size);
+	return result;
+}
+*/
+
 int main()
 {
 	{
-
 		auto parser = Parser("C:/VulkanSDK/1.0.65.0/Bin32/glslangValidator.exe");
-		
+
 		size_t winWidth = 800;
 		size_t winHeight = 600;
 		auto hwnd = StartWindow(winWidth, winHeight);
-
-
-		auto surface = Surface(winWidth, winHeight, hwnd);
-		vk::PhysicalDeviceFeatures features = {};
-		features.samplerAnisotropy = VK_TRUE;
-		auto devices = Device::enumerateDevices(surface, features, { VK_KHR_SWAPCHAIN_EXTENSION_NAME, VK_KHR_SAMPLER_MIRROR_CLAMP_TO_EDGE_EXTENSION_NAME });
+		auto surface = ISurface::createWin32Surface(winWidth, winHeight, hwnd);
+		IDevice::Features features;
+		features.samplerAnisotropy = true;
+		IDevice::Extensions extensions;
+		extensions.swapchain = true;
+		extensions.samplerMirrorClampToEdge = true;
+		auto devices = IDevice::enumerateDevices(*surface, features, extensions);
 		auto& device = devices[0];
-		auto swapChain = device.createSwapChain(Format::eR8G8B8Unorm, 3, SwapChainPresentMode::eMailbox);
-		auto vertexBuffer = device.createVertexBuffer(std::vector<Vertex>{
+		auto swapChain = device->createSwapChain(Format::eR8G8B8Unorm, 3, IDevice::PresentMode::eMailbox);
+		auto vertexBuffer = device->createVertexBuffer(std::vector<Vertex>{
 			{ 0.3f, -1.0f },
 			{ 0.52f, 0.4f },
 			{ -0.5f, 0.5f },
@@ -140,44 +168,45 @@ int main()
 			{ -0.52f, -0.4f },
 			{ 0.5f, -0.5f },
 		});
-		auto indexBuffer = device.createIndexBuffer(std::vector<uint16_t>{
+		auto indexBuffer = device->createIndexBuffer(std::vector<uint16_t>{
 			0, 1, 2
 		});
-		auto uniformBuffer = device.createUniformBuffer<sizeof(UniformBufferObject)>();
+		auto uniformBuffer = device->createUniformBuffer(sizeof(UniformBufferObject));
 
-		auto bigUniform = device.createUniformBuffer<1000>();
+		auto bigUniform = device->createUniformBuffer(1000);
 
 		std::vector<char> bigData(1000);
 		for (auto i = 0; i < 1000; ++i) {
 			bigData[i] = i % 256;
 		}
 
-		auto sampler3D = device.createTextureSampler3D(Filter::eNearest, Filter::eNearest, TextureWrapMode::eClampToBorder, TextureWrapMode::eClampToEdge, TextureWrapMode::eRepeat);
-		auto sampler2D = device.createTextureSampler2D(Filter::eLinear, Filter::eLinear, TextureWrapMode::eMirroredRepeat, TextureWrapMode::eMirrorClampToEdge);
-		auto sampler1D = device.createTextureSampler1D(Filter::eNearest, Filter::eNearest, TextureWrapMode::eRepeat);
+		auto sampler3D = device->createTextureSampler3D(Filter::eNearest, Filter::eNearest, TextureWrapMode::eClampToBorder, TextureWrapMode::eClampToEdge, TextureWrapMode::eRepeat);
+		auto sampler2D = device->createTextureSampler2D(Filter::eLinear, Filter::eLinear, TextureWrapMode::eMirroredRepeat, TextureWrapMode::eMirrorClampToEdge);
+		auto sampler1D = device->createTextureSampler1D(Filter::eNearest, Filter::eNearest, TextureWrapMode::eRepeat);
 
-		auto image = createTexture(device);
+		/*
+		auto image = createTexture(*device);
 
 		bigUniform.upload(bigData);
 
 		auto dlData = bigUniform.download();
 
-		auto vertexShader = parser.compileVertexShader("shader/textureVert.vert", "main");
+		auto vertexShader = parser.compileVertexShader(readFile("shader/textureVert.vert"), "main");
 		auto fragmentShader = parser.compileFragmentShader("shader/textureFrag.frag", "main");
 
-		auto program = device.createShaderProgram(vertexShader, fragmentShader);
+		auto program = device.createShaderProgram(*vertexShader, *fragmentShader);
 
 		auto renderPass = device.createRenderPass(program, swapChain);
 
 		auto graphicsQueue = device.createGraphicsQueue(swapChain);
 		size_t frameNo = 0;	//<-- for debugging
-		
 
 
-		while(true)
+
+		while (true)
 		{
 			MSG msg;
-			if(PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
+			if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
 			{
 				if (msg.message == WM_QUIT) {
 					break;
@@ -202,6 +231,8 @@ int main()
 			}
 		}
 		device.waitIdle();
+		*/
 	}
+	std::cout << "Press enter to continue...";
 	std::cin.ignore();
 }

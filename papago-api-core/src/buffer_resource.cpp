@@ -12,7 +12,7 @@ void BufferResource::destroy()
 
 }
 
-BufferResource BufferResource::createBufferResource(
+std::unique_ptr<BufferResource> BufferResource::createBufferResource(
 	vk::PhysicalDevice		physicalDevice, 
 	const vk::UniqueDevice& device, 
 	size_t					size, 
@@ -27,7 +27,7 @@ BufferResource BufferResource::createBufferResource(
 
 	auto memoryRequirements = device->getBufferMemoryRequirements(*vkBuffer);
 
-	return BufferResource(device, physicalDevice, std::move(vkBuffer), memoryFlags, memoryRequirements);
+	return std::make_unique<BufferResource>(device, physicalDevice, std::move(vkBuffer), memoryFlags, memoryRequirements);
 }
 
 BufferResource::BufferResource(
