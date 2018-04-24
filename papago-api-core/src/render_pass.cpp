@@ -30,7 +30,7 @@ RenderPass::RenderPass(
 	auto attributeDescription = getAttributeDescriptions();
 	vk::VertexInputBindingDescription bindingDescription;
 
-	if (m_shaderProgram.m_vertexShader.m_input.size() > 0) {
+	if (!m_shaderProgram.m_vertexShader.m_input.empty()) {
 
 		bindingDescription = getBindingDescription();
 

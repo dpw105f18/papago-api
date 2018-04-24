@@ -18,25 +18,25 @@ Sampler::operator vk::Sampler&()
 	return *m_vkTextureSampler;
 }
 
-Sampler& Sampler::setMagFilter(Filter filter)
+Sampler& Sampler::setMagFilter(vk::Filter filter)
 {
 	m_vkSamplerCreateInfo.magFilter = filter;
 	return *this;
 }
 
-Sampler& Sampler::setMinFilter(Filter filter)
+Sampler& Sampler::setMinFilter(vk::Filter filter)
 {
 	m_vkSamplerCreateInfo.magFilter = filter;
 	return *this;
 }
 
-Sampler& Sampler::setTextureWrapU(TextureWrapMode mode)
+Sampler& Sampler::setTextureWrapU(vk::SamplerAddressMode mode)
 {
 	m_vkSamplerCreateInfo.addressModeU = mode;
 	return *this;
 }
 
-Sampler& Sampler::setTextureWrapV(TextureWrapMode mode)
+Sampler& Sampler::setTextureWrapV(vk::SamplerAddressMode mode)
 {
 	if (m_dimension < SamplerD::e2D)
 	{
@@ -47,7 +47,7 @@ Sampler& Sampler::setTextureWrapV(TextureWrapMode mode)
 	return *this;
 }
 
-Sampler& Sampler::setTextureWrapW(TextureWrapMode mode)
+Sampler& Sampler::setTextureWrapW(vk::SamplerAddressMode mode)
 {
 	if (m_dimension < SamplerD::e3D) 
 	{

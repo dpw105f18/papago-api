@@ -1,13 +1,13 @@
 #pragma once
 #include "shader.hpp"
+#include "ishader.hpp"
 
-class VertexShader : public Shader
+class VertexShader : public Shader, public IVertexShader
 {
 public:
+	VertexShader(const std::vector<char>& bytecode, const std::string& entryPoint);
 
 private:
-	VertexShader(const std::string& filePath, const std::string& entryPoint);
-
 	struct Input
 	{
 		uint32_t offset;	//<-- offset in bytes from the beginning of the vertex data

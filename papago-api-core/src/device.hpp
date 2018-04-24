@@ -1,12 +1,12 @@
 #pragma once
-#include "standard_header.hpp"
 #include <vector>
+#include "IDevice.hpp"
 #include "api_enums.hpp"
 #include "command_buffer.hpp"
 #include "buffer_resource.hpp"
 
-class VertexShader;
-class FragmentShader;
+class IVertexShader;
+class IFragmentShader;
 class BufferResource;
 class GraphicsQueue;
 class Surface;
@@ -15,33 +15,34 @@ class ImageResource;
 class Sampler;
 class ShaderProgram;
 
-class Device {
+class Device : public IDevice {
 public:
-	static std::vector<Device> enumerateDevices(Surface& surface, const Features &features, const std::vector<const char*> &extensions);
+	static std::vector<Device> enumerateDevices(Surface& surface, const vk::PhysicalDeviceFeatures &features, const std::vector<const char*> &extensions);
 	Device(vk::PhysicalDevice, vk::UniqueDevice&, Surface&);
 
-	SwapChain createSwapChain(const Format&, size_t framebufferCount, SwapChainPresentMode);
+
+	std::unique_ptr<ISwapchain> createSwapChain(Format, size_t framebufferCount, PresentMode preferredPresentMode) override;
+	std::unique_ptr<SwapChain> createSwapChain(const vk::Format & format, size_t framebufferCount, vk::PresentModeKHR preferredPresentMode);
 	GraphicsQueue createGraphicsQueue(SwapChain&) const;
 	CommandBuffer createCommandBuffer(Usage) const;
 	SubCommandBuffer createSubCommandBuffer(Usage);
-	RenderPass createRenderPass(const ShaderProgram&, uint32_t width, uint32_t height, Format, bool enableDepthBuffer) const;
-	Sampler createTextureSampler3D(Filter magFil, Filter minFil, TextureWrapMode modeU, TextureWrapMode modeV, TextureWrapMode modeW);
-	Sampler createTextureSampler2D(Filter magFil, Filter minFil, TextureWrapMode modeU, TextureWrapMode modeV);
-	Sampler createTextureSampler1D(Filter magFil, Filter minFil, TextureWrapMode modeU);
+	RenderPass createRenderPass(const ShaderProgram&, uint32_t width, uint32_t height, vk::Format, bool enableDepthBuffer) const;
+	std::unique_ptr<ISampler> createTextureSampler1D(Filter magFil, Filter minFil, TextureWrapMode modeU);
+	std::unique_ptr<ISampler> createTextureSampler2D(Filter magFil, Filter minFil, TextureWrapMode modeU, TextureWrapMode modeV);
+	std::unique_ptr<ISampler> createTextureSampler3D(Filter magFil, Filter minFil, TextureWrapMode modeU, TextureWrapMode modeV, TextureWrapMode modeW);
+	std::unique_ptr<IImageResource> createTexture2D(size_t width, size_t height, Format) override;
 	//drop the other create textureSampler idea below?
 	void createTextureSampler(Sampler sampler);
 
-	ImageResource createTexture2D(uint32_t width, uint32_t height, Format format);
+	ImageResource createTexture2D(uint32_t width, uint32_t height, vk::Format format);
 
-	ShaderProgram createShaderProgram(VertexShader&, FragmentShader&);
+	ShaderProgram createShaderProgram(IVertexShader&, IFragmentShader&);
+	std::unique_ptr<IBufferResource> createUniformBuffer(size_t size) override;
 
-	template<typename T>
-	BufferResource createVertexBuffer(const std::vector<T>& vertexData) const;
-	template<typename T>
-	BufferResource createIndexBuffer(const std::vector<T>& indexData) const;
-	template<size_t N>
-	BufferResource createUniformBuffer() const;
 	void waitIdle();
+protected:
+	std::unique_ptr<IBufferResource> createVertexBufferInternal(std::vector<char>& data) override;
+	std::unique_ptr<IBufferResource> createIndexBufferInternal(std::vector<char>& data) override;
 private:
 	struct SwapChainSupportDetails
 	{
@@ -74,8 +75,8 @@ private:
 	static SwapChainSupportDetails querySwapChainSupport(const vk::PhysicalDevice& , Surface& ) ;
 	
 	static QueueFamilyIndices findQueueFamilies(const vk::PhysicalDevice& device, Surface& surface);
-	static vk::SurfaceFormatKHR chooseSwapSurfaceFormat(Format,  std::vector<vk::SurfaceFormatKHR>& availableFormats);
-	static vk::PresentModeKHR chooseSwapPresentMode(SwapChainPresentMode&, const std::vector<vk::PresentModeKHR>& availablePresentModes);
+	static vk::SurfaceFormatKHR chooseSwapSurfaceFormat(vk::Format,  std::vector<vk::SurfaceFormatKHR>& availableFormats);
+	static vk::PresentModeKHR chooseSwapPresentMode(vk::PresentModeKHR, const std::vector<vk::PresentModeKHR>& availablePresentModes);
 	static vk::Extent2D chooseSwapChainExtent(uint32_t width, uint32_t height, const vk::SurfaceCapabilitiesKHR& availableCapabilities);
 	static std::vector<vk::DeviceQueueCreateInfo> createQueueCreateInfos(QueueFamilyIndices, const float&);
 	vk::SwapchainCreateInfoKHR createSwapChainCreateInfo(Surface&, const size_t& framebufferCount, const vk::SurfaceFormatKHR&, const vk::Extent2D&, const vk::SurfaceCapabilitiesKHR&, const vk::PresentModeKHR&) const;
@@ -83,7 +84,7 @@ private:
 	static bool isPhysicalDeviceSuitable(const vk::PhysicalDevice& physicalDevice, Surface&, const std::vector<const char*> &);
 	static bool areExtensionsSupported(const vk::PhysicalDevice& physicalDevice, const std::vector<const char*> &extensions);
 
-	vk::UniqueRenderPass createVkRenderpass(Format, bool withDepthBuffer = true) const;
+	vk::UniqueRenderPass createVkRenderpass(vk::Format, bool withDepthBuffer = true) const;
 
 	vk::PhysicalDevice m_vkPhysicalDevice;
 	vk::UniqueDevice m_vkDevice;
@@ -96,49 +97,3 @@ private:
 	friend class ImageResource;
 	friend class GraphicsQueue;
 };
-
-template<typename T>
-BufferResource Device::createVertexBuffer(const std::vector<T>& vertexData) const
-{
-	size_t bufferSize = sizeof(T) * vertexData.size();
-	auto buffer = BufferResource::createBufferResource(
-		m_vkPhysicalDevice,
-		m_vkDevice,
-		bufferSize,
-		vk::BufferUsageFlagBits::eVertexBuffer,
-		// TODO: Convert to device local memory when command pool and buffers are ready
-		vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
-
-	auto data = reinterpret_cast<char const *>(vertexData.data());
-	buffer.upload(std::vector<char>(data, data + bufferSize));
-	return buffer;
-}
-
-template<typename T>
-BufferResource Device::createIndexBuffer(const std::vector<T>& indexData) const
-{
-	size_t bufferSize = sizeof(T) * indexData.size();
-	auto buffer = BufferResource::createBufferResource(
-		m_vkPhysicalDevice,
-		m_vkDevice,
-		bufferSize,
-		vk::BufferUsageFlagBits::eIndexBuffer,
-		// TODO: Convert to device local memory when command pool and buffers are ready
-		vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
-
-	auto data = reinterpret_cast<char const *>(indexData.data());
-	//TODO: should the creation of buffers also upload right away?
-	buffer.upload(std::vector<char>(data, data + bufferSize));
-	return std::move(buffer);
-}
-
-template<size_t N>
-BufferResource Device::createUniformBuffer() const
-{
-	return BufferResource::createBufferResource(
-		m_vkPhysicalDevice,
-		m_vkDevice,
-		N,
-		vk::BufferUsageFlagBits::eUniformBuffer,
-		vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
-}

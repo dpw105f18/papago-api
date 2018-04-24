@@ -8,14 +8,6 @@ Surface::operator vk::SurfaceKHR&()
 	return *m_vkSurfaceKHR;
 }
 
-uint32_t Surface::getWidth() const {
-	return m_width;
-}
-
-uint32_t Surface::getHeight() const {
-	return m_height;
-}
-
 #ifdef PAPAGO_USE_VALIDATION_LAYERS
 #define GET_INSTANCE_PROCEDURE(instance, name) (PFN_##name)vkGetInstanceProcAddr(instance, #name);
 
@@ -98,7 +90,12 @@ void Surface::checkInstanceLayers(const std::vector<const char*>& requiredLayers
 	}
 }
 
-Surface::Surface(uint32_t width, uint32_t height, HWND hwnd) : m_width(width), m_height(height)
+std::unique_ptr<ISurface> ISurface::createWin32Surface(size_t width, size_t height, HWND window)
+{
+	return std::make_unique<Surface>(width, height, window);
+}
+
+Surface::Surface(uint32_t width, uint32_t height, HWND hwnd) : ISurface(width, height)
 {
 	vk::ApplicationInfo appInfo("PapaGo-api", VK_MAKE_VERSION(1, 0, 0), "No Engine", VK_MAKE_VERSION(1, 0, 0), VK_API_VERSION_1_0);
 

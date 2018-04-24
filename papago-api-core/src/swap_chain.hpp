@@ -1,15 +1,17 @@
 #pragma once
-#include "standard_header.hpp"
 #include "device.hpp"
 #include "image_resource.hpp"
+#include "iswapchain.hpp"
 
-class SwapChain {
+class SwapChain : public ISwapchain {
 public:
+	SwapChain(vk::UniqueDevice&, vk::UniqueSwapchainKHR&, std::vector<ImageResource>& colorResources, std::vector<ImageResource>& depthResources, vk::Extent2D);
+	
 	explicit operator vk::SwapchainKHR&();
 
 	uint32_t getWidth() const;
 	uint32_t getHeight() const;
-	Format getFormat() const;
+	vk::Format getFormat() const;
 
 private:
 	vk::UniqueSwapchainKHR m_vkSwapChain;
@@ -20,7 +22,6 @@ private:
 	vk::Extent2D m_vkExtent;
 	std::vector<vk::UniqueFence> m_vkFences;
 
-	SwapChain(vk::UniqueDevice&, vk::UniqueSwapchainKHR&, std::vector<ImageResource>& colorResources, std::vector<ImageResource>& depthResources, vk::Extent2D);
 	
 	vk::UniqueRenderPass createDummyRenderPass(const vk::UniqueDevice& device); //<-- TODO: use proper RenderPass
 

@@ -1,6 +1,5 @@
 #pragma once
 #include <vector>
-#include "standard_header.hpp"
 
 class Resource
 {
@@ -10,8 +9,6 @@ public:
 
 	virtual ~Resource() = default;
 	virtual void destroy() = 0;
-	virtual void upload(const std::vector<char>& data);
-	virtual std::vector<char> download();
 	bool inUse();
 protected:
 	explicit Resource(const vk::UniqueDevice& device);

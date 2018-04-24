@@ -1,6 +1,4 @@
 #pragma once
-#include "standard_header.hpp"
-#include "parser.hpp"
 #include <string>
 #include <map>
 
@@ -14,7 +12,7 @@ class Shader {
 public:
 
 protected:
-	Shader(const std::string& filePath, const std::string entryPoint);
+	Shader(const std::vector<char>& bytecode, const std::string entryPoint);
 	const std::string m_entryPoint;
 	std::vector<char> m_code;
 	std::map<std::string, Binding> m_bindings;
@@ -22,7 +20,5 @@ protected:
 	std::vector<Binding> getBindings() const;
 	bool bindingExists(const std::string& name);
 private:
-	static std::vector<char> readFile(const std::string& filePath);	//TODO: move to a Parser-stub
-
 	friend class CommandBuffer;
 };

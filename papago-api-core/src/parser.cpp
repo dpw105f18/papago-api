@@ -8,93 +8,150 @@ Parser::Parser(const std::string & compilePath): m_compilePath(compilePath)
 {
 }
 
-VertexShader Parser::compileVertexShader(const std::string &filePath, const std::string &entryPoint)
+#define STUPID_VERTEX_SHADER_HASH 0xa709c4e0b8ab6894
+#define COLOR_VERTEX_SHADER_HASH 0xf454a08ee86af30a
+
+std::unique_ptr<IVertexShader> Parser::compileVertexShader(const std::string &source, const std::string &entryPoint)
 {
-	auto spvFile = compile(filePath);
+	auto byte_code = compile(source, "vert");
+	auto result = std::make_unique<VertexShader>(byte_code, entryPoint);
+	std::hash<std::string> hashFun;
+	auto hash = hashFun(source);
 
 
-	auto result = VertexShader(spvFile, entryPoint);
-
-	//TODO: set binding information on [result]
-
-	if (filePath == "shader/colorVert.vert") {
-
-		result.m_input.push_back({ 0, vk::Format::eR32G32B32Sfloat });	//<-- position
+	if (hash == STUPID_VERTEX_SHADER_HASH) {
+		result->m_input.push_back({ 0, vk::Format::eR32G32B32Sfloat });	//<-- position
 	}
-	else if(filePath == std::string("shader/stupidVert.vert")){
-		
-		result.m_input.push_back({ 0, vk::Format::eR32G32B32Sfloat });	//<-- position
-		result.m_input.push_back({ sizeof(float) * 3, vk::Format::eR32G32Sfloat }); //<-- uv
+	else if(hash == COLOR_VERTEX_SHADER_HASH){
+		result->m_input.push_back({ 0, vk::Format::eR32G32B32Sfloat });	//<-- position
+		result->m_input.push_back({ sizeof(float) * 3, vk::Format::eR32G32Sfloat }); //<-- uv
 	}
 	return result;
 }
 
-FragmentShader Parser::compileFragmentShader(const std::string & filePath, const std::string & entryPoint)
+#define STUPID_FRAGMENT_SHADER_HASH 0xfc0838ff5f18bfc2
+#define COLOR_FRAGMENT_SHADER_HASH 0xb810ed8016ecd8d6
+
+std::unique_ptr<IFragmentShader> Parser::compileFragmentShader(const std::string& source, const std::string& entryPoint)
 {
-	auto spvFile = compile(filePath);
-	auto result = FragmentShader(spvFile, entryPoint);
+	auto byte_code = compile(source, "frag");
+	auto result = std::make_unique<FragmentShader>(byte_code, entryPoint);
 	
+	std::hash<std::string> hashFun;
+	auto hash = hashFun(source);
+
 	//TODO: set binding information on [result]
 	
 	// For texture frag
 	//result.m_bindings.insert({ "texSampler", {0, vk::DescriptorType::eCombinedImageSampler} });
 	
 	// For uniform frag
-	if (filePath == std::string("shader/colorFrag.frag")) {
+	if (hash == COLOR_FRAGMENT_SHADER_HASH) {
 	
 	}
-	else if(filePath == std::string("shader/stupidFrag.frag")){
-		result.m_bindings.insert({ { "sam" },{ 0, vk::DescriptorType::eCombinedImageSampler } });
-		result.m_bindings.insert({ { "val" },{ 1, vk::DescriptorType::eUniformBuffer } });
+	else if(hash == STUPID_FRAGMENT_SHADER_HASH){
+		result->m_bindings.insert({ { "sam" },{ 0, vk::DescriptorType::eCombinedImageSampler } });
+		result->m_bindings.insert({ { "val" },{ 1, vk::DescriptorType::eUniformBuffer } });
 	}
 	
 	return result;
 }
 
-std::string Parser::compile(const std::string & filePath)
+std::vector<char> Parser::compile(const std::string& source, const std::string& shaderType)
 {
-	auto pathIndex = filePath.find_last_of('/');
-	auto spirVPath = filePath.substr(0, pathIndex);
+	auto arg = std::string(" --stdin -S ") + shaderType
+		+ std::string(" -V -o ") + std::string(".\\temp.spv");
 
-	auto fileIndex = filePath.find_last_of('.');
-	auto fileName = filePath.substr(pathIndex, fileIndex - pathIndex);
-	// '/' is already included in the spirVPath and thus is not needed here
-	auto spvFile = spirVPath + fileName + ".spv";
+	// Create a pipe between the handles 'read' and 'write', so that anything 
+	// written to 'write' can be read by 'read'.
+	HANDLE stdin_read, stdin_write, stdout_read, stdout_write;
 
-	//TODO: append stage to spv filename (so test.vert and test.frag => testVert.spv and testFrag.spv). -AM.
-	// Is here or else c_str will point to junk
-	auto arg = std::string(" -V ")	//<-- compile using Vulkan semantics
-		+ std::string("-o ") + std::string("\"") + spvFile + std::string("\" ") //<-- output file = fileName.spv (in same folder as fileName.vert)
-		+ std::string("\"") + filePath + "\" ";	//<-- fileName.vert file
+	SECURITY_ATTRIBUTES security_attributes = {};
+	security_attributes.bInheritHandle = true;
+	security_attributes.nLength = sizeof(SECURITY_ATTRIBUTES);
+	security_attributes.lpSecurityDescriptor = nullptr;
 
-	auto commandLineArguments = LPTSTR(arg.c_str());
+	if (!CreatePipe(&stdin_read, &stdin_write, &security_attributes, 0))
+		PAPAGO_ERROR("Could not create pipe.");
+	if (!SetHandleInformation(stdin_write, HANDLE_FLAG_INHERIT, 0))
+		PAPAGO_ERROR("Stdout SetHandleInformation");
 
-	STARTUPINFO startUpInfo;
+	if (!CreatePipe(&stdout_read, &stdout_write, &security_attributes, 0))
+		PAPAGO_ERROR("Could not create pipe.");
+	if (!SetHandleInformation(stdout_read, HANDLE_FLAG_INHERIT, 0))
+		PAPAGO_ERROR("Stdout SetHandleInformation");
+
+	// Tell the process to use the 'read' handle as its stdin
+	STARTUPINFO startUpInfo = {};
+	startUpInfo.cb = sizeof(startUpInfo);
+	startUpInfo.hStdInput = stdin_read;
+	startUpInfo.hStdOutput = stdout_write;
+	startUpInfo.hStdError = stdout_write;
+	startUpInfo.dwFlags |= STARTF_USESTDHANDLES;
+
 	PROCESS_INFORMATION processInfo;
 
-	ZeroMemory(&startUpInfo, sizeof(startUpInfo));
-	startUpInfo.cb = sizeof(startUpInfo);
-	ZeroMemory(&processInfo, sizeof(processInfo));
-
-	auto success = CreateProcess(m_compilePath.c_str(),
-		commandLineArguments,
-		NULL,
-		NULL,
-		FALSE,
+	if (!CreateProcess(m_compilePath.c_str(),
+		&arg[0],
+		nullptr,
+		nullptr,
+		true,
 		0,
-		NULL,
-		NULL,
+		nullptr,
+		nullptr,
 		&startUpInfo,
-		&processInfo);
-
-	if (!success) {
-		PAPAGO_ERROR("Could not start compilation process."); //TODO:: Close handle on error? - Brandborg
-	}
-	else {
-		WaitForSingleObject(processInfo.hThread, INFINITE);
+		&processInfo))
+	{
 		CloseHandle(processInfo.hProcess);
 		CloseHandle(processInfo.hThread);
+		DeleteFile(".\\temp.spv");
+		PAPAGO_ERROR("Could not start compilation process.");
 	}
 
-	return spvFile;
+	DWORD bytesWritten;
+	WriteFile(stdin_write, source.c_str(), source.size(), &bytesWritten, nullptr);
+	// Write end of input token to handle
+	WriteFile(stdin_write, "\n\x1a", 2, &bytesWritten, nullptr);
+
+	WaitForSingleObject(processInfo.hThread, 1000);
+
+	DWORD exit_code;
+	if (!GetExitCodeProcess(processInfo.hProcess, &exit_code))
+		PAPAGO_ERROR("Failed to get exit code from child process.");
+
+	if (exit_code != EXIT_SUCCESS) {
+		char buffer[2048];
+		DWORD bytes_read;
+		ReadFile(stdout_read, &buffer, 2048, &bytes_read, nullptr);
+
+		PAPAGO_ERROR("Validator could not validate input.");
+	}
+
+	CloseHandle(processInfo.hProcess);
+	CloseHandle(processInfo.hThread);
+	CloseHandle(stdin_read);
+	CloseHandle(stdin_write);
+	CloseHandle(stdout_read);
+	CloseHandle(stdout_write);
+
+	auto file = CreateFile(
+		".\\temp.spv",
+		GENERIC_READ,
+		FILE_SHARE_READ,
+		nullptr,
+		OPEN_EXISTING,
+		FILE_ATTRIBUTE_NORMAL,
+		nullptr
+	);
+	if (file == INVALID_HANDLE_VALUE)
+		PAPAGO_ERROR("Could not open file.");
+
+	auto size = GetFileSize(file, nullptr);
+
+	std::vector<char> buffer(size);
+	ReadFile(file, buffer.data(), size, nullptr, nullptr);
+
+	CloseHandle(file);
+	DeleteFile(".\\temp.spv");
+	return buffer;
 }

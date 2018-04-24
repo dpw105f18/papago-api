@@ -1,8 +1,9 @@
 #pragma once
 #include "device.hpp"
 #include "api_enums.hpp"
+#include "isampler.hpp"
 
-class Sampler
+class Sampler : public ISampler
 {
 public:
 
@@ -10,11 +11,11 @@ public:
 
 	explicit operator vk::Sampler&();
 
-	Sampler& setMagFilter(Filter filter);
-	Sampler& setMinFilter(Filter filter);
-	Sampler& setTextureWrapU(TextureWrapMode mode);
-	Sampler& setTextureWrapV(TextureWrapMode mode);
-	Sampler& setTextureWrapW(TextureWrapMode mode);
+	Sampler& setMagFilter(vk::Filter filter);
+	Sampler& setMinFilter(vk::Filter filter);
+	Sampler& setTextureWrapU(vk::SamplerAddressMode mode);
+	Sampler& setTextureWrapV(vk::SamplerAddressMode mode);
+	Sampler& setTextureWrapW(vk::SamplerAddressMode mode);
 
 private:
 	friend class Device;

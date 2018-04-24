@@ -26,26 +26,26 @@
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v141</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v141</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
@@ -85,8 +85,8 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ExecutablePath>$(ProjectDir)bin\$(Configuration)\$(Platform);$(ExecutablePath)</ExecutablePath>
-    <OutDir>$(ProjectDir)bin\$(Configuration)\$(Platform)\</OutDir>
-    <IntDir>$(ProjectDir)obj\$(Configuration)\$(Platform)\</IntDir>
+    <OutDir>$(SolutionDir)bin\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(ProjectDir)bin\$(Platform)\$(Configuration)\</IntDir>
     <IncludePath>$(ProjectDir)includes;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -160,14 +160,22 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="src\api_enums.hpp" />
+    <ClInclude Include="include\common.hpp" />
+    <ClInclude Include="include\ibuffer_resource.hpp" />
+    <ClInclude Include="include\idevice.hpp" />
+    <ClInclude Include="include\iimage_resource.hpp" />
+    <ClInclude Include="include\isampler.hpp" />
+    <ClInclude Include="include\ishader.hpp" />
+    <ClInclude Include="include\isurface.hpp" />
+    <ClInclude Include="include\iswapchain.hpp" />
+    <ClInclude Include="include\api_enums.hpp" />
     <ClInclude Include="src\buffer_resource.hpp" />
     <ClInclude Include="src\command_buffer.hpp" />
     <ClInclude Include="src\device.hpp" />
     <ClInclude Include="src\fragment_shader.hpp" />
     <ClInclude Include="src\graphics_queue.hpp" />
     <ClInclude Include="src\image_resource.hpp" />
-    <ClInclude Include="src\parser.hpp" />
+    <ClInclude Include="include\parser.hpp" />
     <ClInclude Include="src\render_pass.hpp" />
     <ClInclude Include="src\resource.hpp" />
     <ClInclude Include="src\sampler.hpp" />
@@ -186,7 +194,6 @@
     <ClCompile Include="src\fragment_shader.cpp" />
     <ClCompile Include="src\graphics_queue.cpp" />
     <ClCompile Include="src\image_resource.cpp" />
-    <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\parser.cpp" />
     <ClCompile Include="src\sampler.cpp" />
     <ClCompile Include="src\render_pass.cpp" />

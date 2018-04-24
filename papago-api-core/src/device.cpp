@@ -11,9 +11,31 @@
 #include "shader_program.h"
 #include <set>
 
+std::vector<std::unique_ptr<IDevice>> IDevice::enumerateDevices(ISurface & surface, const Features & features, const Extensions & extensions)
+{
+	// TODO: Support more features and extensions
+	vk::PhysicalDeviceFeatures vkFeatures = {};
+	vkFeatures.samplerAnisotropy = features.samplerAnisotropy;
+
+	std::vector<const char *> vkExtensions;
+	if (extensions.samplerMirrorClampToEdge) {
+		vkExtensions.push_back(VK_KHR_SAMPLER_MIRROR_CLAMP_TO_EDGE_EXTENSION_NAME);
+	}
+	if (extensions.swapchain) {
+		// Should this be forced on by default ?? - CW 2018-04-18
+		vkExtensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+	}
+	auto devices = Device::enumerateDevices((Surface&)surface, vkFeatures, vkExtensions);
+	std::vector<std::unique_ptr<IDevice>> result;
+	result.reserve(devices.size());
+	for (auto& device : devices) {
+		result.push_back(std::make_unique<Device>(std::move(device)));
+	}
+	return result;
+}
 
 //Provides a vector of devices with the given [features] and [extensions] enabled
-std::vector<Device> Device::enumerateDevices(Surface& surface, const Features &features, const std::vector<const char*> &extensions)
+std::vector<Device> Device::enumerateDevices(Surface& surface, const vk::PhysicalDeviceFeatures &features, const std::vector<const char*> &extensions)
 {
 	std::vector<const char*> enabledLayers;
 #ifdef PAPAGO_USE_VALIDATION_LAYERS
@@ -164,7 +186,7 @@ bool Device::areExtensionsSupported(const vk::PhysicalDevice & physicalDevice, c
 	return requiredExtensions.empty();
 }
 
-vk::UniqueRenderPass Device::createVkRenderpass(Format format, bool withDepthBuffer) const
+vk::UniqueRenderPass Device::createVkRenderpass(vk::Format format, bool withDepthBuffer) const
 {
 	vk::AttachmentDescription colorAttachment;
 	colorAttachment.setFormat(format)
@@ -192,7 +214,7 @@ vk::UniqueRenderPass Device::createVkRenderpass(Format format, bool withDepthBuf
 
 		auto format = ImageResource::findSupportedFormat(
 			m_vkPhysicalDevice, 
-			{ Format::eD32SfloatS8Uint, Format::eD24UnormS8Uint }, //TODO: make sure these formats matches the format for Depth/Stencil ImageResources
+			{ vk::Format::eD32SfloatS8Uint, vk::Format::eD24UnormS8Uint }, //TODO: make sure these formats matches the format for Depth/Stencil ImageResources
 			vk::ImageTiling::eOptimal, 
 			vk::FormatFeatureFlagBits::eDepthStencilAttachment
 		);
@@ -231,7 +253,7 @@ vk::UniqueRenderPass Device::createVkRenderpass(Format format, bool withDepthBuf
 }
 
 // framebufferCount is a prefered minimum of buffers in the swapchain
-SwapChain Device::createSwapChain(const Format& format, size_t framebufferCount, SwapChainPresentMode preferredPresentMode)
+std::unique_ptr<SwapChain> Device::createSwapChain(const vk::Format& format, size_t framebufferCount, vk::PresentModeKHR preferredPresentMode)
 {
 	auto details = querySwapChainSupport(m_vkPhysicalDevice, m_surface);
 
@@ -255,9 +277,9 @@ SwapChain Device::createSwapChain(const Format& format, size_t framebufferCount,
 
 	// Get image resources for framebuffers
 	std::vector<ImageResource> colorResources, depthResources;
-	std::vector<Format> formatCandidates = {
-		Format::eD32SfloatS8Uint, 
-		Format::eD24UnormS8Uint
+	std::vector<vk::Format> formatCandidates = {
+		vk::Format::eD32SfloatS8Uint,
+		vk::Format::eD24UnormS8Uint
 	};
 
 	auto resourceExtent = vk::Extent3D(extent.width, extent.height, 1);
@@ -278,7 +300,32 @@ SwapChain Device::createSwapChain(const Format& format, size_t framebufferCount,
 				formatCandidates));
 	}
 
-	return SwapChain(m_vkDevice, swapChain, colorResources, depthResources, extent);
+	return std::make_unique<SwapChain>(m_vkDevice, swapChain, colorResources, depthResources, extent);
+}
+
+std::unique_ptr<ISwapchain> Device::createSwapChain(Format format, size_t framebufferCount, PresentMode preferredPesentMode)
+{
+	vk::Format vkFormat;
+	switch (format)
+	{
+	case Format::eR8G8B8Unorm:
+		vkFormat = vk::Format::eR8G8B8Unorm;
+		break;
+	default:
+		PAPAGO_ERROR("Unknown format");
+		break;
+	}
+	vk::PresentModeKHR vkPreferredPresentMode;
+	switch (preferredPesentMode)
+	{
+	case IDevice::PresentMode::eMailbox:
+		vkPreferredPresentMode = vk::PresentModeKHR::eMailbox;
+		break;
+	default:
+		PAPAGO_ERROR("Unknown presentmode");
+		break;
+	}
+	return createSwapChain(vkFormat, framebufferCount, vkPreferredPresentMode);
 }
 
 GraphicsQueue Device::createGraphicsQueue(SwapChain& swapChain) const
@@ -293,46 +340,6 @@ CommandBuffer Device::createCommandBuffer(Usage usage) const
 	return { m_vkDevice, queueFamilyIndices.graphicsFamily, usage };
 }
 
-Sampler Device::createTextureSampler3D(Filter magFilter, Filter minFilter, TextureWrapMode wrapU, TextureWrapMode wrapV, TextureWrapMode wrapW)
-{
-	//TODO: provide builder-pattern to API user -AM/AB
-	auto& sampler = Sampler(SamplerD::e3D)
-		.setMagFilter(magFilter)
-		.setMinFilter(magFilter)
-		.setTextureWrapU(wrapU)
-		.setTextureWrapV(wrapV)
-		.setTextureWrapW(wrapW);
-
-	sampler.m_vkTextureSampler = m_vkDevice->createSamplerUnique(sampler.m_vkSamplerCreateInfo);
-
-	return std::move(sampler);
-}
-
-Sampler Device::createTextureSampler2D(Filter magFilter, Filter minFilter, TextureWrapMode wrapU, TextureWrapMode wrapV)
-{
-	auto&  sampler = Sampler(SamplerD::e2D)
-		.setMagFilter(magFilter)
-		.setMinFilter(minFilter)
-		.setTextureWrapU(wrapU)
-		.setTextureWrapV(wrapV);
-
-	sampler.m_vkTextureSampler = m_vkDevice->createSamplerUnique(sampler.m_vkSamplerCreateInfo);
-
-	return std::move(sampler);
-}
-
-Sampler Device::createTextureSampler1D(Filter magFilter, Filter minFilter, TextureWrapMode wrapU )
-{
-	auto& sampler = Sampler(SamplerD::e1D)
-		.setMagFilter(magFilter)
-		.setMinFilter(minFilter)
-		.setTextureWrapU(wrapU);
-
-	sampler.m_vkTextureSampler = m_vkDevice->createSamplerUnique(sampler.m_vkSamplerCreateInfo);
-
-	return std::move(sampler);
-}
-
 //TODO: rename? make as public method on sampler? -AM/AB
 void Device::createTextureSampler(Sampler sampler)
 {
@@ -340,7 +347,7 @@ void Device::createTextureSampler(Sampler sampler)
 }
 
 //TODO: remove 2D from method name and let dimension be determined by the (number of) arguments? -AM
-ImageResource Device::createTexture2D(uint32_t width, uint32_t height, Format format )
+ImageResource Device::createTexture2D(uint32_t width, uint32_t height, vk::Format format )
 {
 	vk::Extent3D extent = { width, height, 1 };
 	vk::ImageCreateInfo info;
@@ -360,9 +367,49 @@ ImageResource Device::createTexture2D(uint32_t width, uint32_t height, Format fo
 	return ImageResource(image, *this, vk::ImageAspectFlagBits::eColor, format, extent, memoryRequirements);
 }
 
-ShaderProgram Device::createShaderProgram(VertexShader &vertexShader, FragmentShader &fragmentShader)
+ShaderProgram Device::createShaderProgram(IVertexShader &vertexShader, IFragmentShader &fragmentShader)
 {
-	return ShaderProgram(m_vkDevice, vertexShader, fragmentShader);
+	return ShaderProgram(m_vkDevice, (VertexShader&)vertexShader, (FragmentShader&)fragmentShader);
+}
+
+std::unique_ptr<IBufferResource> Device::createUniformBuffer(size_t size)
+{
+	return BufferResource::createBufferResource(
+		m_vkPhysicalDevice,
+		m_vkDevice,
+		size,
+		vk::BufferUsageFlagBits::eUniformBuffer,
+		vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+}
+
+std::unique_ptr<IBufferResource> Device::createVertexBufferInternal(std::vector<char>& data)
+{
+	size_t bufferSize = data.size();
+	auto buffer = BufferResource::createBufferResource(
+		m_vkPhysicalDevice,
+		m_vkDevice,
+		bufferSize,
+		vk::BufferUsageFlagBits::eVertexBuffer,
+		// TODO: Convert to device local memory when command pool and buffers are ready
+		vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+
+	buffer->upload(data);
+	return buffer;
+}
+
+std::unique_ptr<IBufferResource> Device::createIndexBufferInternal(std::vector<char>& data)
+{
+	size_t bufferSize = data.size();
+	auto buffer = BufferResource::createBufferResource(
+		m_vkPhysicalDevice,
+		m_vkDevice,
+		bufferSize,
+		vk::BufferUsageFlagBits::eIndexBuffer,
+		// TODO: Convert to device local memory when command pool and buffers are ready
+		vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+
+	buffer->upload(data);
+	return buffer;
 }
 
 void Device::waitIdle()
@@ -370,10 +417,66 @@ void Device::waitIdle()
 	m_vkDevice->waitIdle();
 }
 
-RenderPass Device::createRenderPass(const ShaderProgram& program, uint32_t width, uint32_t height, Format format, bool enableDepthBuffer) const
+RenderPass Device::createRenderPass(const ShaderProgram& program, uint32_t width, uint32_t height, vk::Format format, bool enableDepthBuffer) const
 {
 	auto vkPass = createVkRenderpass(format, enableDepthBuffer);
 	return RenderPass(m_vkDevice, vkPass, program, { width, height });
+}
+
+std::unique_ptr<ISampler> Device::createTextureSampler1D(Filter magFilter, Filter minFilter, TextureWrapMode modeU)
+{
+	auto sampler = std::make_unique<Sampler>(SamplerD::e1D);
+	sampler->setMagFilter(to_vulkan_filter(magFilter))
+		.setMinFilter(to_vulkan_filter(minFilter))
+		.setTextureWrapU(to_vulkan_address_mode(modeU));
+
+	sampler->m_vkTextureSampler = m_vkDevice->createSamplerUnique(sampler->m_vkSamplerCreateInfo);
+
+	return sampler;
+}
+
+std::unique_ptr<ISampler> Device::createTextureSampler2D(Filter magFilter, Filter minFilter, TextureWrapMode modeU, TextureWrapMode modeV)
+{
+	auto sampler = std::make_unique<Sampler>(SamplerD::e2D);
+	sampler->setMagFilter(to_vulkan_filter(magFilter))
+		.setMinFilter(to_vulkan_filter(minFilter))
+		.setTextureWrapU(to_vulkan_address_mode(modeU))
+		.setTextureWrapV(to_vulkan_address_mode(modeV));
+
+	sampler->m_vkTextureSampler = m_vkDevice->createSamplerUnique(sampler->m_vkSamplerCreateInfo);
+
+	return sampler;
+}
+
+std::unique_ptr<ISampler> Device::createTextureSampler3D(Filter magFilter, Filter minFilter, TextureWrapMode modeU, TextureWrapMode modeV, TextureWrapMode modeW)
+{
+	auto sampler = std::make_unique<Sampler>(SamplerD::e3D);
+	sampler->setMagFilter(to_vulkan_filter(magFilter))
+		.setMinFilter(to_vulkan_filter(minFilter))
+		.setTextureWrapU(to_vulkan_address_mode(modeU))
+		.setTextureWrapV(to_vulkan_address_mode(modeV))
+		.setTextureWrapW(to_vulkan_address_mode(modeW));
+
+	sampler->m_vkTextureSampler = m_vkDevice->createSamplerUnique(sampler->m_vkSamplerCreateInfo);
+
+	return sampler;
+}
+
+std::unique_ptr<IImageResource> Device::createTexture2D(size_t width, size_t height, Format format)
+{
+	vk::Extent3D extent = { uint32_t(width), uint32_t(height), 1 };
+	vk::ImageCreateInfo info;
+	info.setImageType(vk::ImageType::e2D)
+		.setExtent(extent)
+		.setFormat(to_vulkan_format(format))
+		.setInitialLayout(vk::ImageLayout::eUndefined)
+		.setMipLevels(1)
+		.setArrayLayers(1)
+		.setUsage(vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled);
+
+	auto image = m_vkDevice->createImage(info);
+	auto memoryRequirements = m_vkDevice->getImageMemoryRequirements(image);
+	return std::make_unique<ImageResource>(image, *this, vk::ImageAspectFlagBits::eColor, to_vulkan_format(format), extent, memoryRequirements);
 }
 
 Device::Device(vk::PhysicalDevice physicalDevice, vk::UniqueDevice &device, Surface &surface)
@@ -397,7 +500,7 @@ Device::SwapChainSupportDetails Device::querySwapChainSupport(const vk::Physical
 	return details;
 }
 
-vk::SurfaceFormatKHR Device::chooseSwapSurfaceFormat(Format preferredFormat, std::vector<vk::SurfaceFormatKHR>& availableFormats)
+vk::SurfaceFormatKHR Device::chooseSwapSurfaceFormat(vk::Format preferredFormat, std::vector<vk::SurfaceFormatKHR>& availableFormats)
 {
 	//In the case the surface has no preference
 	if (availableFormats.size() == 1 && availableFormats[0].format == vk::Format::eUndefined) {
@@ -416,7 +519,7 @@ vk::SurfaceFormatKHR Device::chooseSwapSurfaceFormat(Format preferredFormat, std
 	return availableFormats[0];
 }
 
-vk::PresentModeKHR Device::chooseSwapPresentMode(SwapChainPresentMode &preferredPresentMode, const std::vector<vk::PresentModeKHR>& availablePresentModes)
+vk::PresentModeKHR Device::chooseSwapPresentMode(vk::PresentModeKHR preferredPresentMode, const std::vector<vk::PresentModeKHR>& availablePresentModes)
 {
 	// FIFO is guarrenteed to be supported according to the Vulkan Specification
 	auto bestMode = vk::PresentModeKHR::eFifo;

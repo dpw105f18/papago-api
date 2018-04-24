@@ -1,5 +1,4 @@
 #pragma once
-#include "standard_header.hpp"
 #include "api_enums.hpp"
 #include "shader_program.h"
 
