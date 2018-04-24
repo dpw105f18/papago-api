@@ -18,7 +18,9 @@ public:
 
 	// Inherited via Resource
 	void destroy() override;
-
+protected:
+	void internalUpload(const std::vector<char>& data) override;
+	std::vector<char> internalDownload() override;
 private:
 	vk::UniqueBuffer m_vkBuffer;
 	vk::DescriptorBufferInfo m_vkInfo;

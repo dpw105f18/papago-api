@@ -17,6 +17,7 @@ ImageResource::ImageResource(ImageResource&& other) noexcept
 
 ImageResource::~ImageResource()
 {
+	// std::cout << "ImageResource::~ImageResource Called (this: " << this << ")\n";
 	// HACK: If size is zero then memory was externally allocated
 	if (m_size && m_vkImage) {
 		m_vkDevice->destroyImage(m_vkImage);

@@ -186,13 +186,12 @@ int main()
 		auto sampler2D = device->createTextureSampler2D(Filter::eLinear, Filter::eLinear, TextureWrapMode::eMirroredRepeat, TextureWrapMode::eMirrorClampToEdge);
 		auto sampler1D = device->createTextureSampler1D(Filter::eNearest, Filter::eNearest, TextureWrapMode::eRepeat);
 
-		/*
 		auto image = createTexture(*device);
 
-		bigUniform.upload(bigData);
+		bigUniform->upload(bigData);
 
-		auto dlData = bigUniform.download();
-		*/
+		auto dlData = bigUniform->download();
+		
 		auto vertexShader = parser.compileVertexShader(readFile("shader/stupidVert.vert"), "main");
 		vertexShader = parser.compileVertexShader(readFile("shader/colorVert.vert"), "main");
 		auto fragmentShader = parser.compileFragmentShader(readFile("shader/stupidFrag.frag"), "main");

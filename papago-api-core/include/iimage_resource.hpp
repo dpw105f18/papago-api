@@ -3,7 +3,7 @@
 
 class IImageResource {
 public:
-	~IImageResource() = default;
+	virtual ~IImageResource() = default;
 
 	virtual void upload(const std::vector<char>& data) = 0;
 };

@@ -12,6 +12,22 @@ void BufferResource::destroy()
 
 }
 
+void BufferResource::internalUpload(const std::vector<char>& data)
+{
+	auto mappedMemory = m_vkDevice->mapMemory(*m_vkMemory, 0, VK_WHOLE_SIZE);
+	memcpy(mappedMemory, data.data(), data.size());
+	m_vkDevice->unmapMemory(*m_vkMemory);
+}
+
+std::vector<char> BufferResource::internalDownload()
+{
+	std::vector<char> result(m_size);
+	auto mappedMemory = m_vkDevice->mapMemory(*m_vkMemory, 0, VK_WHOLE_SIZE);
+	memcpy(result.data(), mappedMemory, m_size);
+	m_vkDevice->unmapMemory(*m_vkMemory);
+	return result;
+}
+
 std::unique_ptr<BufferResource> BufferResource::createBufferResource(
 	vk::PhysicalDevice		physicalDevice, 
 	const vk::UniqueDevice& device, 

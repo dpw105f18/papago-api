@@ -15,7 +15,7 @@ public:
 
 	void upload(const std::vector<char>& data) override; 
 
-	std::vector<char> download() override;
+	std::vector<char> download();
 
 	uint32_t getWidth() const;
 	uint32_t getHeight() const;

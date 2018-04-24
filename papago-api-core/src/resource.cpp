@@ -9,22 +9,6 @@ Resource::Resource(Resource&& other) noexcept
 {
 }
 
-void Resource::upload(const std::vector<char>& data)
-{
-	auto mappedMemory = m_vkDevice->mapMemory(*m_vkMemory, 0, VK_WHOLE_SIZE);
-	memcpy(mappedMemory, data.data(), data.size());
-	m_vkDevice->unmapMemory(*m_vkMemory);
-}
-
-std::vector<char> Resource::download()
-{
-	std::vector<char> result(m_size);
-	auto mappedMemory = m_vkDevice->mapMemory(*m_vkMemory, 0, VK_WHOLE_SIZE);
-	memcpy(result.data(), mappedMemory, m_size);
-	m_vkDevice->unmapMemory(*m_vkMemory);
-	return result;
-}
-
 bool Resource::inUse()
 {
 	return m_vkFence
