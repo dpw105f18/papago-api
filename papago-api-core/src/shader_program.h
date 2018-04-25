@@ -1,14 +1,15 @@
 #pragma once
+#include "ishader_program.hpp"
 
 class VertexShader;
 class FragmentShader;
 class CommandBuffer;
 
-class ShaderProgram
+class ShaderProgram : public IShaderProgram
 {
 public:
-private:
 	ShaderProgram(const vk::UniqueDevice& device, VertexShader& vertexShader, FragmentShader& fragmentShader);
+private:
 	vk::UniqueShaderModule m_vkVertexModule;
 	vk::UniqueShaderModule m_vkFragmentModule;
 	vk::PipelineShaderStageCreateInfo m_vkVertexStageCreateInfo;

@@ -367,9 +367,9 @@ ImageResource Device::createTexture2D(uint32_t width, uint32_t height, vk::Forma
 	return ImageResource(image, *this, vk::ImageAspectFlagBits::eColor, format, extent, memoryRequirements);
 }
 
-ShaderProgram Device::createShaderProgram(IVertexShader &vertexShader, IFragmentShader &fragmentShader)
+std::unique_ptr<IShaderProgram> Device::createShaderProgram(IVertexShader &vertexShader, IFragmentShader &fragmentShader)
 {
-	return ShaderProgram(m_vkDevice, (VertexShader&)vertexShader, (FragmentShader&)fragmentShader);
+	return std::make_unique<ShaderProgram>(m_vkDevice, (VertexShader&)vertexShader, (FragmentShader&)fragmentShader);
 }
 
 std::unique_ptr<IBufferResource> Device::createUniformBuffer(size_t size)

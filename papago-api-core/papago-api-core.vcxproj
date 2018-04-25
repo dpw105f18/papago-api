@@ -166,6 +166,7 @@
     <ClInclude Include="include\iimage_resource.hpp" />
     <ClInclude Include="include\isampler.hpp" />
     <ClInclude Include="include\ishader.hpp" />
+    <ClInclude Include="include\ishader_program.hpp" />
     <ClInclude Include="include\isurface.hpp" />
     <ClInclude Include="include\iswapchain.hpp" />
     <ClInclude Include="include\api_enums.hpp" />

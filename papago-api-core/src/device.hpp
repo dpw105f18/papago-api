@@ -13,7 +13,7 @@ class Surface;
 class SwapChain;
 class ImageResource;
 class Sampler;
-class ShaderProgram;
+class IShaderProgram;
 
 class Device : public IDevice {
 public:
@@ -36,10 +36,10 @@ public:
 
 	ImageResource createTexture2D(uint32_t width, uint32_t height, vk::Format format);
 
-	ShaderProgram createShaderProgram(IVertexShader&, IFragmentShader&);
+	std::unique_ptr<IShaderProgram> createShaderProgram(IVertexShader&, IFragmentShader&);
 	std::unique_ptr<IBufferResource> createUniformBuffer(size_t size) override;
 
-	void waitIdle();
+	void waitIdle() override;
 protected:
 	std::unique_ptr<IBufferResource> createVertexBufferInternal(std::vector<char>& data) override;
 	std::unique_ptr<IBufferResource> createIndexBufferInternal(std::vector<char>& data) override;
