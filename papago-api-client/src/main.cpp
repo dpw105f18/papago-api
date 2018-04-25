@@ -16,6 +16,7 @@
 #include "iswapchain.hpp"
 #include "iimage_resource.hpp"
 #include "ibuffer_resource.hpp"
+#include "ishader_program.hpp"
 #include "idevice.hpp"
 #include "api_enums.hpp"
 
@@ -196,9 +197,9 @@ int main()
 		vertexShader = parser.compileVertexShader(readFile("shader/colorVert.vert"), "main");
 		auto fragmentShader = parser.compileFragmentShader(readFile("shader/stupidFrag.frag"), "main");
 		fragmentShader = parser.compileFragmentShader(readFile("shader/colorFrag.frag"), "main");
-		/*
-		auto program = device.createShaderProgram(*vertexShader, *fragmentShader);
+		auto program = device->createShaderProgram(*vertexShader, *fragmentShader);
 
+		/*
 		auto renderPass = device.createRenderPass(program, swapChain);
 
 		auto graphicsQueue = device.createGraphicsQueue(swapChain);
@@ -233,8 +234,8 @@ int main()
 				graphicsQueue.Wait();
 			}
 		}
-		device.waitIdle();
 		*/
+		device->waitIdle();
 	}
 	std::cout << "Press enter to continue...";
 	std::cin.ignore();

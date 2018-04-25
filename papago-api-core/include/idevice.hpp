@@ -7,6 +7,9 @@ class ISwapchain;
 class IBufferResource;
 class IImageResource;
 class ISampler;
+class IShaderProgram;
+class IVertexShader;
+class IFragmentShader;
 enum class Filter;
 enum class TextureWrapMode;
 
@@ -38,6 +41,8 @@ public:
 		TextureWrapMode modeV,
 		TextureWrapMode modeW) = 0;
 	virtual std::unique_ptr<IImageResource> createTexture2D(size_t width, size_t height, Format) = 0;
+	virtual std::unique_ptr<IShaderProgram> createShaderProgram(IVertexShader& vertexShader, IFragmentShader& fragmentShader) = 0;
+	virtual void waitIdle() = 0;
 
 	struct Features {
 		bool samplerAnisotropy;
