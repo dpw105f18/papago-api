@@ -17,6 +17,7 @@
 #include "iimage_resource.hpp"
 #include "ibuffer_resource.hpp"
 #include "ishader_program.hpp"
+#include "igraphics_queue.hpp"
 #include "idevice.hpp"
 #include "api_enums.hpp"
 
@@ -200,9 +201,11 @@ int main()
 		auto program = device->createShaderProgram(*vertexShader, *fragmentShader);
 
 		/*
+		auto program = device.createShaderProgram(*vertexShader, *fragmentShader);
 		auto renderPass = device.createRenderPass(program, swapChain);
-
-		auto graphicsQueue = device.createGraphicsQueue(swapChain);
+		*/
+		auto graphicsQueue = device->createGraphicsQueue(*swapChain);
+		/*
 		size_t frameNo = 0;	//<-- for debugging
 
 

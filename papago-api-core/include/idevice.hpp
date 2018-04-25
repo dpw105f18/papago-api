@@ -12,6 +12,7 @@ class IVertexShader;
 class IFragmentShader;
 enum class Filter;
 enum class TextureWrapMode;
+class IGraphicsQueue;
 
 class IDevice {
 public:
@@ -44,6 +45,8 @@ public:
 	virtual std::unique_ptr<IShaderProgram> createShaderProgram(IVertexShader& vertexShader, IFragmentShader& fragmentShader) = 0;
 	virtual void waitIdle() = 0;
 
+	virtual std::unique_ptr<IGraphicsQueue> createGraphicsQueue(ISwapchain&) = 0;
+	
 	struct Features {
 		bool samplerAnisotropy;
 	};

@@ -14,6 +14,7 @@ class SwapChain;
 class ImageResource;
 class Sampler;
 class IShaderProgram;
+class IGraphicsQueue;
 
 class Device : public IDevice {
 public:
@@ -23,7 +24,6 @@ public:
 
 	std::unique_ptr<ISwapchain> createSwapChain(Format, size_t framebufferCount, PresentMode preferredPresentMode) override;
 	std::unique_ptr<SwapChain> createSwapChain(const vk::Format & format, size_t framebufferCount, vk::PresentModeKHR preferredPresentMode);
-	GraphicsQueue createGraphicsQueue(SwapChain&) const;
 	CommandBuffer createCommandBuffer(Usage) const;
 	SubCommandBuffer createSubCommandBuffer(Usage);
 	RenderPass createRenderPass(const ShaderProgram&, uint32_t width, uint32_t height, vk::Format, bool enableDepthBuffer) const;
@@ -38,6 +38,7 @@ public:
 
 	std::unique_ptr<IShaderProgram> createShaderProgram(IVertexShader&, IFragmentShader&);
 	std::unique_ptr<IBufferResource> createUniformBuffer(size_t size) override;
+	std::unique_ptr<IGraphicsQueue> createGraphicsQueue(ISwapchain&) override;
 
 	void waitIdle() override;
 protected:

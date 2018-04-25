@@ -163,6 +163,7 @@
     <ClInclude Include="include\common.hpp" />
     <ClInclude Include="include\ibuffer_resource.hpp" />
     <ClInclude Include="include\idevice.hpp" />
+    <ClInclude Include="include\igraphics_queue.hpp" />
     <ClInclude Include="include\iimage_resource.hpp" />
     <ClInclude Include="include\isampler.hpp" />
     <ClInclude Include="include\ishader.hpp" />
