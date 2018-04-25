@@ -243,8 +243,6 @@ int main()
 		}
 		device.waitIdle();
 		*/
-
-		auto d = "bug";
 	}
 	std::cout << "Press enter to continue...";
 	std::cin.ignore();
