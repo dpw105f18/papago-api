@@ -277,6 +277,12 @@ ImageResource::ImageResource(vk::Image& image, const Device& device, vk::Format 
 	m_device.m_internalCommandBuffer->reset(vk::CommandBufferResetFlagBits::eReleaseResources);
 }
 
+inline bool ImageResource::inUse()
+{
+	return m_vkFence
+		&& m_vkDevice->getFenceStatus(*m_vkFence) == vk::Result::eNotReady;
+}
+
 vk::Format ImageResource::findSupportedFormat(
 	const vk::PhysicalDevice & physicalDevice, 
 	const std::vector<vk::Format>& candidateFormats, 

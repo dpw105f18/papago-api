@@ -11,6 +11,9 @@ class CommandBuffer : public ICommandBuffer, public RecordingCommandBuffer
 public:
 	CommandBuffer(const vk::UniqueDevice& device, int queueFamilyIndex, Usage);
 
+	void record(IRenderPass&, ISwapchain&, size_t frameIndex, std::function<void(RecordingCommandBuffer&)>) override;
+	void record(IRenderPass&, IImageResource&, std::function<void(RecordingCommandBuffer&)>) override;
+
 	//TODO: remove "override"s - place functionality in SubCommandBuffer or redesign relationship. -AM
 	void begin(const RenderPass&);
 	void begin(RenderPass&, SwapChain&, uint32_t imageIndex);	//TODO: <-- remove imageIndex. -AM
@@ -24,9 +27,9 @@ public:
 	void setDepthTest(DepthTest);
 	RecordingCommandBuffer& setUniform(const std::string& uniformName, IBufferResource&) override;
 	RecordingCommandBuffer& setUniform(const std::string&, IImageResource&, ISampler&) override;
-	void setInput(const BufferResource&);
+	RecordingCommandBuffer& setInput(IBufferResource&) override;
+	RecordingCommandBuffer& setIndexBuffer(IBufferResource&) override;
 	void setInterleavedInput(const std::vector<const std::string>&, const Resource&);
-	void setIndexBuffer(const BufferResource&);
 	void drawInstanced(size_t instanceVertexCount, size_t instanceCount, size_t startVertexLocation, size_t startInstanceLocation);
 	RecordingCommandBuffer& drawIndexed(size_t indexCount, size_t instanceCount, size_t firstIndex, size_t vertexOffset, size_t firstInstance) override;
 	void setOutput(const std::string&, ImageResource&);

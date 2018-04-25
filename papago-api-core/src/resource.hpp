@@ -9,7 +9,6 @@ public:
 
 	virtual ~Resource() = default;
 	virtual void destroy() = 0;
-	bool inUse();
 protected:
 	explicit Resource(const vk::UniqueDevice& device);
 

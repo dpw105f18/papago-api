@@ -9,12 +9,6 @@ Resource::Resource(Resource&& other) noexcept
 {
 }
 
-bool Resource::inUse()
-{
-	return m_vkFence
-		&& m_vkDevice->getFenceStatus(*m_vkFence) == vk::Result::eNotReady;
-}
-
 Resource::Resource(const vk::UniqueDevice& device) 
 	: m_vkMemory(nullptr)
 	, m_vkDevice(device)

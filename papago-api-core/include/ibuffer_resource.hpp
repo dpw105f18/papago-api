@@ -9,6 +9,8 @@ public:
 
 	template<typename T = char>
 	std::vector<T> download();
+
+	virtual bool inUse() = 0;
 protected:
 	virtual void internalUpload(const std::vector<char>& data) = 0;
 	virtual std::vector<char> internalDownload() = 0;

@@ -28,6 +28,20 @@ CommandBuffer::CommandBuffer(const vk::UniqueDevice &device, int queueFamilyInde
 	m_vkCommandBuffer = std::move(device->allocateCommandBuffersUnique(allocateInfo)[0]);	//TODO: remove "[0]"-hack. -AM
 }
 
+void CommandBuffer::record(IRenderPass & renderPass, ISwapchain & swapchain, size_t frameIndex, std::function<void(RecordingCommandBuffer&)> func)
+{
+	begin((RenderPass&)renderPass, (SwapChain&)swapchain, frameIndex);
+	func(*this);
+	end();
+}
+
+void CommandBuffer::record(IRenderPass & renderPass, IImageResource & target, std::function<void(RecordingCommandBuffer&)> func)
+{
+	begin((RenderPass&)renderPass, (ImageResource&)target);
+	func(*this);
+	end();
+}
+
 long CommandBuffer::getBinding(const ShaderProgram & program, const std::string& name)
 {
 	long binding = -1;
@@ -136,13 +150,18 @@ RecordingCommandBuffer& CommandBuffer::setUniform(const std::string & name, IIma
 	m_vkCommandBuffer->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *m_renderPassPtr->m_vkPipelineLayout, 0, { *m_renderPassPtr->m_vkDescriptorSet }, { });
 
 	m_resourcesInUse.emplace(&i);
+	return *this;
 }
 
-void CommandBuffer::setInput(const BufferResource& buffer)
+RecordingCommandBuffer& CommandBuffer::setInput(IBufferResource& buffer)
 {
 	//TODO: find a more general way to fix offsets
 	//TODO: make it work with m_vkCommandBuffer->bindVertexBuffers(...);
-	m_vkCommandBuffer->bindVertexBuffers(0, { *buffer.m_vkBuffer }, { 0 });
+	m_vkCommandBuffer->bindVertexBuffers(
+		0, 
+		{ *((BufferResource&)buffer).m_vkBuffer }, 
+		{ 0 });
+	return *this;
 }
 
 void CommandBuffer::end()
@@ -152,10 +171,14 @@ void CommandBuffer::end()
 	m_vkCommandBuffer->end();
 }
 
-void CommandBuffer::setIndexBuffer(const BufferResource &indexBuffer)
+RecordingCommandBuffer& CommandBuffer::setIndexBuffer(IBufferResource &indexBuffer)
 {
 	// TODO: Retrieve wheter uint16 or uint32 is used for index buffer from somewhere - CW 2018-04-13
-	m_vkCommandBuffer->bindIndexBuffer(*indexBuffer.m_vkBuffer, 0, vk::IndexType::eUint16);
+	m_vkCommandBuffer->bindIndexBuffer(
+		*((BufferResource &)indexBuffer).m_vkBuffer, 
+		0, 
+		vk::IndexType::eUint16);
+	return *this;
 }
 
 void CommandBuffer::drawInstanced(size_t instanceVertexCount, size_t instanceCount, size_t startVertexLocation, size_t startInstanceLocation)
@@ -188,4 +211,5 @@ RecordingCommandBuffer& CommandBuffer::setUniform(const std::string & uniformNam
 RecordingCommandBuffer& CommandBuffer::drawIndexed(size_t indexCount, size_t instanceCount, size_t firstIndex, size_t vertexOffset, size_t firstInstance)
 {
 	m_vkCommandBuffer->drawIndexed(indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
+	return *this;
 }

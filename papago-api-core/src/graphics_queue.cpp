@@ -4,7 +4,7 @@
 #include "device.hpp"
 #include <iterator>
 
-void GraphicsQueue::submitCommands(std::vector<CommandBuffer>& commandBuffers)
+void GraphicsQueue::submitCommands(const std::vector<std::reference_wrapper<ICommandBuffer>>& commandBuffers)
 {
 	m_vkGraphicsQueue.waitIdle();
 	std::vector<vk::Semaphore> semaphores = { *m_vkRenderFinishSemaphore};
@@ -14,7 +14,7 @@ void GraphicsQueue::submitCommands(std::vector<CommandBuffer>& commandBuffers)
 	vkCommandBuffers.reserve(commandBuffers.size());
 
 	for (auto& commandBuffer : commandBuffers) {
-		vkCommandBuffers.emplace_back(static_cast<vk::CommandBuffer>(commandBuffer));
+		vkCommandBuffers.emplace_back(static_cast<vk::CommandBuffer>((CommandBuffer&)commandBuffer.get()));
 	}
 
 	vk::SubmitInfo submitInfo = {};
@@ -31,11 +31,12 @@ void GraphicsQueue::submitCommands(std::vector<CommandBuffer>& commandBuffers)
 
 	//TODO: Test if this works with several command buffers using the same resources. - Brandborg
 	for (auto& cmd : commandBuffers) {
+		CommandBuffer& commandBuffer = (CommandBuffer&)cmd.get();
 		std::merge(																	// Merge ..
 			ITERATE(m_submittedResources),											// .. this ..
-			ITERATE(cmd.m_resourcesInUse),											// .. and this ..
+			ITERATE(commandBuffer.m_resourcesInUse),								// .. and this ..
 			std::inserter(m_submittedResources, m_submittedResources.begin()));		// .. into that
-		cmd.m_resourcesInUse.clear();
+		commandBuffer.m_resourcesInUse.clear();
 	}
 
 	for (auto& resource : m_submittedResources) {
@@ -98,7 +99,7 @@ void GraphicsQueue::present()
 }
 
 //TODO: switch getCurrentFrameIndex and getNextFrameIndex back. -AM
-uint32_t GraphicsQueue::getNextFrameIndex() {
+size_t GraphicsQueue::getNextFrameIndex() {
 	
 	//TODO: Make sure that we handle the case, where framebuffer is not ready - Brandborg
 	auto result = m_device.m_vkDevice->acquireNextImageKHR(static_cast<vk::SwapchainKHR>(m_swapChain), 0, *m_vkImageAvailableSemaphore, vk::Fence());

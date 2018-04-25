@@ -164,9 +164,12 @@
     <ClInclude Include="include\ibuffer_resource.hpp" />
     <ClInclude Include="include\icommand_buffer.hpp" />
     <ClInclude Include="include\idevice.hpp" />
+    <ClInclude Include="include\igraphics_queue.hpp" />
     <ClInclude Include="include\iimage_resource.hpp" />
+    <ClInclude Include="include\irender_pass.hpp" />
     <ClInclude Include="include\isampler.hpp" />
     <ClInclude Include="include\ishader.hpp" />
+    <ClInclude Include="include\ishader_program.hpp" />
     <ClInclude Include="include\isurface.hpp" />
     <ClInclude Include="include\iswapchain.hpp" />
     <ClInclude Include="include\api_enums.hpp" />

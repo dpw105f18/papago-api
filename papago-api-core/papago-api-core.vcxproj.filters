@@ -93,7 +93,16 @@
     <ClInclude Include="include\iimage_resource.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\ishader_program.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\igraphics_queue.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="include\icommand_buffer.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\irender_pass.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -36,6 +36,8 @@ public:
 		const Device&, 
 		vk::Format,
 		vk::Extent3D);
+
+	bool inUse() override;
 private:
 	static ImageResource createDepthResource(
 		const Device& device,

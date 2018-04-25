@@ -13,7 +13,8 @@ class Surface;
 class SwapChain;
 class ImageResource;
 class Sampler;
-class ShaderProgram;
+class IShaderProgram;
+class IGraphicsQueue;
 
 class Device : public IDevice {
 public:
@@ -23,8 +24,11 @@ public:
 
 	std::unique_ptr<ISwapchain> createSwapChain(Format, size_t framebufferCount, PresentMode preferredPresentMode) override;
 	std::unique_ptr<SwapChain> createSwapChain(const vk::Format & format, size_t framebufferCount, vk::PresentModeKHR preferredPresentMode);
+	CommandBuffer createCommandBuffer(Usage) const;
 	GraphicsQueue createGraphicsQueue(SwapChain&) const;
 	SubCommandBuffer createSubCommandBuffer(Usage);
+	std::unique_ptr<IRenderPass> createRenderPass(IShaderProgram&, ISwapchain&, bool) override;
+	std::unique_ptr<IRenderPass> createRenderPass(IShaderProgram&, size_t width, size_t height, Format, bool) override;
 	RenderPass createRenderPass(const ShaderProgram&, uint32_t width, uint32_t height, vk::Format, bool enableDepthBuffer) const;
 	std::unique_ptr<ISampler> createTextureSampler1D(Filter magFil, Filter minFil, TextureWrapMode modeU);
 	std::unique_ptr<ISampler> createTextureSampler2D(Filter magFil, Filter minFil, TextureWrapMode modeU, TextureWrapMode modeV);
@@ -36,10 +40,11 @@ public:
 
 	ImageResource createTexture2D(uint32_t width, uint32_t height, vk::Format format);
 
-	ShaderProgram createShaderProgram(IVertexShader&, IFragmentShader&);
+	std::unique_ptr<IShaderProgram> createShaderProgram(IVertexShader&, IFragmentShader&);
 	std::unique_ptr<IBufferResource> createUniformBuffer(size_t size) override;
+	std::unique_ptr<IGraphicsQueue> createGraphicsQueue(ISwapchain&) override;
 
-	void waitIdle();
+	void waitIdle() override;
 protected:
 	std::unique_ptr<IBufferResource> createVertexBufferInternal(std::vector<char>& data) override;
 	std::unique_ptr<IBufferResource> createIndexBufferInternal(std::vector<char>& data) override;
