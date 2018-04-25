@@ -1,5 +1,6 @@
 #pragma once
 #include "common.hpp"
+#include "api_enums.hpp"
 
 class ISurface;
 enum class Format;
@@ -9,6 +10,7 @@ class IImageResource;
 class ISampler;
 enum class Filter;
 enum class TextureWrapMode;
+class ICommandBuffer;
 
 class IDevice {
 public:
@@ -38,6 +40,7 @@ public:
 		TextureWrapMode modeV,
 		TextureWrapMode modeW) = 0;
 	virtual std::unique_ptr<IImageResource> createTexture2D(size_t width, size_t height, Format) = 0;
+	virtual std::unique_ptr<ICommandBuffer> createCommandBuffer(Usage) = 0;
 
 	struct Features {
 		bool samplerAnisotropy;

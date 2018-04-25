@@ -162,6 +162,7 @@
   <ItemGroup>
     <ClInclude Include="include\common.hpp" />
     <ClInclude Include="include\ibuffer_resource.hpp" />
+    <ClInclude Include="include\icommand_buffer.hpp" />
     <ClInclude Include="include\idevice.hpp" />
     <ClInclude Include="include\iimage_resource.hpp" />
     <ClInclude Include="include\isampler.hpp" />

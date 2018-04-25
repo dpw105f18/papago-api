@@ -2,12 +2,14 @@
 #include <set>
 #include "sub_command_buffer.hpp"
 #include "api_enums.hpp"
+#include "icommand_buffer.hpp"
 
 class ShaderProgram;
 
-class CommandBuffer
+class CommandBuffer : public ICommandBuffer
 {
 public:
+	CommandBuffer(const vk::UniqueDevice& device, int queueFamilyIndex, Usage);
 
 	//TODO: remove "override"s - place functionality in SubCommandBuffer or redesign relationship. -AM
 	void begin(const RenderPass&);
@@ -39,7 +41,6 @@ public:
 	}
 
 private:
-	CommandBuffer(const vk::UniqueDevice& device, int queueFamilyIndex, Usage);
 	
 	// TODO: Have program so that we only need to pass in the name - Brandborg
 	long getBinding(const ShaderProgram& program, const std::string& name);

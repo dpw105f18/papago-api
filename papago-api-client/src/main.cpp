@@ -16,6 +16,7 @@
 #include "iswapchain.hpp"
 #include "iimage_resource.hpp"
 #include "ibuffer_resource.hpp"
+#include "icommand_buffer.hpp"
 #include "idevice.hpp"
 #include "api_enums.hpp"
 
@@ -205,7 +206,7 @@ int main()
 		size_t frameNo = 0;	//<-- for debugging
 
 
-
+		*/
 		while (true)
 		{
 			MSG msg;
@@ -218,23 +219,22 @@ int main()
 				DispatchMessage(&msg);
 			}
 			else {
-				auto cmd = device.createCommandBuffer(Usage::eReset);
-				cmd.begin(renderPass, swapChain, graphicsQueue.getCurrentFrameIndex());
-				cmd.setInput(vertexBuffer);
-				cmd.setUniform("texSampler", image, sampler2D);
-				cmd.setIndexBuffer(indexBuffer);
-				cmd.drawIndexed(3); // TODO: Create a way to get this from the index buffer
+				auto cmd = device->createCommandBuffer(Usage::eReset);
+		//		cmd.begin(renderPass, swapChain, graphicsQueue.getCurrentFrameIndex());
+		//		cmd.setInput(vertexBuffer);
+		//		cmd.setUniform("texSampler", image, sampler2D);
+		//		cmd.setIndexBuffer(indexBuffer);
+		//		cmd.drawIndexed(3); // TODO: Create a way to get this from the index buffer
 				//cmd.drawInstanced(vertexBuffer.getSize(), 1, 0, 0);
-				cmd.end();
-				std::vector<CommandBuffer> commandBuffers;
-				commandBuffers.push_back(std::move(cmd));
-				graphicsQueue.present(commandBuffers);
-				frameNo++;
-				graphicsQueue.Wait();
+		//		cmd.end();
+		//		std::vector<CommandBuffer> commandBuffers;
+		//		commandBuffers.push_back(std::move(cmd));
+		//		graphicsQueue.present(commandBuffers);
+		//		frameNo++;
+		//		graphicsQueue.Wait();
 			}
 		}
-		device.waitIdle();
-		*/
+		//device.waitIdle();
 	}
 	std::cout << "Press enter to continue...";
 	std::cin.ignore();

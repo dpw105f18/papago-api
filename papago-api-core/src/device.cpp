@@ -334,10 +334,13 @@ GraphicsQueue Device::createGraphicsQueue(SwapChain& swapChain) const
 	return { *this, queueFamilyIndices.graphicsFamily, queueFamilyIndices.presentFamily, swapChain };
 }
 
-CommandBuffer Device::createCommandBuffer(Usage usage) const
+std::unique_ptr<ICommandBuffer> Device::createCommandBuffer(Usage usage)
 {
 	auto queueFamilyIndices = findQueueFamilies(m_vkPhysicalDevice, m_surface);
-	return { m_vkDevice, queueFamilyIndices.graphicsFamily, usage };
+	return std::make_unique<CommandBuffer>(
+		m_vkDevice, 
+		queueFamilyIndices.graphicsFamily, 
+		usage);
 }
 
 //TODO: rename? make as public method on sampler? -AM/AB

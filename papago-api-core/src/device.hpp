@@ -24,7 +24,6 @@ public:
 	std::unique_ptr<ISwapchain> createSwapChain(Format, size_t framebufferCount, PresentMode preferredPresentMode) override;
 	std::unique_ptr<SwapChain> createSwapChain(const vk::Format & format, size_t framebufferCount, vk::PresentModeKHR preferredPresentMode);
 	GraphicsQueue createGraphicsQueue(SwapChain&) const;
-	CommandBuffer createCommandBuffer(Usage) const;
 	SubCommandBuffer createSubCommandBuffer(Usage);
 	RenderPass createRenderPass(const ShaderProgram&, uint32_t width, uint32_t height, vk::Format, bool enableDepthBuffer) const;
 	std::unique_ptr<ISampler> createTextureSampler1D(Filter magFil, Filter minFil, TextureWrapMode modeU);
@@ -33,6 +32,7 @@ public:
 	std::unique_ptr<IImageResource> createTexture2D(size_t width, size_t height, Format) override;
 	//drop the other create textureSampler idea below?
 	void createTextureSampler(Sampler sampler);
+	std::unique_ptr<ICommandBuffer> createCommandBuffer(Usage) override;
 
 	ImageResource createTexture2D(uint32_t width, uint32_t height, vk::Format format);
 
