@@ -6,7 +6,7 @@
 
 class ShaderProgram;
 
-class CommandBuffer : public ICommandBuffer
+class CommandBuffer : public ICommandBuffer, public RecordingCommandBuffer
 {
 public:
 	CommandBuffer(const vk::UniqueDevice& device, int queueFamilyIndex, Usage);
@@ -22,13 +22,13 @@ public:
 	void clearDepthBuffer(float value);
 	void clearFrameBuffer(Color);
 	void setDepthTest(DepthTest);
-	void setUniform(const std::string&, BufferResource&);
-	void setUniform(const std::string&, ImageResource&, Sampler&);
+	RecordingCommandBuffer& setUniform(const std::string& uniformName, IBufferResource&) override;
+	RecordingCommandBuffer& setUniform(const std::string&, IImageResource&, ISampler&) override;
 	void setInput(const BufferResource&);
 	void setInterleavedInput(const std::vector<const std::string>&, const Resource&);
 	void setIndexBuffer(const BufferResource&);
 	void drawInstanced(size_t instanceVertexCount, size_t instanceCount, size_t startVertexLocation, size_t startInstanceLocation);
-	void drawIndexed(size_t indexCount, size_t instanceCount = 1, size_t firstIndex = 0, size_t vertexOffset = 0, size_t firstInstance = 0);
+	RecordingCommandBuffer& drawIndexed(size_t indexCount, size_t instanceCount, size_t firstIndex, size_t vertexOffset, size_t firstInstance) override;
 	void setOutput(const std::string&, ImageResource&);
 	void executeSubCommands(std::vector<SubCommandBuffer>);
 
