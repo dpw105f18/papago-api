@@ -490,7 +490,7 @@ std::unique_ptr<IImageResource> Device::createTexture2D(size_t width, size_t hei
 		.setInitialLayout(vk::ImageLayout::eUndefined)
 		.setMipLevels(1)
 		.setArrayLayers(1)
-		.setUsage(vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled);
+		.setUsage(vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eColorAttachment);
 
 	auto image = m_vkDevice->createImage(info);
 	auto memoryRequirements = m_vkDevice->getImageMemoryRequirements(image);
