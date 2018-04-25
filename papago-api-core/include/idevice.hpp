@@ -9,6 +9,7 @@ class IImageResource;
 class ISampler;
 enum class Filter;
 enum class TextureWrapMode;
+class IGraphicsQueue;
 
 class IDevice {
 public:
@@ -38,7 +39,8 @@ public:
 		TextureWrapMode modeV,
 		TextureWrapMode modeW) = 0;
 	virtual std::unique_ptr<IImageResource> createTexture2D(size_t width, size_t height, Format) = 0;
-
+	virtual std::unique_ptr<IGraphicsQueue> createGraphicsQueue(ISwapchain&) = 0;
+	
 	struct Features {
 		bool samplerAnisotropy;
 	};

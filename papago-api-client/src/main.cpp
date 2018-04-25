@@ -16,6 +16,7 @@
 #include "iswapchain.hpp"
 #include "iimage_resource.hpp"
 #include "ibuffer_resource.hpp"
+#include "igraphics_queue.hpp"
 #include "idevice.hpp"
 #include "api_enums.hpp"
 
@@ -198,10 +199,10 @@ int main()
 		fragmentShader = parser.compileFragmentShader(readFile("shader/colorFrag.frag"), "main");
 		/*
 		auto program = device.createShaderProgram(*vertexShader, *fragmentShader);
-
 		auto renderPass = device.createRenderPass(program, swapChain);
-
-		auto graphicsQueue = device.createGraphicsQueue(swapChain);
+		*/
+		auto graphicsQueue = device->createGraphicsQueue(*swapChain);
+		/*
 		size_t frameNo = 0;	//<-- for debugging
 
 

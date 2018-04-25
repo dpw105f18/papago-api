@@ -328,10 +328,14 @@ std::unique_ptr<ISwapchain> Device::createSwapChain(Format format, size_t frameb
 	return createSwapChain(vkFormat, framebufferCount, vkPreferredPresentMode);
 }
 
-GraphicsQueue Device::createGraphicsQueue(SwapChain& swapChain) const
+std::unique_ptr<IGraphicsQueue> Device::createGraphicsQueue(ISwapchain& swapChain)
 {
 	auto queueFamilyIndices = findQueueFamilies(m_vkPhysicalDevice, m_surface);
-	return { *this, queueFamilyIndices.graphicsFamily, queueFamilyIndices.presentFamily, swapChain };
+	return std::make_unique<GraphicsQueue>(
+		*this, 
+		queueFamilyIndices.graphicsFamily, 
+		queueFamilyIndices.presentFamily, 
+		(SwapChain&)swapChain );
 }
 
 CommandBuffer Device::createCommandBuffer(Usage usage) const
