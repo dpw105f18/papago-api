@@ -149,6 +149,13 @@ int main()
 	{
 		auto parser = Parser("C:/VulkanSDK/1.0.65.0/Bin32/glslangValidator.exe");
 
+		auto stupidVertFile = readFile("shader/stupidVert.vert");
+		auto stupidFragFile = readFile("shader/parserTest.frag");
+
+		auto vertexShader = parser.compileVertexShader(stupidVertFile, "main");
+		auto fragmentShader = parser.compileFragmentShader(stupidFragFile, "main");
+
+		/*
 		size_t winWidth = 800;
 		size_t winHeight = 600;
 		auto hwnd = StartWindow(winWidth, winHeight);
@@ -196,6 +203,7 @@ int main()
 		vertexShader = parser.compileVertexShader(readFile("shader/colorVert.vert"), "main");
 		auto fragmentShader = parser.compileFragmentShader(readFile("shader/stupidFrag.frag"), "main");
 		fragmentShader = parser.compileFragmentShader(readFile("shader/colorFrag.frag"), "main");
+		*/
 		/*
 		auto program = device.createShaderProgram(*vertexShader, *fragmentShader);
 
@@ -235,6 +243,8 @@ int main()
 		}
 		device.waitIdle();
 		*/
+
+		auto d = "bug";
 	}
 	std::cout << "Press enter to continue...";
 	std::cin.ignore();
