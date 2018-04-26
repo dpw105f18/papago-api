@@ -9,9 +9,9 @@ public:
 	
 	explicit operator vk::SwapchainKHR&();
 
-	uint32_t getWidth() const;
-	uint32_t getHeight() const;
-	vk::Format getFormat() const;
+	uint32_t getWidth() const override;
+	uint32_t getHeight() const override;
+	Format getFormat() const override;
 
 private:
 	vk::UniqueSwapchainKHR m_vkSwapChain;

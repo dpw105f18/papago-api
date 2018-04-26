@@ -199,7 +199,7 @@ int main()
 		auto stupidVert = parser.compileVertexShader(readFile("shader/stupidVert.vert"), "main");
 		auto stupidFrag = parser.compileFragmentShader(readFile("shader/stupidFrag.frag"), "main");
 		auto stupidProgram = device->createShaderProgram(*stupidVert, *stupidFrag);
-		auto stupidPass = device->createRenderPass(*stupidProgram, *swapchain, true);
+		auto stupidPass = device->createRenderPass(*stupidProgram, swapchain->getWidth(), swapchain->getHeight(), swapchain->getFormat(),  true);
 
 		while (true)
 		{
@@ -214,7 +214,7 @@ int main()
 			}
 			else {
 				auto cmd = device->createCommandBuffer(Usage::eReset);
-				cmd->record(*colPass, *passOneTarget, [&](RecordingCommandBuffer& commandBuffer) {
+				cmd->record(*colPass, *passOneTarget, [&](IRecordingCommandBuffer& commandBuffer) {
 					commandBuffer
 						.setInput(*vertexBuffer)
 						.setIndexBuffer(*indexBuffer)
@@ -230,7 +230,7 @@ int main()
 					uniformBuffer->upload(std::vector<vec3>{ randomColor });
 				}
 
-				stupidCmd->record(*stupidPass, *swapchain, graphicsQueue->getNextFrameIndex(), [&](RecordingCommandBuffer& commandBuffer) {
+				stupidCmd->record(*stupidPass, *swapchain, graphicsQueue->getNextFrameIndex(), [&](IRecordingCommandBuffer& commandBuffer) {
 					commandBuffer.setUniform("val", *uniformBuffer);
 					commandBuffer.setUniform("sam", *passOneTarget, *sampler);
 					commandBuffer.setInput(*stupidVertexBuffer);

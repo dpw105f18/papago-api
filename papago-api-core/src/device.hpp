@@ -27,8 +27,7 @@ public:
 	CommandBuffer createCommandBuffer(Usage) const;
 	GraphicsQueue createGraphicsQueue(SwapChain&) const;
 	SubCommandBuffer createSubCommandBuffer(Usage);
-	std::unique_ptr<IRenderPass> createRenderPass(IShaderProgram&, ISwapchain&, bool) override;
-	std::unique_ptr<IRenderPass> createRenderPass(IShaderProgram&, size_t width, size_t height, Format, bool) override;
+	std::unique_ptr<IRenderPass> createRenderPass(IShaderProgram&, uint32_t width, uint32_t height, Format, bool) override;
 	RenderPass createRenderPass(const ShaderProgram&, uint32_t width, uint32_t height, vk::Format, bool enableDepthBuffer) const;
 	std::unique_ptr<ISampler> createTextureSampler1D(Filter magFil, Filter minFil, TextureWrapMode modeU);
 	std::unique_ptr<ISampler> createTextureSampler2D(Filter magFil, Filter minFil, TextureWrapMode modeU, TextureWrapMode modeV);

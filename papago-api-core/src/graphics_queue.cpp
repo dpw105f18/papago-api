@@ -14,7 +14,7 @@ void GraphicsQueue::submitCommands(const std::vector<std::reference_wrapper<ICom
 	vkCommandBuffers.reserve(commandBuffers.size());
 
 	for (auto& commandBuffer : commandBuffers) {
-		vkCommandBuffers.emplace_back(static_cast<vk::CommandBuffer>((CommandBuffer&)commandBuffer.get()));
+		vkCommandBuffers.emplace_back(static_cast<vk::CommandBuffer>(static_cast<CommandBuffer&>(commandBuffer.get())));
 	}
 
 	vk::SubmitInfo submitInfo = {};
@@ -98,7 +98,6 @@ void GraphicsQueue::present()
 	);
 }
 
-//TODO: switch getCurrentFrameIndex and getNextFrameIndex back. -AM
 size_t GraphicsQueue::getNextFrameIndex() {
 	
 	//TODO: Make sure that we handle the case, where framebuffer is not ready - Brandborg

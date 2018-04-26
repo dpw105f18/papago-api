@@ -414,25 +414,14 @@ void Device::waitIdle()
 	m_vkDevice->waitIdle();
 }
 
-std::unique_ptr<IRenderPass> Device::createRenderPass(IShaderProgram & program, ISwapchain & swapchain, bool enableDepthBuffer)
-{
-	auto& sc = (SwapChain&)swapchain;
-	auto vkPass = createVkRenderpass(sc.getFormat(), enableDepthBuffer);
-	return std::make_unique<RenderPass>(
-		m_vkDevice, 
-		vkPass, 
-		(ShaderProgram&)program, 
-		vk::Extent2D{ sc.getWidth(), sc.getHeight()});
-}
-
-std::unique_ptr<IRenderPass> Device::createRenderPass(IShaderProgram & program, size_t width, size_t height, Format format, bool enableDepthBuffer)
+std::unique_ptr<IRenderPass> Device::createRenderPass(IShaderProgram & program, uint32_t width, uint32_t height, Format format, bool enableDepthBuffer)
 {
 	auto vkPass = createVkRenderpass(to_vulkan_format(format), enableDepthBuffer);
 	return std::make_unique<RenderPass>(
 		m_vkDevice,
 		vkPass,
-		(ShaderProgram&)program,
-		vk::Extent2D{ uint32_t(width), uint32_t(height) });
+		static_cast<ShaderProgram&>(program),
+		vk::Extent2D{ width, height });
 }
 
 RenderPass Device::createRenderPass(const ShaderProgram& program, uint32_t width, uint32_t height, vk::Format format, bool enableDepthBuffer) const

@@ -162,9 +162,9 @@ uint32_t ImageResource::getHeight() const
 	return m_vkExtent.height;
 }
 
-vk::Format ImageResource::getFormat() const
+Format ImageResource::getFormat() const
 {
-	return m_format;
+	return  from_vulkan_format(m_format);
 }
 
 void ImageResource::destroy()
