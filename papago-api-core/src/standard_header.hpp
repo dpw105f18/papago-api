@@ -55,8 +55,25 @@ inline vk::Format to_vulkan_format(Format format) {
 	case Format::eR8G8B8Unorm:
 		return vk::Format::eR8G8B8Unorm;
 	case Format::eR8G8B8A8Unorm:
-		return vk::Format::eR8G8B8A8Unorm;;
+		return vk::Format::eR8G8B8A8Unorm;
+	case Format::eB8G8R8A8Unorm:
+		return vk::Format::eB8G8R8A8Unorm;
 	default:
+		PAPAGO_ERROR("Invalid format");
+		break;
+	}
+}
+
+inline Format from_vulkan_format(vk::Format format) {
+	switch (format) {
+	case vk::Format::eR8G8B8Unorm:
+		return Format::eR8G8B8Unorm;
+	case vk::Format::eR8G8B8A8Unorm:
+		return Format::eR8G8B8A8Unorm;
+	case vk::Format::eB8G8R8A8Unorm:
+			return Format::eB8G8R8A8Unorm;
+	default:
+		PAPAGO_ERROR("Invalid format");
 		break;
 	}
 }

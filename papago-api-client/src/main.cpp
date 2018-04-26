@@ -16,8 +16,11 @@
 #include "iswapchain.hpp"
 #include "iimage_resource.hpp"
 #include "ibuffer_resource.hpp"
+#include "icommand_buffer.hpp"
 #include "ishader_program.hpp"
+#include "icommand_buffer.hpp"
 #include "igraphics_queue.hpp"
+#include "irender_pass.hpp"
 #include "idevice.hpp"
 #include "api_enums.hpp"
 
@@ -26,14 +29,17 @@ struct vec2
 	float x, y;
 };
 
-struct vec3
+union vec3
 {
-	float x, y, z;
+	struct { float x, y, z; }; // Positions
+	struct { float r, g, b; }; // Colors
+	struct { float u, v, w; }; // Texture Maps
 };
 
 struct Vertex
 {
-	vec2 m_position;
+	vec3 m_position;
+	vec2 m_textureCoordinate;
 };
 
 
@@ -149,12 +155,8 @@ std::string readFile(const std::string& file_path) {
 int main()
 {
 	{
-		auto parser = Parser("C:/VulkanSDK/1.0.65.0/Bin32/glslangValidator.exe");
-
-		size_t winWidth = 800;
-		size_t winHeight = 600;
-		auto hwnd = StartWindow(winWidth, winHeight);
-		auto surface = ISurface::createWin32Surface(winWidth, winHeight, hwnd);
+		auto hwnd = StartWindow(800, 600);
+		auto surface = ISurface::createWin32Surface(800, 600, hwnd);
 		IDevice::Features features;
 		features.samplerAnisotropy = true;
 		IDevice::Extensions extensions;
@@ -162,53 +164,42 @@ int main()
 		extensions.samplerMirrorClampToEdge = true;
 		auto devices = IDevice::enumerateDevices(*surface, features, extensions);
 		auto& device = devices[0];
-		auto swapChain = device->createSwapChain(Format::eR8G8B8Unorm, 3, IDevice::PresentMode::eMailbox);
-		auto vertexBuffer = device->createVertexBuffer(std::vector<Vertex>{
-			{ 0.3f, -1.0f },
-			{ 0.52f, 0.4f },
-			{ -0.5f, 0.5f },
-			{ -0.3f, 1.0f },
-			{ -0.52f, -0.4f },
-			{ 0.5f, -0.5f },
+
+		auto stupidVertexBuffer = device->createVertexBuffer(std::vector<Vertex>{
+			{ { -0.5, -0.5, 0.5 }, { 0.0, 0.0 } },
+			{ { -0.5,  0.5, 0.5 }, { 0.0, 1.0 } },
+			{ {  0.5,  0.5, 0.5 }, { 1.0, 1.0 } },
+			{ {  0.5, -0.5, 0.5 }, { 1.0, 0.0 } }
+		});
+		auto vertexBuffer = device->createVertexBuffer(std::vector<vec3>{
+			{-0.5, -0.5, 0.5 },
+			{-0.5,  0.5, 0.5 },
+			{ 0.5,  0.5, 0.5 },
+			{ 0.5, -0.5, 0.5 }
 		});
 		auto indexBuffer = device->createIndexBuffer(std::vector<uint16_t>{
-			0, 1, 2
+			0, 1, 2,
+			0, 2, 3
 		});
 
-		auto uniformBuffer = device->createUniformBuffer(sizeof(UniformBufferObject));
-
-		auto bigUniform = device->createUniformBuffer(1000);
-
-		std::vector<char> bigData(1000);
-		for (auto i = 0; i < 1000; ++i) {
-			bigData[i] = i % 256;
-		}
-
-		auto sampler3D = device->createTextureSampler3D(Filter::eNearest, Filter::eNearest, TextureWrapMode::eClampToBorder, TextureWrapMode::eClampToEdge, TextureWrapMode::eRepeat);
-		auto sampler2D = device->createTextureSampler2D(Filter::eLinear, Filter::eLinear, TextureWrapMode::eMirroredRepeat, TextureWrapMode::eMirrorClampToEdge);
-		auto sampler1D = device->createTextureSampler1D(Filter::eNearest, Filter::eNearest, TextureWrapMode::eRepeat);
-
-		auto image = createTexture(*device);
-
-		bigUniform->upload(bigData);
-
-		auto dlData = bigUniform->download();
+		auto parser = Parser("C:/VulkanSDK/1.0.65.0/Bin32/glslangValidator.exe");
+		auto swapchain = device->createSwapChain(Format::eR8G8B8A8Unorm, 3, IDevice::PresentMode::eMailbox);
+		auto graphicsQueue = device->createGraphicsQueue(*swapchain);
+		auto passOneTarget = device->createTexture2D(800, 600, Format::eR8G8B8A8Unorm);
+		auto uniformBuffer = device->createUniformBuffer(sizeof(vec3));
+		auto sampler = device->createTextureSampler2D(Filter::eLinear, Filter::eLinear, TextureWrapMode::eMirroredRepeat, TextureWrapMode::eMirrorClampToEdge);
 		
-		auto vertexShader = parser.compileVertexShader(readFile("shader/stupidVert.vert"), "main");
-		vertexShader = parser.compileVertexShader(readFile("shader/colorVert.vert"), "main");
-		auto fragmentShader = parser.compileFragmentShader(readFile("shader/stupidFrag.frag"), "main");
-		fragmentShader = parser.compileFragmentShader(readFile("shader/colorFrag.frag"), "main");
-		auto program = device->createShaderProgram(*vertexShader, *fragmentShader);
-
-		/*
-		auto program = device.createShaderProgram(*vertexShader, *fragmentShader);
-		auto renderPass = device.createRenderPass(program, swapChain);
-		*/
-		auto graphicsQueue = device->createGraphicsQueue(*swapChain);
-		/*
-		size_t frameNo = 0;	//<-- for debugging
-
-
+		// PASS 1
+		auto colVert = parser.compileVertexShader(readFile("shader/colorVert.vert"), "main");
+		auto colFrag = parser.compileFragmentShader(readFile("shader/colorFrag.frag"), "main");
+		auto colProgram = device->createShaderProgram(*colVert, *colFrag);
+		auto colPass = device->createRenderPass(*colProgram, 800, 600, Format::eR8G8B8A8Unorm, false);
+		
+		// PASS 2
+		auto stupidVert = parser.compileVertexShader(readFile("shader/stupidVert.vert"), "main");
+		auto stupidFrag = parser.compileFragmentShader(readFile("shader/stupidFrag.frag"), "main");
+		auto stupidProgram = device->createShaderProgram(*stupidVert, *stupidFrag);
+		auto stupidPass = device->createRenderPass(*stupidProgram, swapchain->getWidth(), swapchain->getHeight(), swapchain->getFormat(),  true);
 
 		while (true)
 		{
@@ -222,22 +213,39 @@ int main()
 				DispatchMessage(&msg);
 			}
 			else {
-				auto cmd = device.createCommandBuffer(Usage::eReset);
-				cmd.begin(renderPass, swapChain, graphicsQueue.getCurrentFrameIndex());
-				cmd.setInput(vertexBuffer);
-				cmd.setUniform("texSampler", image, sampler2D);
-				cmd.setIndexBuffer(indexBuffer);
-				cmd.drawIndexed(3); // TODO: Create a way to get this from the index buffer
-				//cmd.drawInstanced(vertexBuffer.getSize(), 1, 0, 0);
-				cmd.end();
-				std::vector<CommandBuffer> commandBuffers;
-				commandBuffers.push_back(std::move(cmd));
-				graphicsQueue.present(commandBuffers);
-				frameNo++;
-				graphicsQueue.Wait();
+				auto cmd = device->createCommandBuffer(Usage::eReset);
+				cmd->record(*colPass, *passOneTarget, [&](IRecordingCommandBuffer& commandBuffer) {
+					commandBuffer
+						.setInput(*vertexBuffer)
+						.setIndexBuffer(*indexBuffer)
+						.drawIndexed(6);
+				});
+				auto stupidCmd = device->createCommandBuffer(Usage::eReuse);
+
+				if (!uniformBuffer->inUse()) {
+					vec3 randomColor = {
+						(float) std::rand() / RAND_MAX,
+						(float) std::rand() / RAND_MAX,
+						(float) std::rand() / RAND_MAX };
+					uniformBuffer->upload(std::vector<vec3>{ randomColor });
+				}
+
+				stupidCmd->record(*stupidPass, *swapchain, graphicsQueue->getNextFrameIndex(), [&](IRecordingCommandBuffer& commandBuffer) {
+					commandBuffer.setUniform("val", *uniformBuffer);
+					commandBuffer.setUniform("sam", *passOneTarget, *sampler);
+					commandBuffer.setInput(*stupidVertexBuffer);
+					commandBuffer.setIndexBuffer(*indexBuffer);
+					commandBuffer.drawIndexed(6);
+				});
+
+				graphicsQueue->submitCommands(std::vector<std::reference_wrapper<ICommandBuffer>> {
+					*cmd,
+					*stupidCmd
+				});
+
+				graphicsQueue->present();
 			}
 		}
-		*/
 		device->waitIdle();
 	}
 	std::cout << "Press enter to continue...";

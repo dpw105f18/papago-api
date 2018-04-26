@@ -162,9 +162,9 @@ uint32_t ImageResource::getHeight() const
 	return m_vkExtent.height;
 }
 
-vk::Format ImageResource::getFormat() const
+Format ImageResource::getFormat() const
 {
-	return m_format;
+	return  from_vulkan_format(m_format);
 }
 
 void ImageResource::destroy()
@@ -275,6 +275,12 @@ ImageResource::ImageResource(vk::Image& image, const Device& device, vk::Format 
 	m_device.m_vkInternalQueue.waitIdle();
 
 	m_device.m_internalCommandBuffer->reset(vk::CommandBufferResetFlagBits::eReleaseResources);
+}
+
+inline bool ImageResource::inUse()
+{
+	return m_vkFence
+		&& m_vkDevice->getFenceStatus(*m_vkFence) == vk::Result::eNotReady;
 }
 
 vk::Format ImageResource::findSupportedFormat(

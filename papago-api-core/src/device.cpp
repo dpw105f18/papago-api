@@ -305,16 +305,6 @@ std::unique_ptr<SwapChain> Device::createSwapChain(const vk::Format& format, siz
 
 std::unique_ptr<ISwapchain> Device::createSwapChain(Format format, size_t framebufferCount, PresentMode preferredPesentMode)
 {
-	vk::Format vkFormat;
-	switch (format)
-	{
-	case Format::eR8G8B8Unorm:
-		vkFormat = vk::Format::eR8G8B8Unorm;
-		break;
-	default:
-		PAPAGO_ERROR("Unknown format");
-		break;
-	}
 	vk::PresentModeKHR vkPreferredPresentMode;
 	switch (preferredPesentMode)
 	{
@@ -325,7 +315,7 @@ std::unique_ptr<ISwapchain> Device::createSwapChain(Format format, size_t frameb
 		PAPAGO_ERROR("Unknown presentmode");
 		break;
 	}
-	return createSwapChain(vkFormat, framebufferCount, vkPreferredPresentMode);
+	return createSwapChain(to_vulkan_format(format), framebufferCount, vkPreferredPresentMode);
 }
 
 std::unique_ptr<IGraphicsQueue> Device::createGraphicsQueue(ISwapchain& swapChain)
@@ -338,10 +328,13 @@ std::unique_ptr<IGraphicsQueue> Device::createGraphicsQueue(ISwapchain& swapChai
 		(SwapChain&)swapChain );
 }
 
-CommandBuffer Device::createCommandBuffer(Usage usage) const
+std::unique_ptr<ICommandBuffer> Device::createCommandBuffer(Usage usage)
 {
 	auto queueFamilyIndices = findQueueFamilies(m_vkPhysicalDevice, m_surface);
-	return { m_vkDevice, queueFamilyIndices.graphicsFamily, usage };
+	return std::make_unique<CommandBuffer>(
+		m_vkDevice, 
+		queueFamilyIndices.graphicsFamily, 
+		usage);
 }
 
 //TODO: rename? make as public method on sampler? -AM/AB
@@ -421,6 +414,16 @@ void Device::waitIdle()
 	m_vkDevice->waitIdle();
 }
 
+std::unique_ptr<IRenderPass> Device::createRenderPass(IShaderProgram & program, uint32_t width, uint32_t height, Format format, bool enableDepthBuffer)
+{
+	auto vkPass = createVkRenderpass(to_vulkan_format(format), enableDepthBuffer);
+	return std::make_unique<RenderPass>(
+		m_vkDevice,
+		vkPass,
+		static_cast<ShaderProgram&>(program),
+		vk::Extent2D{ width, height });
+}
+
 RenderPass Device::createRenderPass(const ShaderProgram& program, uint32_t width, uint32_t height, vk::Format format, bool enableDepthBuffer) const
 {
 	auto vkPass = createVkRenderpass(format, enableDepthBuffer);
@@ -476,7 +479,7 @@ std::unique_ptr<IImageResource> Device::createTexture2D(size_t width, size_t hei
 		.setInitialLayout(vk::ImageLayout::eUndefined)
 		.setMipLevels(1)
 		.setArrayLayers(1)
-		.setUsage(vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled);
+		.setUsage(vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eColorAttachment);
 
 	auto image = m_vkDevice->createImage(info);
 	auto memoryRequirements = m_vkDevice->getImageMemoryRequirements(image);

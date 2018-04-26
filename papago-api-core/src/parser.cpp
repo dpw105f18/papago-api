@@ -10,6 +10,7 @@ Parser::Parser(const std::string & compilePath): m_compilePath(compilePath)
 
 #define STUPID_VERTEX_SHADER_HASH 0xa709c4e0b8ab6894
 #define COLOR_VERTEX_SHADER_HASH 0xf454a08ee86af30a
+#define TEXTURE_VERTEX_SHADER_HASH 0x19e592a304b02230
 
 std::unique_ptr<IVertexShader> Parser::compileVertexShader(const std::string &source, const std::string &entryPoint)
 {
@@ -26,11 +27,15 @@ std::unique_ptr<IVertexShader> Parser::compileVertexShader(const std::string &so
 		result->m_input.push_back({ 0, vk::Format::eR32G32B32Sfloat });	//<-- position
 		result->m_input.push_back({ sizeof(float) * 3, vk::Format::eR32G32Sfloat }); //<-- uv
 	}
+	else if (hash == TEXTURE_VERTEX_SHADER_HASH) {
+		result->m_input.push_back({ 0, vk::Format::eR32G32B32Sfloat });	//<-- position
+	}
 	return result;
 }
 
 #define STUPID_FRAGMENT_SHADER_HASH 0xfc0838ff5f18bfc2
 #define COLOR_FRAGMENT_SHADER_HASH 0xb810ed8016ecd8d6
+#define TEXTURE_FRAGMENT_SHADER_HASH 0xdc0a529a31085233
 
 std::unique_ptr<IFragmentShader> Parser::compileFragmentShader(const std::string& source, const std::string& entryPoint)
 {
@@ -52,6 +57,9 @@ std::unique_ptr<IFragmentShader> Parser::compileFragmentShader(const std::string
 	else if(hash == STUPID_FRAGMENT_SHADER_HASH){
 		result->m_bindings.insert({ { "sam" },{ 0, vk::DescriptorType::eCombinedImageSampler } });
 		result->m_bindings.insert({ { "val" },{ 1, vk::DescriptorType::eUniformBuffer } });
+	}
+	else if (hash == TEXTURE_FRAGMENT_SHADER_HASH) {
+		result->m_bindings.insert({ {"texSampler"}, {0, vk::DescriptorType::eCombinedImageSampler} });
 	}
 	
 	return result;

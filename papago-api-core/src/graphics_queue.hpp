@@ -8,16 +8,17 @@ class Device;
 class CommandBuffer;
 class SwapChain;
 class ImageResource;
+class ICommandBuffer;
 
 class GraphicsQueue : public IGraphicsQueue
 {
 public:
 	GraphicsQueue(const Device&, int graphicsQueueIndex, int presentQueueIndex, SwapChain&);
 	
-	void present();
-	uint32_t getNextFrameIndex();
-	void wait();
-	void submitCommands(std::vector<CommandBuffer>&);
+	void present() override;
+	size_t getNextFrameIndex() override;
+	void wait() override;
+	void submitCommands(const std::vector<std::reference_wrapper<ICommandBuffer>>&);
 	ImageResource& getLastRenderedImage();
 private:
 	uint32_t getCurrentFrameIndex();
