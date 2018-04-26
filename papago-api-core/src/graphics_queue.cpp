@@ -110,6 +110,7 @@ size_t GraphicsQueue::getNextFrameIndex() {
 //TODO: don't present this to API users. -AM
 void GraphicsQueue::wait()
 {
+	m_vkGraphicsQueue.waitIdle();
 	m_vkPresentQueue.waitIdle();
 }
 

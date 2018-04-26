@@ -25,6 +25,7 @@ protected:
 		uint32_t memoryTypeBits, 
 		const vk::MemoryPropertyFlags&);
 
+	//TODO: make m_size the actual size of the resource, not the alligned size. -AM
 	size_t m_size;
 	vk::Fence* m_vkFence;
 

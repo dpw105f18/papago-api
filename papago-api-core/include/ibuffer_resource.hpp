@@ -26,7 +26,7 @@ template<typename T>
 inline void IBufferResource::upload(const std::vector<T>& data)
 {
 	std::vector<char> buffer(sizeof(T)*data.size());
-	memcpy(buffer.data(), &data, buffer.size());
+	memcpy(buffer.data(), data.data(), buffer.size());
 	internalUpload(buffer);
 }
 
@@ -41,7 +41,8 @@ template<typename T>
 inline std::vector<T> IBufferResource::download()
 {
 	auto data = internalDownload();
-	T buffer;
-	memcpy(&buffer, data.data(), sizeof(T));
+	std::vector<T> buffer;
+	buffer.resize(data.size() / sizeof(T));
+	memcpy(buffer.data(), data.data(), sizeof(T));
 	return buffer;
 }
