@@ -137,153 +137,99 @@ std::vector<char> Parser::compile(const std::string& source, const std::string& 
 	return buffer;
 }
 
+size_t format_size(vk::Format format) {
+	switch (format)
+	{
+	case vk::Format::eD32Sfloat:			return sizeof(float);
+	case vk::Format::eR32G32Sfloat:			return 2 * sizeof(float);
+	case vk::Format::eR32G32B32Sfloat:		return 3 * sizeof(float);
+	case vk::Format::eR32G32B32A32Sfloat:	return 4 * sizeof(float);
+	default:
+		break;
+	}
+}
+
+vk::Format string_to_format(std::string input) {
+	static const std::map<std::string, vk::Format> map{
+		{ "float", vk::Format::eD32Sfloat },
+		{ "vec2", vk::Format::eR32G32Sfloat },
+		{ "vec3", vk::Format::eR32G32B32Sfloat },
+		{ "vec4", vk::Format::eR32G32B32A32Sfloat }
+	};
+	auto result = map.find(input);
+	if (result == map.end()) {
+		PAPAGO_ERROR("Failed to convert " + input + " to a format.");
+	}
+	return result->second;
+}
+
+#define REGEX_NUMBER "[0-9]+"
+#define REGEX_NAME "[a-zA-Z_][a-zA-Z0-9_]*"
+
 void Parser::setShaderInput(VertexShader & shader, const std::string & source)
 {
-	std::vector<std::string> layoutLines;
+	static const auto regex = std::regex(".*layout\\s*\\(location\\s*=\\s*(" REGEX_NUMBER ")\\s*\\)\\s+in\\s+(" REGEX_NAME ")\\s+(" REGEX_NAME ");");
+	
+	auto offset = 0u;
+	std::sregex_iterator iterator(ITERATE(source), regex);
+	for (auto i = iterator; i != std::sregex_iterator(); ++i) {
+		auto match = *i;
+		auto location = std::stoi(match[1]);
+		auto format = string_to_format(match[2].str());
+		auto name = match[3].str();
 
-	auto layoutRegex = std::regex(std::string(".*layout\\s*\\(.*\\)\\s+in.*;"));
-	std::smatch layoutMatches;
-	auto toSearch = source;
-
-	do {
-		if (std::regex_search(toSearch, layoutMatches, layoutRegex)) {
-			layoutLines.push_back(layoutMatches[0].str());
-			toSearch = layoutMatches.suffix().str();
-		}
-	} while (layoutMatches.size() > 0);
-
-	std::map<int, std::string> locationTypes;
-	for (auto& layoutLine : layoutLines) {
-		std::smatch matches;
-		if (std::regex_search(layoutLine, matches, std::regex("layout\\s*\\(\\s*location\\s*=\\s*"))) {
-			std::string suffix = matches.suffix().str();
-
-			//get location index
-			std::regex_search(suffix, matches, std::regex("^[0-9]+"));
-			auto location = std::stoi(matches[0].str());
-
-			//get variable name (even though we don't use it, the prefix of this match is used later)
-			std::regex_search(suffix, matches, std::regex("([a-zA-Z_][a-zA-Z0-9_\\-]*)(\\s*;)$"));
-			auto name = matches[1].str();	/* <-- [0] is a match of the entire string, e.g. "myName ;"
-											*     [1] is a match of the first group, e.g. "myName" (with " ;" as [2])
-											*/
-			
-			//get variable type
-			auto prefix = matches.prefix().str();
-			std::regex_search(prefix, matches, std::regex("([a-zA-Z][a-z-A-Z0-9]+)(\\s)$"));
-			auto type = matches[1].str();
-
-			locationTypes.insert({ location, type });
-		}
-	}
-
-	shader.m_input.resize(locationTypes.size());
-
-	//TODO: can we assume that the locations don't skip an index? -AM
-	uint32_t offset = 0;
-	for (auto i = 0; i < locationTypes.size(); ++i) {
-		//handle type:
-		auto& type = locationTypes[i];
-		vk::Format format = vk::Format::eUndefined;
-		uint32_t formatByteSize = 0;
-		//TODO: find better way to get format from types
-		if (type == std::string("vec2")) {
-			format = vk::Format::eR32G32Sfloat;
-			formatByteSize = sizeof(float) * 2;
-		}
-		else if (type == std::string("vec3")) {
-			format = vk::Format::eR32G32B32Sfloat;
-			formatByteSize = sizeof(float) * 3;
-		}
-		else if (type == std::string("vec4")) {
-			format = vk::Format::eR32G32B32A32Sfloat;
-			formatByteSize = sizeof(float) * 4;
+		if (shader.m_input.size() <= location) {
+			shader.m_input.resize(location+1);
 		}
 
-		shader.m_input[i] = { offset, format };
-		offset += formatByteSize;
+		shader.m_input[location] = { offset, format };
+		offset += format_size(format);
 	}
 }
 
 void Parser::setShaderUniforms(Shader & shader, const std::string & source)
 {
-	std::vector<std::string> layoutLines;
+	static const auto blockRegex = std::regex("layout\\s*\\(binding\\s*=\\s*(" REGEX_NUMBER ")\\s*\\)\\s*uniform\\s+" REGEX_NAME "\\s*\\{([^\\}]*)\\}\\s*" REGEX_NAME "\\s*;");
 
-	//there are two types of uniforms:
-	//block: layout(binding = [index]) uniform [type] { ... } [alias];
-	//no-block: layout(binding = [index]) uniform [type] [name];
-	constexpr auto uniformRegex = "(\\s+layout\\s*\\(.*\\)\\s+uniform)";	//<-- what they have in common
-	constexpr auto noBlockRegex = "(\\s+.+\\s+.+;)";
-	constexpr auto blockRegex = "(\\s+.+\\s*\\{[^\\}]*\\}.+;)";
+	for (std::sregex_iterator iterator(ITERATE(source), blockRegex); iterator != std::sregex_iterator(); ++iterator) {
+		auto match = *iterator;
+		uint32_t binding = std::stoi(match[1].str());
+		auto body = match[2].str();
 
-	auto layoutRegex = std::regex(uniformRegex + std::string("(") + blockRegex + "|" + noBlockRegex  + ")");
-	std::smatch layoutMatches;
-	auto toSearch = source;
-	do {
-		if (std::regex_search(toSearch, layoutMatches, layoutRegex)) {
-			layoutLines.push_back(layoutMatches[0].str());
-			toSearch = layoutMatches.suffix().str();
+		auto offset = 0u;
+		static const auto body_regex = std::regex("(" REGEX_NAME ")\\s+(" REGEX_NAME ");");
+		for (std::sregex_iterator body_iterator(ITERATE(body), body_regex); body_iterator != std::sregex_iterator(); ++body_iterator) {
+			auto body_match = *body_iterator;
+			auto type = body_match[1];
+			auto name = body_match[2];
+				
+			vk::DescriptorType descriptorType;
+			auto typeByteSize = 0u;
+			if (type == std::string("sampler2D")) {
+				descriptorType = vk::DescriptorType::eCombinedImageSampler;
+			}
+			else {
+				descriptorType = vk::DescriptorType::eUniformBuffer;
+				typeByteSize = format_size(string_to_format(type));
+			}
+
+			shader.m_bindings.insert({ name, { binding, offset, descriptorType } });
+			offset += typeByteSize;
 		}
-	} while (layoutMatches.size() > 0);
+	}
 
-	std::map<std::string, Binding> namedBindings;
-	for (auto& layoutLine : layoutLines) {
-		std::smatch matches;
-		if (std::regex_search(layoutLine, matches, std::regex("layout\\s*\\(\\s*binding\\s*=\\s*"))) {
-			std::string suffix = matches.suffix().str();
+	static const auto regex = std::regex("layout\\s*\\(binding\\s*=\\s*(" REGEX_NUMBER ")\\s*\\)\\s*uniform\\s+(" REGEX_NAME ")\\s+(" REGEX_NAME ")\\s*;");
 
-			//get binding index
-			std::regex_search(suffix, matches, std::regex("^[0-9]+"));
-			uint32_t binding = std::stoi(matches[0].str());
-			uint32_t offset = 0;
-			do {
-				if (std::regex_search(suffix, matches, std::regex("([a-zA-Z_][a-zA-Z0-9_\\-]*)(\\s*;)"))) {
-					//get variable name
-					auto name = matches[1].str();	/* <-- [0] is a match of the entire string, e.g. "myName ;"
-													*      [1] is a match of the first group, e.g. "myName" (with " ;" as [2])
-													*/
+	for (std::sregex_iterator iterator(ITERATE(source), regex); iterator != std::sregex_iterator(); ++iterator) {
+		auto match = *iterator;
+		uint32_t binding = std::stoi(match[1]);
+		auto type = match[2];
+		auto name = match[3];
 
-					//get variable type
-					auto prefix = matches.prefix().str();
-					std::regex_search(prefix, matches, std::regex("([a-zA-Z][a-z-A-Z0-9]+)(\\s)$"));
-					//is it a variable (true) or a block alias (false)?
-					if (matches.size() > 0) {
-						auto type = matches[1].str();
+		vk::DescriptorType descriptorType = type == std::string("sampler2D")
+			? vk::DescriptorType::eCombinedImageSampler
+			: vk::DescriptorType::eUniformBuffer;
 
-						vk::DescriptorType descriptorType;
-						uint32_t typeByteSize = 0;
-
-						if (type == std::string("sampler2D")) {
-							descriptorType = vk::DescriptorType::eCombinedImageSampler;
-						}
-						else {
-							descriptorType = vk::DescriptorType::eUniformBuffer;
-
-							if (type == std::string("vec2")) {
-								typeByteSize = sizeof(float) * 2;
-							}
-							else if (type == std::string("vec3")) {
-								typeByteSize = sizeof(float) * 3;
-							}
-							else if (type == std::string("vec4")) {
-								typeByteSize = sizeof(float) * 4;
-							}
-							else if (type == std::string("float")) {
-								typeByteSize = sizeof(float);
-							}
-							//TODO: add more types to be recognized by the parser. -AM
-						}
-
-						shader.m_bindings.insert({ name, {binding, offset, descriptorType} });
-						offset += typeByteSize;
-
-						std::smatch nextSemicolon;
-						if (std::regex_search(suffix, nextSemicolon, std::regex(";"))) {
-							suffix = nextSemicolon.suffix();
-						}
-					} //end if match is variable (not block alias)
-				} //end if there are more variables to check in this layout line
-			} while (matches.size() > 0);
-		}//end if used to find where the binding index is in the layout line
-	}//end foreach layoutLine
+		shader.m_bindings.insert({ name,{ binding, 0, descriptorType } });
+	}
 }
