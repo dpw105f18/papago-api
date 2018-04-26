@@ -224,9 +224,9 @@ int main()
 
 				if (!uniformBuffer->inUse()) {
 					vec3 randomColor = {
-						std::rand() / RAND_MAX,
-						std::rand() / RAND_MAX,
-						std::rand() / RAND_MAX };
+						(float) std::rand() / RAND_MAX,
+						(float) std::rand() / RAND_MAX,
+						(float) std::rand() / RAND_MAX };
 					uniformBuffer->upload(std::vector<vec3>{ randomColor });
 				}
 
