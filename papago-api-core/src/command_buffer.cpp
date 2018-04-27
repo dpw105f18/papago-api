@@ -28,6 +28,20 @@ CommandBuffer::CommandBuffer(const vk::UniqueDevice &device, int queueFamilyInde
 	m_vkCommandBuffer = std::move(device->allocateCommandBuffersUnique(allocateInfo)[0]);	//TODO: remove "[0]"-hack. -AM
 }
 
+void CommandBuffer::record(IRenderPass & renderPass, ISwapchain & swapchain, size_t frameIndex, std::function<void(IRecordingCommandBuffer&)> func)
+{
+	begin(static_cast<RenderPass&>(renderPass), static_cast<SwapChain&>(swapchain), frameIndex);
+	func(*this);
+	end();
+}
+
+void CommandBuffer::record(IRenderPass & renderPass, IImageResource & target, std::function<void(IRecordingCommandBuffer&)> func)
+{
+	begin(static_cast<RenderPass&>(renderPass), static_cast<ImageResource&>(target));
+	func(*this);
+	end();
+}
+
 long CommandBuffer::getBinding(const ShaderProgram & program, const std::string& name)
 {
 	long binding = -1;
@@ -116,15 +130,16 @@ void CommandBuffer::begin(RenderPass &renderPass, ImageResource & renderTarget)
 	m_vkCommandBuffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *renderPass.m_vkGraphicsPipeline);
 }
 
-void CommandBuffer::setUniform(const std::string & name, ImageResource & image, Sampler & sampler)
+IRecordingCommandBuffer& CommandBuffer::setUniform(const std::string & name, IImageResource & image, ISampler & sampler)
 {
-
+	auto& backendImage = static_cast<ImageResource&>(image);
+	auto& backendSampler = static_cast<Sampler&>(sampler);
 	auto binding = getBinding(m_renderPassPtr->m_shaderProgram, name);
 
 	vk::DescriptorImageInfo info = {};
 	info.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
-		.setImageView(*image.m_vkImageView)
-		.setSampler(static_cast<vk::Sampler>(sampler));
+		.setImageView(*backendImage.m_vkImageView)
+		.setSampler(static_cast<vk::Sampler>(backendSampler));
 
 	auto writeDescriptorSet = vk::WriteDescriptorSet(*m_renderPassPtr->m_vkDescriptorSet, binding)
 		.setDescriptorCount(1)
@@ -134,14 +149,19 @@ void CommandBuffer::setUniform(const std::string & name, ImageResource & image, 
 	m_vkDevice->updateDescriptorSets({ writeDescriptorSet }, {});
 	m_vkCommandBuffer->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *m_renderPassPtr->m_vkPipelineLayout, 0, { *m_renderPassPtr->m_vkDescriptorSet }, { });
 
-	m_resourcesInUse.emplace(&image);
+	m_resourcesInUse.emplace(&backendImage);
+	return *this;
 }
 
-void CommandBuffer::setInput(const BufferResource& buffer)
+IRecordingCommandBuffer& CommandBuffer::setInput(IBufferResource& buffer)
 {
 	//TODO: find a more general way to fix offsets
 	//TODO: make it work with m_vkCommandBuffer->bindVertexBuffers(...);
-	m_vkCommandBuffer->bindVertexBuffers(0, { *buffer.m_vkBuffer }, { 0 });
+	m_vkCommandBuffer->bindVertexBuffers(
+		0, 
+		{ *(static_cast<BufferResource&>(buffer)).m_vkBuffer }, 
+		{ 0 });
+	return *this;
 }
 
 void CommandBuffer::end()
@@ -151,10 +171,14 @@ void CommandBuffer::end()
 	m_vkCommandBuffer->end();
 }
 
-void CommandBuffer::setIndexBuffer(const BufferResource &indexBuffer)
+IRecordingCommandBuffer& CommandBuffer::setIndexBuffer(IBufferResource &indexBuffer)
 {
 	// TODO: Retrieve wheter uint16 or uint32 is used for index buffer from somewhere - CW 2018-04-13
-	m_vkCommandBuffer->bindIndexBuffer(*indexBuffer.m_vkBuffer, 0, vk::IndexType::eUint16);
+	m_vkCommandBuffer->bindIndexBuffer(
+		*(static_cast<BufferResource&>(indexBuffer)).m_vkBuffer, 
+		0, 
+		vk::IndexType::eUint16);
+	return *this;
 }
 
 void CommandBuffer::drawInstanced(size_t instanceVertexCount, size_t instanceCount, size_t startVertexLocation, size_t startInstanceLocation)
@@ -163,9 +187,10 @@ void CommandBuffer::drawInstanced(size_t instanceVertexCount, size_t instanceCou
 	m_vkCommandBuffer->draw(instanceVertexCount, instanceCount, startVertexLocation, startInstanceLocation);
 }
 
-void CommandBuffer::setUniform(const std::string & name, BufferResource & buffer)
+IRecordingCommandBuffer& CommandBuffer::setUniform(const std::string & uniformName, IBufferResource & buffer)
 {
-	auto binding = getBinding(m_renderPassPtr->m_shaderProgram, name);
+	auto& backendBuffer = static_cast<BufferResource&>(buffer);
+	auto binding = getBinding(m_renderPassPtr->m_shaderProgram, uniformName);
 	auto& descriptorSet = m_renderPassPtr->m_vkDescriptorSet;
 
 	auto writeDescriptorSet = vk::WriteDescriptorSet()
@@ -173,16 +198,18 @@ void CommandBuffer::setUniform(const std::string & name, BufferResource & buffer
 		.setDstBinding(binding)
 		.setDescriptorType(vk::DescriptorType::eUniformBuffer)
 		.setDescriptorCount(1)
-		.setPBufferInfo(&buffer.m_vkInfo);
+		.setPBufferInfo(&backendBuffer.m_vkInfo);
 
 	m_vkDevice->updateDescriptorSets({writeDescriptorSet}, {});
 	m_vkCommandBuffer->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *m_renderPassPtr->m_vkPipelineLayout, 0, { *descriptorSet }, {});
 
-	m_resourcesInUse.emplace(&buffer);
+	m_resourcesInUse.emplace(&backendBuffer);
+	return *this;
 }
 
 
-void CommandBuffer::drawIndexed(size_t indexCount, size_t instanceCount, size_t firstIndex, size_t vertexOffset, size_t firstInstance)
+IRecordingCommandBuffer& CommandBuffer::drawIndexed(size_t indexCount, size_t instanceCount, size_t firstIndex, size_t vertexOffset, size_t firstInstance)
 {
 	m_vkCommandBuffer->drawIndexed(indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
+	return *this;
 }

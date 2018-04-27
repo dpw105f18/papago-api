@@ -2,7 +2,8 @@
 
 enum class Format {
 	eR8G8B8Unorm,
-	eR8G8B8A8Unorm
+	eR8G8B8A8Unorm,
+	eB8G8R8A8Unorm
 };
 
 enum class TypeEnums {

@@ -1,19 +1,20 @@
 #pragma once
 #include "api_enums.hpp"
 #include "shader_program.h"
+#include "irender_pass.hpp"
 
 class FragmentShader;
 class VertexShader;
 class ImageResource;
 class Sampler;
 
-class RenderPass
+class RenderPass : public IRenderPass
 {
 public:
 	explicit operator vk::RenderPass&();
+	RenderPass(const vk::UniqueDevice&, vk::UniqueRenderPass&, const ShaderProgram&, const vk::Extent2D&);
 
 private:
-	RenderPass(const vk::UniqueDevice&, vk::UniqueRenderPass&, const ShaderProgram&, const vk::Extent2D&);
 	vk::UniqueRenderPass m_vkRenderPass;
 	vk::UniquePipeline m_vkGraphicsPipeline;
 	vk::UniquePipelineLayout m_vkPipelineLayout;

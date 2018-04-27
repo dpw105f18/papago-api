@@ -2,12 +2,17 @@
 #include <set>
 #include "sub_command_buffer.hpp"
 #include "api_enums.hpp"
+#include "icommand_buffer.hpp"
 
 class ShaderProgram;
 
-class CommandBuffer
+class CommandBuffer : public ICommandBuffer, public IRecordingCommandBuffer
 {
 public:
+	CommandBuffer(const vk::UniqueDevice& device, int queueFamilyIndex, Usage);
+
+	void record(IRenderPass&, ISwapchain&, size_t frameIndex, std::function<void(IRecordingCommandBuffer&)>) override;
+	void record(IRenderPass&, IImageResource&, std::function<void(IRecordingCommandBuffer&)>) override;
 
 	//TODO: remove "override"s - place functionality in SubCommandBuffer or redesign relationship. -AM
 	void begin(const RenderPass&);
@@ -20,13 +25,13 @@ public:
 	void clearDepthBuffer(float value);
 	void clearFrameBuffer(Color);
 	void setDepthTest(DepthTest);
-	void setUniform(const std::string&, BufferResource&);
-	void setUniform(const std::string&, ImageResource&, Sampler&);
-	void setInput(const BufferResource&);
+	IRecordingCommandBuffer& setUniform(const std::string& uniformName, IBufferResource&) override;
+	IRecordingCommandBuffer& setUniform(const std::string&, IImageResource&, ISampler&) override;
+	IRecordingCommandBuffer& setInput(IBufferResource&) override;
+	IRecordingCommandBuffer& setIndexBuffer(IBufferResource&) override;
 	void setInterleavedInput(const std::vector<const std::string>&, const Resource&);
-	void setIndexBuffer(const BufferResource&);
 	void drawInstanced(size_t instanceVertexCount, size_t instanceCount, size_t startVertexLocation, size_t startInstanceLocation);
-	void drawIndexed(size_t indexCount, size_t instanceCount = 1, size_t firstIndex = 0, size_t vertexOffset = 0, size_t firstInstance = 0);
+	IRecordingCommandBuffer& drawIndexed(size_t indexCount, size_t instanceCount, size_t firstIndex, size_t vertexOffset, size_t firstInstance) override;
 	void setOutput(const std::string&, ImageResource&);
 	void executeSubCommands(std::vector<SubCommandBuffer>);
 
@@ -39,7 +44,6 @@ public:
 	}
 
 private:
-	CommandBuffer(const vk::UniqueDevice& device, int queueFamilyIndex, Usage);
 	
 	// TODO: Have program so that we only need to pass in the name - Brandborg
 	long getBinding(const ShaderProgram& program, const std::string& name);

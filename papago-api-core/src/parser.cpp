@@ -170,7 +170,7 @@ void Parser::setShaderInput(VertexShader & shader, const std::string & source)
 {
 	static const auto regex = std::regex(".*layout\\s*\\(location\\s*=\\s*(" REGEX_NUMBER ")\\s*\\)\\s+in\\s+(" REGEX_NAME ")\\s+(" REGEX_NAME ");");
 	
-	auto offset = 0u;
+
 	std::sregex_iterator iterator(ITERATE(source), regex);
 	for (auto i = iterator; i != std::sregex_iterator(); ++i) {
 		auto match = *i;
@@ -181,11 +181,16 @@ void Parser::setShaderInput(VertexShader & shader, const std::string & source)
 		if (shader.m_input.size() <= location) {
 			shader.m_input.resize(location+1);
 		}
-
-		//TODO: Make sure this is a global offset, right now it will fail if the location order is mixed.
-		shader.m_input[location] = { offset, format };
-		offset += format_size(format);
+		shader.m_input[location] = { 0, format };
 	}
+
+	// Calculate offsets. Can't do it in loop above, as allocation order could be mixed.
+	auto offset = 0u;
+	for (auto& input : shader.m_input) {
+		input.offset = offset;
+		offset += input.getFormatSize();
+	}
+
 }
 
 void Parser::setShaderUniforms(Shader & shader, const std::string & source)

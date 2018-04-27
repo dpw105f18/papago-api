@@ -18,6 +18,7 @@ public:
 
 	// Inherited via Resource
 	void destroy() override;
+	bool inUse() override;
 protected:
 	void internalUpload(const std::vector<char>& data) override;
 	std::vector<char> internalDownload() override;

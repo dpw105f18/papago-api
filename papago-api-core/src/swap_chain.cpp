@@ -17,7 +17,7 @@ uint32_t SwapChain::getHeight() const
 	return m_vkExtent.height;
 }
 
-vk::Format SwapChain::getFormat() const
+Format SwapChain::getFormat() const
 {
 	//TODO: make sure swapchain ALWAYS have at least one colorResource! -AM
 	return m_colorResources[0].getFormat();

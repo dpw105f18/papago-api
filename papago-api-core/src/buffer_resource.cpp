@@ -12,9 +12,15 @@ void BufferResource::destroy()
 
 }
 
+inline bool BufferResource::inUse()
+{
+	return m_vkFence
+		&& m_vkDevice->getFenceStatus(*m_vkFence) == vk::Result::eNotReady;
+}
+
 void BufferResource::internalUpload(const std::vector<char>& data)
 {
-	auto mappedMemory = m_vkDevice->mapMemory(*m_vkMemory, 0, VK_WHOLE_SIZE);
+	auto mappedMemory = m_vkDevice->mapMemory(*m_vkMemory, 0, data.size());
 	memcpy(mappedMemory, data.data(), data.size());
 	m_vkDevice->unmapMemory(*m_vkMemory);
 }

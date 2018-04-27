@@ -1,5 +1,6 @@
 #pragma once
 #include "common.hpp"
+#include "api_enums.hpp"
 
 class ISurface;
 enum class Format;
@@ -7,8 +8,14 @@ class ISwapchain;
 class IBufferResource;
 class IImageResource;
 class ISampler;
+class IShaderProgram;
+class IVertexShader;
+class IFragmentShader;
 enum class Filter;
 enum class TextureWrapMode;
+class IGraphicsQueue;
+class ICommandBuffer;
+class IRenderPass;
 
 class IDevice {
 public:
@@ -38,7 +45,13 @@ public:
 		TextureWrapMode modeV,
 		TextureWrapMode modeW) = 0;
 	virtual std::unique_ptr<IImageResource> createTexture2D(size_t width, size_t height, Format) = 0;
+	virtual std::unique_ptr<ICommandBuffer> createCommandBuffer(Usage) = 0;
+	virtual std::unique_ptr<IShaderProgram> createShaderProgram(IVertexShader& vertexShader, IFragmentShader& fragmentShader) = 0;
+	virtual std::unique_ptr<IRenderPass> createRenderPass(IShaderProgram&, uint32_t width, uint32_t height, Format, bool enableDepthBuffer) = 0;
+	virtual void waitIdle() = 0;
 
+	virtual std::unique_ptr<IGraphicsQueue> createGraphicsQueue(ISwapchain&) = 0;
+	
 	struct Features {
 		bool samplerAnisotropy;
 	};

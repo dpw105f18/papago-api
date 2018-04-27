@@ -75,13 +75,13 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ExecutablePath>$(ProjectDir)bin\$(Configuration)\$(Platform);$(ExecutablePath)</ExecutablePath>
-    <OutDir>$(ProjectDir)bin\$(Configuration)\$(Platform)\</OutDir>
-    <IntDir>$(ProjectDir)obj\$(Configuration)\$(Platform)\</IntDir>
+    <OutDir>$(SolutionDir)bin\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(ProjectDir)bin\$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ExecutablePath>$(ProjectDir)bin\$(Configuration)\$(Platform);$(ExecutablePath)</ExecutablePath>
-    <OutDir>$(ProjectDir)bin\$(Configuration)\$(Platform)\</OutDir>
-    <IntDir>$(ProjectDir)obj\$(Configuration)\$(Platform)\</IntDir>
+    <OutDir>$(SolutionDir)bin\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(ProjectDir)bin\$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ExecutablePath>$(ProjectDir)bin\$(Configuration)\$(Platform);$(ExecutablePath)</ExecutablePath>
@@ -91,8 +91,8 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ExecutablePath>$(ProjectDir)bin\$(Configuration)\$(Platform);$(ExecutablePath)</ExecutablePath>
-    <OutDir>$(ProjectDir)bin\$(Configuration)\$(Platform)\</OutDir>
-    <IntDir>$(ProjectDir)obj\$(Configuration)\$(Platform)\</IntDir>
+    <OutDir>$(SolutionDir)bin\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(ProjectDir)bin\$(Platform)\$(Configuration)\</IntDir>
     <IncludePath>$(ProjectDir)includes;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -162,10 +162,14 @@
   <ItemGroup>
     <ClInclude Include="include\common.hpp" />
     <ClInclude Include="include\ibuffer_resource.hpp" />
+    <ClInclude Include="include\icommand_buffer.hpp" />
     <ClInclude Include="include\idevice.hpp" />
+    <ClInclude Include="include\igraphics_queue.hpp" />
     <ClInclude Include="include\iimage_resource.hpp" />
+    <ClInclude Include="include\irender_pass.hpp" />
     <ClInclude Include="include\isampler.hpp" />
     <ClInclude Include="include\ishader.hpp" />
+    <ClInclude Include="include\ishader_program.hpp" />
     <ClInclude Include="include\isurface.hpp" />
     <ClInclude Include="include\iswapchain.hpp" />
     <ClInclude Include="include\api_enums.hpp" />

@@ -19,7 +19,7 @@ public:
 
 	uint32_t getWidth() const;
 	uint32_t getHeight() const;
-	vk::Format getFormat() const;
+	Format getFormat() const override;
 
 	void destroy() override;
 
@@ -36,6 +36,8 @@ public:
 		const Device&, 
 		vk::Format,
 		vk::Extent3D);
+
+	bool inUse() override;
 private:
 	static ImageResource createDepthResource(
 		const Device& device,

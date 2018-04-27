@@ -2,23 +2,26 @@
 #include <vector>
 #include <set>
 #include "resource.hpp"
+#include "igraphics_queue.hpp"
 
 class Device;
 class CommandBuffer;
 class SwapChain;
 class ImageResource;
+class ICommandBuffer;
 
-class GraphicsQueue
+class GraphicsQueue : public IGraphicsQueue
 {
 public:
-	void present();
-	uint32_t getNextFrameIndex();
-	void wait();
-	void submitCommands(std::vector<CommandBuffer>&);
+	GraphicsQueue(const Device&, int graphicsQueueIndex, int presentQueueIndex, SwapChain&);
+	
+	void present() override;
+	size_t getNextFrameIndex() override;
+	void wait() override;
+	void submitCommands(const std::vector<std::reference_wrapper<ICommandBuffer>>&);
 	ImageResource& getLastRenderedImage();
 private:
 	uint32_t getCurrentFrameIndex();
-	GraphicsQueue(const Device&, int graphicsQueueIndex, int presentQueueIndex, SwapChain&);
 	void createSemaphores(const vk::UniqueDevice&);
 
 	template<vk::ImageLayout from, vk::ImageLayout to>
