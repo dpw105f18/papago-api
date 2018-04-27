@@ -11,7 +11,7 @@ public:
 	~ImageResource();
 
 	template<vk::ImageLayout source, vk::ImageLayout destination>
-	void transition(const CommandBuffer&, vk::ImageAspectFlags = vk::ImageAspectFlagBits::eColor, vk::AccessFlags srcAccessFlags = vk::AccessFlags(), vk::AccessFlags dstAccessFlags = vk::AccessFlags());
+	void transition(const CommandBuffer&, vk::AccessFlags srcAccessFlags = vk::AccessFlags(), vk::AccessFlags dstAccessFlags = vk::AccessFlags());
 
 	void upload(const std::vector<char>& data) override; 
 
@@ -80,7 +80,6 @@ private:
 template<>
 inline void ImageResource::transition<vk::ImageLayout::eUndefined, vk::ImageLayout::eGeneral>(
 	const CommandBuffer& commandBuffer
-	, vk::ImageAspectFlags aspectFlag
 	, vk::AccessFlags srcAccessFlags
 	, vk::AccessFlags dstAccessFlags)
 {
@@ -92,7 +91,7 @@ inline void ImageResource::transition<vk::ImageLayout::eUndefined, vk::ImageLayo
 		VK_QUEUE_FAMILY_IGNORED,	//srcQueueFamilyIndex
 		VK_QUEUE_FAMILY_IGNORED,	//dstQueueFamliyIndex
 		m_vkImage, //image
-		{aspectFlag, 0, 1, 0, 1} //subresourceRange
+		{m_vkAspectFlags, 0, 1, 0, 1} //subresourceRange
 	);
 
 	commandBuffer->pipelineBarrier(
@@ -109,7 +108,6 @@ inline void ImageResource::transition<vk::ImageLayout::eUndefined, vk::ImageLayo
 template<>
 inline void ImageResource::transition<vk::ImageLayout::eGeneral, vk::ImageLayout::eTransferDstOptimal>(
 	const CommandBuffer& commandBuffer
-	, vk::ImageAspectFlags aspectFlag
 	, vk::AccessFlags srcAccessFlags
 	, vk::AccessFlags dstAccessFlags)
 {
@@ -121,7 +119,7 @@ inline void ImageResource::transition<vk::ImageLayout::eGeneral, vk::ImageLayout
 		VK_QUEUE_FAMILY_IGNORED,
 		VK_QUEUE_FAMILY_IGNORED,
 		m_vkImage,
-		{ aspectFlag, 0, 1, 0, 1 });
+		{ m_vkAspectFlags, 0, 1, 0, 1 });
 
 	commandBuffer->pipelineBarrier(
 		vk::PipelineStageFlagBits::eBottomOfPipe,
@@ -137,7 +135,6 @@ inline void ImageResource::transition<vk::ImageLayout::eGeneral, vk::ImageLayout
 template<>
 inline void ImageResource::transition<vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eGeneral>(
 	const CommandBuffer& commandBuffer
-	, vk::ImageAspectFlags aspectFlag
 	, vk::AccessFlags srcAccessFlags
 	, vk::AccessFlags dstAccessFlags)
 {
@@ -149,7 +146,7 @@ inline void ImageResource::transition<vk::ImageLayout::eTransferDstOptimal, vk::
 		VK_QUEUE_FAMILY_IGNORED,
 		VK_QUEUE_FAMILY_IGNORED,
 		m_vkImage,
-		{ aspectFlag, 0, 1, 0, 1 });
+		{ m_vkAspectFlags, 0, 1, 0, 1 });
 
 	commandBuffer->pipelineBarrier(
 		vk::PipelineStageFlagBits::eBottomOfPipe,
@@ -165,7 +162,6 @@ inline void ImageResource::transition<vk::ImageLayout::eTransferDstOptimal, vk::
 template<>
 inline void ImageResource::transition<vk::ImageLayout::eGeneral, vk::ImageLayout::eTransferSrcOptimal>(
 	const CommandBuffer& commandBuffer
-	, vk::ImageAspectFlags aspectFlag
 	, vk::AccessFlags srcAccessFlags
 	, vk::AccessFlags dstAccessFlags)
 {
@@ -177,7 +173,7 @@ inline void ImageResource::transition<vk::ImageLayout::eGeneral, vk::ImageLayout
 		VK_QUEUE_FAMILY_IGNORED,	//srcQueueFamilyIndex
 		VK_QUEUE_FAMILY_IGNORED,	//dstQueueFamliyIndex
 		m_vkImage, //image
-		{ aspectFlag, 0, 1, 0, 1 } //subresourceRange
+		{ m_vkAspectFlags, 0, 1, 0, 1 } //subresourceRange
 	);
 
 	commandBuffer->pipelineBarrier(
@@ -194,7 +190,6 @@ inline void ImageResource::transition<vk::ImageLayout::eGeneral, vk::ImageLayout
 template<>
 inline void ImageResource::transition<vk::ImageLayout::eTransferSrcOptimal, vk::ImageLayout::eGeneral>(
 	const CommandBuffer& commandBuffer
-	, vk::ImageAspectFlags aspectFlag
 	, vk::AccessFlags srcAccessFlags
 	, vk::AccessFlags dstAccessFlags)
 {
@@ -206,7 +201,7 @@ inline void ImageResource::transition<vk::ImageLayout::eTransferSrcOptimal, vk::
 		VK_QUEUE_FAMILY_IGNORED,	//srcQueueFamilyIndex
 		VK_QUEUE_FAMILY_IGNORED,	//dstQueueFamliyIndex
 		m_vkImage, //image
-		{ aspectFlag, 0, 1, 0, 1 } //subresourceRange
+		{ m_vkAspectFlags, 0, 1, 0, 1 } //subresourceRange
 	);
 
 	commandBuffer->pipelineBarrier(
@@ -223,7 +218,6 @@ inline void ImageResource::transition<vk::ImageLayout::eTransferSrcOptimal, vk::
 template<>
 inline void ImageResource::transition<vk::ImageLayout::eGeneral, vk::ImageLayout::eShaderReadOnlyOptimal>(
 	const CommandBuffer& commandBuffer
-	, vk::ImageAspectFlags aspectFlag
 	, vk::AccessFlags srcAccessFlags
 	, vk::AccessFlags dstAccessFlags)
 {
@@ -235,7 +229,7 @@ inline void ImageResource::transition<vk::ImageLayout::eGeneral, vk::ImageLayout
 		VK_QUEUE_FAMILY_IGNORED,	//srcQueueFamilyIndex
 		VK_QUEUE_FAMILY_IGNORED,	//dstQueueFamliyIndex
 		m_vkImage, //image
-		{ aspectFlag, 0, 1, 0, 1 } //subresourceRange
+		{ m_vkAspectFlags, 0, 1, 0, 1 } //subresourceRange
 	);
 
 	commandBuffer->pipelineBarrier(
@@ -252,7 +246,6 @@ inline void ImageResource::transition<vk::ImageLayout::eGeneral, vk::ImageLayout
 template<>
 inline void ImageResource::transition<vk::ImageLayout::eShaderReadOnlyOptimal, vk::ImageLayout::eGeneral>(
 	const CommandBuffer& commandBuffer
-	, vk::ImageAspectFlags aspectFlag
 	, vk::AccessFlags srcAccessFlags
 	, vk::AccessFlags dstAccessFlags)
 {
@@ -264,7 +257,7 @@ inline void ImageResource::transition<vk::ImageLayout::eShaderReadOnlyOptimal, v
 		VK_QUEUE_FAMILY_IGNORED,	//srcQueueFamilyIndex
 		VK_QUEUE_FAMILY_IGNORED,	//dstQueueFamliyIndex
 		m_vkImage, //image
-		{ aspectFlag, 0, 1, 0, 1 } //subresourceRange
+		{ m_vkAspectFlags, 0, 1, 0, 1 } //subresourceRange
 	);
 
 	commandBuffer->pipelineBarrier(
@@ -281,7 +274,6 @@ inline void ImageResource::transition<vk::ImageLayout::eShaderReadOnlyOptimal, v
 template<>
 inline void ImageResource::transition<vk::ImageLayout::eGeneral, vk::ImageLayout::ePresentSrcKHR>(
 	const CommandBuffer& commandBuffer
-	, vk::ImageAspectFlags aspectFlag
 	, vk::AccessFlags srcAccessFlags
 	, vk::AccessFlags dstAccessFlags)
 {
@@ -293,7 +285,7 @@ inline void ImageResource::transition<vk::ImageLayout::eGeneral, vk::ImageLayout
 		VK_QUEUE_FAMILY_IGNORED,	//srcQueueFamilyIndex
 		VK_QUEUE_FAMILY_IGNORED,	//dstQueueFamliyIndex
 		m_vkImage, //image
-		{ aspectFlag, 0, 1, 0, 1 } //subresourceRange
+		{ m_vkAspectFlags, 0, 1, 0, 1 } //subresourceRange
 	);
 
 	commandBuffer->pipelineBarrier(
@@ -310,7 +302,6 @@ inline void ImageResource::transition<vk::ImageLayout::eGeneral, vk::ImageLayout
 template<>
 inline void ImageResource::transition<vk::ImageLayout::ePresentSrcKHR, vk::ImageLayout::eGeneral>(
 	const CommandBuffer& commandBuffer
-	, vk::ImageAspectFlags aspectFlag
 	, vk::AccessFlags srcAccessFlags
 	, vk::AccessFlags dstAccessFlags)
 {
@@ -322,7 +313,7 @@ inline void ImageResource::transition<vk::ImageLayout::ePresentSrcKHR, vk::Image
 		VK_QUEUE_FAMILY_IGNORED,	//srcQueueFamilyIndex
 		VK_QUEUE_FAMILY_IGNORED,	//dstQueueFamliyIndex
 		m_vkImage, //image
-		{ aspectFlag, 0, 1, 0, 1 } //subresourceRange
+		{ m_vkAspectFlags, 0, 1, 0, 1 } //subresourceRange
 	);
 
 	commandBuffer->pipelineBarrier(
@@ -367,7 +358,6 @@ inline void ImageResource::transition<vk::ImageLayout::eUndefined, vk::ImageLayo
 template<vk::ImageLayout source, vk::ImageLayout destination>
 void ImageResource::transition(
 	const CommandBuffer& commandBuffer
-	, vk::ImageAspectFlags aspectFlag
 	, vk::AccessFlags srcAccessFlags
 	, vk::AccessFlags dstAccessFlags)
 {

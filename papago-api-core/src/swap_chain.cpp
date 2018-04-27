@@ -65,6 +65,7 @@ vk::UniqueRenderPass SwapChain::createDummyRenderPass(const vk::UniqueDevice& de
 		.setLoadOp(vk::AttachmentLoadOp::eLoad)
 		.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare)
 		.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare)
+		.setInitialLayout(vk::ImageLayout::eGeneral)
 		.setFinalLayout(vk::ImageLayout::eGeneral);
 
 	vk::AttachmentDescription depthDesc = {};
@@ -73,6 +74,7 @@ vk::UniqueRenderPass SwapChain::createDummyRenderPass(const vk::UniqueDevice& de
 		.setStoreOp(vk::AttachmentStoreOp::eDontCare)
 		.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare)
 		.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare)
+		.setInitialLayout(vk::ImageLayout::eGeneral)
 		.setFinalLayout(vk::ImageLayout::eGeneral);
 
 	vk::AttachmentReference colorRef(0, vk::ImageLayout::eColorAttachmentOptimal);

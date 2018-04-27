@@ -8,6 +8,7 @@ ImageResource::ImageResource(ImageResource&& other) noexcept
 	, m_format(other.m_format)
 	, m_vkExtent(other.m_vkExtent)
 	, m_device(other.m_device)
+	, m_vkAspectFlags(other.m_vkAspectFlags)
 {
 	// m_vkImage isn't automatically set to a null handle when moved
 	other.m_vkImage = vk::Image();
@@ -34,7 +35,7 @@ void ImageResource::upload(const std::vector<char>& data)
 	
 
 
-	transition<vk::ImageLayout::eGeneral, vk::ImageLayout::eTransferDstOptimal>(commandBuffer, m_vkAspectFlags);
+	transition<vk::ImageLayout::eGeneral, vk::ImageLayout::eTransferDstOptimal>(commandBuffer);
 	
 
 	//Do the actual uploading
@@ -72,7 +73,7 @@ void ImageResource::upload(const std::vector<char>& data)
 	commandBuffer->copyBufferToImage(*buffer, m_vkImage, vk::ImageLayout::eTransferDstOptimal, { region });
 
 	//Transition to eGeneral, as that is our "default" layout
-	transition<vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eGeneral>(commandBuffer, m_vkAspectFlags);
+	transition<vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eGeneral>(commandBuffer);
 	commandBuffer->end();
 
 	//execute everything
@@ -238,7 +239,7 @@ ImageResource::ImageResource(
 	m_device.m_internalCommandBuffer->begin(info);
 
 	if (aspectFlags & vk::ImageAspectFlagBits::eDepth) {
-		transition<vk::ImageLayout::eUndefined, vk::ImageLayout::eGeneral>(m_device.m_internalCommandBuffer, m_vkAspectFlags);
+		transition<vk::ImageLayout::eUndefined, vk::ImageLayout::eGeneral>(m_device.m_internalCommandBuffer);
 	}
 	else if (aspectFlags & vk::ImageAspectFlagBits::eColor) {
 		transition<vk::ImageLayout::eUndefined, vk::ImageLayout::eGeneral>(m_device.m_internalCommandBuffer);
