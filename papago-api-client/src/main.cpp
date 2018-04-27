@@ -216,6 +216,7 @@ int main()
 				auto cmd = device->createCommandBuffer(Usage::eReset);
 				cmd->record(*colPass, *passOneTarget, [&](IRecordingCommandBuffer& commandBuffer) {
 					commandBuffer
+						.clearColorBuffer(0.0f, 1.0f, 0.0f, 1.0f)
 						.setInput(*vertexBuffer)
 						.setIndexBuffer(*indexBuffer)
 						.drawIndexed(6);
@@ -231,6 +232,8 @@ int main()
 				}
 
 				stupidCmd->record(*stupidPass, *swapchain, graphicsQueue->getNextFrameIndex(), [&](IRecordingCommandBuffer& commandBuffer) {
+					commandBuffer.clearDepthStencilBuffer(1.0f, 0);
+					commandBuffer.clearColorBuffer(1.0f, 0.0f, 0.0f, 1.0f);
 					commandBuffer.setUniform("val", *uniformBuffer);
 					commandBuffer.setUniform("sam", *passOneTarget, *sampler);
 					commandBuffer.setInput(*stupidVertexBuffer);

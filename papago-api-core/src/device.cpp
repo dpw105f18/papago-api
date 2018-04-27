@@ -193,7 +193,7 @@ vk::UniqueRenderPass Device::createVkRenderpass(vk::Format format, bool withDept
 		.setSamples(vk::SampleCountFlagBits::e1)
 		.setLoadOp(vk::AttachmentLoadOp::eLoad)
 		.setStoreOp(vk::AttachmentStoreOp::eStore)
-		.setStencilLoadOp(vk::AttachmentLoadOp::eLoad)
+		.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare)
 		.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare)
 		.setInitialLayout(vk::ImageLayout::eGeneral)
 		.setFinalLayout(vk::ImageLayout::eGeneral);
@@ -223,7 +223,7 @@ vk::UniqueRenderPass Device::createVkRenderpass(vk::Format format, bool withDept
 		depthAttachment.setFormat(format)
 			.setInitialLayout(vk::ImageLayout::eGeneral)
 			.setLoadOp(vk::AttachmentLoadOp::eLoad) // Don't clear buffer data at load
-			.setStoreOp(vk::AttachmentStoreOp::eDontCare)
+			.setStoreOp(vk::AttachmentStoreOp::eStore)
 			.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare)
 			.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare)
 			.setFinalLayout(vk::ImageLayout::eGeneral);
