@@ -3,6 +3,9 @@
 #include "vertex_shader.hpp"
 #include "fragment_shader.hpp"
 #include <sstream>
+#include <regex>
+#include <map>
+
 
 Parser::Parser(const std::string & compilePath): m_compilePath(compilePath)
 {
@@ -10,57 +13,27 @@ Parser::Parser(const std::string & compilePath): m_compilePath(compilePath)
 
 #define STUPID_VERTEX_SHADER_HASH 0xa709c4e0b8ab6894
 #define COLOR_VERTEX_SHADER_HASH 0xf454a08ee86af30a
-#define TEXTURE_VERTEX_SHADER_HASH 0x19e592a304b02230
 
 std::unique_ptr<IVertexShader> Parser::compileVertexShader(const std::string &source, const std::string &entryPoint)
 {
 	auto byte_code = compile(source, "vert");
 	auto result = std::make_unique<VertexShader>(byte_code, entryPoint);
-	std::hash<std::string> hashFun;
-	auto hash = hashFun(source);
 
+	setShaderInput(*result, source);
+	setShaderUniforms(*result, source);
 
-	if (hash == STUPID_VERTEX_SHADER_HASH) {
-		result->m_input.push_back({ 0, vk::Format::eR32G32B32Sfloat });	//<-- position
-	}
-	else if(hash == COLOR_VERTEX_SHADER_HASH){
-		result->m_input.push_back({ 0, vk::Format::eR32G32B32Sfloat });	//<-- position
-		result->m_input.push_back({ sizeof(float) * 3, vk::Format::eR32G32Sfloat }); //<-- uv
-	}
-	else if (hash == TEXTURE_VERTEX_SHADER_HASH) {
-		result->m_input.push_back({ 0, vk::Format::eR32G32B32Sfloat });	//<-- position
-	}
 	return result;
 }
 
 #define STUPID_FRAGMENT_SHADER_HASH 0xfc0838ff5f18bfc2
 #define COLOR_FRAGMENT_SHADER_HASH 0xb810ed8016ecd8d6
-#define TEXTURE_FRAGMENT_SHADER_HASH 0xdc0a529a31085233
 
 std::unique_ptr<IFragmentShader> Parser::compileFragmentShader(const std::string& source, const std::string& entryPoint)
 {
 	auto byte_code = compile(source, "frag");
 	auto result = std::make_unique<FragmentShader>(byte_code, entryPoint);
-	
-	std::hash<std::string> hashFun;
-	auto hash = hashFun(source);
 
-	//TODO: set binding information on [result]
-	
-	// For texture frag
-	//result.m_bindings.insert({ "texSampler", {0, vk::DescriptorType::eCombinedImageSampler} });
-	
-	// For uniform frag
-	if (hash == COLOR_FRAGMENT_SHADER_HASH) {
-	
-	}
-	else if(hash == STUPID_FRAGMENT_SHADER_HASH){
-		result->m_bindings.insert({ { "sam" },{ 0, vk::DescriptorType::eCombinedImageSampler } });
-		result->m_bindings.insert({ { "val" },{ 1, vk::DescriptorType::eUniformBuffer } });
-	}
-	else if (hash == TEXTURE_FRAGMENT_SHADER_HASH) {
-		result->m_bindings.insert({ {"texSampler"}, {0, vk::DescriptorType::eCombinedImageSampler} });
-	}
+	setShaderUniforms(*result, source);
 	
 	return result;
 }
@@ -162,4 +135,105 @@ std::vector<char> Parser::compile(const std::string& source, const std::string& 
 	CloseHandle(file);
 	DeleteFile(".\\temp.spv");
 	return buffer;
+}
+
+size_t format_size(vk::Format format) {
+	switch (format)
+	{
+	case vk::Format::eD32Sfloat:			return sizeof(float);
+	case vk::Format::eR32G32Sfloat:			return 2 * sizeof(float);
+	case vk::Format::eR32G32B32Sfloat:		return 3 * sizeof(float);
+	case vk::Format::eR32G32B32A32Sfloat:	return 4 * sizeof(float);
+	default:
+		break;
+	}
+}
+
+vk::Format string_to_format(std::string input) {
+	static const std::map<std::string, vk::Format> map{
+		{ "float", vk::Format::eD32Sfloat },
+		{ "vec2", vk::Format::eR32G32Sfloat },
+		{ "vec3", vk::Format::eR32G32B32Sfloat },
+		{ "vec4", vk::Format::eR32G32B32A32Sfloat }
+	};
+	auto result = map.find(input);
+	if (result == map.end()) {
+		PAPAGO_ERROR("Failed to convert " + input + " to a format.");
+	}
+	return result->second;
+}
+
+#define REGEX_NUMBER "[0-9]+"
+#define REGEX_NAME "[a-zA-Z_][a-zA-Z0-9_]*"
+
+void Parser::setShaderInput(VertexShader & shader, const std::string & source)
+{
+	static const auto regex = std::regex(".*layout\\s*\\(location\\s*=\\s*(" REGEX_NUMBER ")\\s*\\)\\s+in\\s+(" REGEX_NAME ")\\s+(" REGEX_NAME ");");
+	
+
+	std::sregex_iterator iterator(ITERATE(source), regex);
+	for (auto i = iterator; i != std::sregex_iterator(); ++i) {
+		auto match = *i;
+		auto location = std::stoi(match[1]);
+		auto format = string_to_format(match[2].str());
+		auto name = match[3].str();
+
+		if (shader.m_input.size() <= location) {
+			shader.m_input.resize(location+1);
+		}
+		shader.m_input[location] = { 0, format };
+	}
+
+	// Calculate offsets. Can't do it in loop above, as allocation order could be mixed.
+	auto offset = 0u;
+	for (auto& input : shader.m_input) {
+		input.offset = offset;
+		offset += input.getFormatSize();
+	}
+
+}
+
+void Parser::setShaderUniforms(Shader & shader, const std::string & source)
+{
+	static const auto blockRegex = std::regex("layout\\s*\\(binding\\s*=\\s*(" REGEX_NUMBER ")\\s*\\)\\s*uniform\\s+" REGEX_NAME "\\s*\\{([^\\}]*)\\}\\s*" REGEX_NAME "\\s*;");
+
+	for (std::sregex_iterator iterator(ITERATE(source), blockRegex); iterator != std::sregex_iterator(); ++iterator) {
+		auto match = *iterator;
+		uint32_t binding = std::stoi(match[1].str());
+		auto body = match[2].str();
+
+		auto offset = 0u;
+		static const auto body_regex = std::regex("(" REGEX_NAME ")\\s+(" REGEX_NAME ");");
+		for (std::sregex_iterator body_iterator(ITERATE(body), body_regex); body_iterator != std::sregex_iterator(); ++body_iterator) {
+			auto body_match = *body_iterator;
+			auto type = body_match[1];
+			auto name = body_match[2];
+				
+			vk::DescriptorType descriptorType;
+			auto typeByteSize = 0u;
+
+			descriptorType = vk::DescriptorType::eUniformBuffer;
+			typeByteSize = format_size(string_to_format(type));
+			
+
+			shader.m_bindings.insert({ name, { binding, offset, descriptorType } });
+			offset += typeByteSize;
+		}
+	}
+
+	static const auto regex = std::regex("layout\\s*\\(binding\\s*=\\s*(" REGEX_NUMBER ")\\s*\\)\\s*uniform\\s+(" REGEX_NAME ")\\s+(" REGEX_NAME ")\\s*;");
+
+	for (std::sregex_iterator iterator(ITERATE(source), regex); iterator != std::sregex_iterator(); ++iterator) {
+		auto match = *iterator;
+		uint32_t binding = std::stoi(match[1]);
+		auto type = match[2];
+		auto name = match[3];
+
+		// TODO: Expand to 1D and 3D samplers? - Brandborg
+		vk::DescriptorType descriptorType = type == std::string("sampler2D")
+			? vk::DescriptorType::eCombinedImageSampler
+			: vk::DescriptorType::eUniformBuffer; // Technically a buffer uniform cannot be found in the free like this.
+
+		shader.m_bindings.insert({ name,{ binding, 0, descriptorType } });
+	}
 }

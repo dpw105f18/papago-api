@@ -5,6 +5,7 @@
 struct Binding
 {
 	uint32_t binding;
+	uint32_t offset;
 	vk::DescriptorType type;
 };
 
@@ -21,4 +22,5 @@ protected:
 	bool bindingExists(const std::string& name);
 private:
 	friend class CommandBuffer;
+	friend class Parser;
 };
