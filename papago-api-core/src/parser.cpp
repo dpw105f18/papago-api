@@ -182,6 +182,7 @@ void Parser::setShaderInput(VertexShader & shader, const std::string & source)
 			shader.m_input.resize(location+1);
 		}
 
+		//TODO: Make sure this is a global offset, right now it will fail if the location order is mixed.
 		shader.m_input[location] = { offset, format };
 		offset += format_size(format);
 	}
@@ -205,13 +206,10 @@ void Parser::setShaderUniforms(Shader & shader, const std::string & source)
 				
 			vk::DescriptorType descriptorType;
 			auto typeByteSize = 0u;
-			if (type == std::string("sampler2D")) {
-				descriptorType = vk::DescriptorType::eCombinedImageSampler;
-			}
-			else {
-				descriptorType = vk::DescriptorType::eUniformBuffer;
-				typeByteSize = format_size(string_to_format(type));
-			}
+
+			descriptorType = vk::DescriptorType::eUniformBuffer;
+			typeByteSize = format_size(string_to_format(type));
+			
 
 			shader.m_bindings.insert({ name, { binding, offset, descriptorType } });
 			offset += typeByteSize;
@@ -226,9 +224,10 @@ void Parser::setShaderUniforms(Shader & shader, const std::string & source)
 		auto type = match[2];
 		auto name = match[3];
 
+		// TODO: Expand to 1D and 3D samplers? - Brandborg
 		vk::DescriptorType descriptorType = type == std::string("sampler2D")
 			? vk::DescriptorType::eCombinedImageSampler
-			: vk::DescriptorType::eUniformBuffer;
+			: vk::DescriptorType::eUniformBuffer; // Technically a buffer uniform cannot be found in the free like this.
 
 		shader.m_bindings.insert({ name,{ binding, 0, descriptorType } });
 	}
