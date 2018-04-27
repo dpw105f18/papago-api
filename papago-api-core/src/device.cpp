@@ -135,7 +135,7 @@ vk::SwapchainCreateInfoKHR Device::createSwapChainCreateInfo(
 		.setImageExtent(extent)
 		.setImageArrayLayers(1)
 		// IMPROVEMENT: All images are assumed to be transfer sources, so it can be downloaded. Is it more efficient to not do that? - CW 2018-04-23
-		.setImageUsage(vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferSrc) 
+		.setImageUsage(vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eTransferDst) 
 		.setPreTransform(capabilities.currentTransform)
 		.setCompositeAlpha(vk::CompositeAlphaFlagBitsKHR::eOpaque)
 		.setPresentMode(presentMode)
@@ -191,7 +191,7 @@ vk::UniqueRenderPass Device::createVkRenderpass(vk::Format format, bool withDept
 	vk::AttachmentDescription colorAttachment;
 	colorAttachment.setFormat(format)
 		.setSamples(vk::SampleCountFlagBits::e1)
-		.setLoadOp(vk::AttachmentLoadOp::eClear)
+		.setLoadOp(vk::AttachmentLoadOp::eLoad)
 		.setStoreOp(vk::AttachmentStoreOp::eStore)
 		.setStencilLoadOp(vk::AttachmentLoadOp::eLoad)
 		.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare)
@@ -221,11 +221,12 @@ vk::UniqueRenderPass Device::createVkRenderpass(vk::Format format, bool withDept
 			
 		vk::AttachmentDescription depthAttachment;
 		depthAttachment.setFormat(format)
-			.setLoadOp(vk::AttachmentLoadOp::eClear) // Clear buffer data at load
+			.setInitialLayout(vk::ImageLayout::eGeneral)
+			.setLoadOp(vk::AttachmentLoadOp::eLoad) // Don't clear buffer data at load
 			.setStoreOp(vk::AttachmentStoreOp::eDontCare)
 			.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare)
 			.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare)
-			.setFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
+			.setFinalLayout(vk::ImageLayout::eGeneral);
 
 		attachments.push_back(depthAttachment);
 

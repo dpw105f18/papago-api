@@ -70,18 +70,13 @@ void CommandBuffer::begin(RenderPass& renderPass, SwapChain& swapChain, uint32_t
 		.setExtent(swapChain.m_vkExtent);
 
 
-	std::array<vk::ClearValue, 2> clearValues;
-
-	clearValues[0].setColor(vk::ClearColorValue(std::array<float, 4>{0, 0, 0, 1}));
-	clearValues[1].setDepthStencil(vk::ClearDepthStencilValue{ 1.0, 0 });
-
 	vk::RenderPassBeginInfo renderPassBeginInfo = {};
 
 	renderPassBeginInfo.setRenderPass(static_cast<vk::RenderPass>(renderPass))
 		.setFramebuffer(*swapChain.m_vkFramebuffers[imageIndex])
 		.setRenderArea(renderArea)
-		.setClearValueCount(clearValues.size())
-		.setPClearValues(clearValues.data());
+		.setClearValueCount(0)
+		.setPClearValues(nullptr);
 
 	//note: no clear-values because of the specific constructor overload...
 
@@ -104,10 +99,6 @@ void CommandBuffer::begin(RenderPass &renderPass, ImageResource & renderTarget)
 		.setExtent({renderTarget.m_vkExtent.width, renderTarget.m_vkExtent.height});
 
 
-	std::array<vk::ClearValue, 2> clearValues;
-
-	clearValues[0].setColor(vk::ClearColorValue(std::array<float, 4>{1, 0, 0, 1}));
-	clearValues[1].setDepthStencil(vk::ClearDepthStencilValue{ 1.0, 0 });
 
 	auto& fbo = renderTarget.createFramebuffer(static_cast<vk::RenderPass>(renderPass));
 
@@ -115,8 +106,8 @@ void CommandBuffer::begin(RenderPass &renderPass, ImageResource & renderTarget)
 	renderPassBeginInfo.setRenderPass(static_cast<vk::RenderPass>(renderPass))
 		.setFramebuffer(*fbo)
 		.setRenderArea(renderArea)
-		.setClearValueCount(clearValues.size())
-		.setPClearValues(clearValues.data());
+		.setClearValueCount(0)
+		.setPClearValues(nullptr);
 
 	//note: no clear-values because of the specific constructor overload...
 

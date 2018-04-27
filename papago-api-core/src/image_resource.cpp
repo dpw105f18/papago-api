@@ -31,8 +31,10 @@ void ImageResource::upload(const std::vector<char>& data)
 	vk::CommandBufferBeginInfo beginInfo = {};
 	beginInfo.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
 	commandBuffer->begin(beginInfo);
-	//TODO: don't assume Image is eUndefined at all times
-	transition<vk::ImageLayout::eGeneral, vk::ImageLayout::eTransferDstOptimal>(commandBuffer);
+	
+
+
+	transition<vk::ImageLayout::eGeneral, vk::ImageLayout::eTransferDstOptimal>(commandBuffer, m_vkAspectFlags);
 	
 
 	//Do the actual uploading
@@ -60,7 +62,7 @@ void ImageResource::upload(const std::vector<char>& data)
 	region.bufferOffset = 0;
 	region.bufferRowLength = 0;
 	region.bufferImageHeight = 0;
-	region.imageSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
+	region.imageSubresource.aspectMask = m_vkAspectFlags & vk::ImageAspectFlagBits::eDepth ? vk::ImageAspectFlagBits::eDepth : m_vkAspectFlags;
 	region.imageSubresource.mipLevel = 0;
 	region.imageSubresource.baseArrayLayer = 0;
 	region.imageSubresource.layerCount = 1;
@@ -70,7 +72,7 @@ void ImageResource::upload(const std::vector<char>& data)
 	commandBuffer->copyBufferToImage(*buffer, m_vkImage, vk::ImageLayout::eTransferDstOptimal, { region });
 
 	//Transition to eGeneral, as that is our "default" layout
-	transition<vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eGeneral>(commandBuffer);
+	transition<vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eGeneral>(commandBuffer, m_vkAspectFlags);
 	commandBuffer->end();
 
 	//execute everything
@@ -189,7 +191,7 @@ ImageResource ImageResource::createDepthResource(
 		.setArrayLayers(1)
 		.setFormat(format)
 		.setTiling(vk::ImageTiling::eOptimal)
-		.setUsage(vk::ImageUsageFlagBits::eDepthStencilAttachment)
+		.setUsage(vk::ImageUsageFlagBits::eDepthStencilAttachment | vk::ImageUsageFlagBits::eTransferDst |vk::ImageUsageFlagBits::eTransferSrc)
 		.setSamples(vk::SampleCountFlagBits::e1));
 
 	auto memoryRequirements = device.m_vkDevice->getImageMemoryRequirements(image);
@@ -216,15 +218,16 @@ ImageResource ImageResource::createColorResource(
 ImageResource::ImageResource(
 	vk::Image& image,
 	const Device& device,
-	vk::ImageAspectFlags aspectFlags, 
-	vk::Format format, 
+	vk::ImageAspectFlags aspectFlags,
+	vk::Format format,
 	vk::Extent3D extent,
-	vk::MemoryRequirements memoryRequirements) 
-		: Resource(device.m_vkPhysicalDevice, device.m_vkDevice, vk::MemoryPropertyFlagBits::eDeviceLocal | vk::MemoryPropertyFlagBits::eHostVisible, memoryRequirements)
-		, m_vkImage(image)
-		, m_format(format)
-		, m_vkExtent(extent)
-		, m_device(device)
+	vk::MemoryRequirements memoryRequirements)
+	: Resource(device.m_vkPhysicalDevice, device.m_vkDevice, vk::MemoryPropertyFlagBits::eDeviceLocal | vk::MemoryPropertyFlagBits::eHostVisible, memoryRequirements)
+	, m_vkImage(image)
+	, m_format(format)
+	, m_vkExtent(extent)
+	, m_device(device)
+	, m_vkAspectFlags(aspectFlags)
 {
 	m_vkDevice->bindImageMemory(m_vkImage, *m_vkMemory, 0);
 
@@ -233,12 +236,27 @@ ImageResource::ImageResource(
 	vk::CommandBufferBeginInfo info = {};
 	info.setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);
 	m_device.m_internalCommandBuffer->begin(info);
+
 	if (aspectFlags & vk::ImageAspectFlagBits::eDepth) {
-		transition<vk::ImageLayout::eUndefined, vk::ImageLayout::eDepthStencilAttachmentOptimal>(m_device.m_internalCommandBuffer);
+		transition<vk::ImageLayout::eUndefined, vk::ImageLayout::eGeneral>(m_device.m_internalCommandBuffer, m_vkAspectFlags);
 	}
 	else if (aspectFlags & vk::ImageAspectFlagBits::eColor) {
 		transition<vk::ImageLayout::eUndefined, vk::ImageLayout::eGeneral>(m_device.m_internalCommandBuffer);
 	}
+
+	/*
+	vk::ClearAttachment clearInfo = {};
+	clearInfo.setAspectMask(aspectFlags)
+		.setColorAttachment(0) // As we only have a single color attatchment, it will always be at 0. Ignored if depth/stencil.
+		.setClearValue(clearValue);
+
+
+	vk::ClearRect clearRect = {};
+	vk::Rect2D rect = { { 0, 0 }, { extent.width, extent.height } };
+	clearRect.setRect(rect).setBaseArrayLayer(0).setLayerCount(1);
+
+	//m_device.m_internalCommandBuffer->clearAttachments(clearInfo, { rect });
+	*/
 	
 	m_device.m_internalCommandBuffer->end();
 
@@ -249,6 +267,11 @@ ImageResource::ImageResource(
 	m_device.m_vkInternalQueue.waitIdle();
 
 	m_device.m_internalCommandBuffer->reset(vk::CommandBufferResetFlagBits::eReleaseResources);
+	
+	auto clearFloats = std::vector<float>(memoryRequirements.size / sizeof(float), 1.0f);
+	auto clearVector = std::vector<char>(memoryRequirements.size);
+	memcpy(clearVector.data(), clearFloats.data(), clearVector.size());
+	upload(clearVector);
 }
 
 // Does NOT allocate memory, this is assumed to already be allocated; but does create a VkImageView.
@@ -258,6 +281,7 @@ ImageResource::ImageResource(vk::Image& image, const Device& device, vk::Format 
 	, m_format(format)
 	, m_vkExtent(extent)
 	, m_device(device)
+	, m_vkAspectFlags(vk::ImageAspectFlagBits::eColor)
 {
 	createImageView(m_vkDevice);
 
@@ -275,6 +299,9 @@ ImageResource::ImageResource(vk::Image& image, const Device& device, vk::Format 
 	m_device.m_vkInternalQueue.waitIdle();
 
 	m_device.m_internalCommandBuffer->reset(vk::CommandBufferResetFlagBits::eReleaseResources);
+
+	auto clearVector = std::vector<char>(m_vkExtent.width * m_vkExtent.height * m_vkExtent.depth * sizeOfFormat(m_format));
+	upload(clearVector);
 }
 
 inline bool ImageResource::inUse()
