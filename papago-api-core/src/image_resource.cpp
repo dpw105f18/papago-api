@@ -268,9 +268,13 @@ ImageResource::ImageResource(
 
 	m_device.m_internalCommandBuffer->reset(vk::CommandBufferResetFlagBits::eReleaseResources);
 	
-	auto clearFloats = std::vector<float>(memoryRequirements.size / sizeof(float), 1.0f);
 	auto clearVector = std::vector<char>(memoryRequirements.size);
-	memcpy(clearVector.data(), clearFloats.data(), clearVector.size());
+
+	if (aspectFlags & vk::ImageAspectFlagBits::eDepth) {
+		auto clearFloats = std::vector<float>(memoryRequirements.size / sizeof(float), 1.0f);
+		memcpy(clearVector.data(), clearFloats.data(), clearVector.size());
+	}
+	
 	upload(clearVector);
 }
 
