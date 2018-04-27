@@ -60,28 +60,69 @@ long CommandBuffer::getBinding(const ShaderProgram & program, const std::string&
 	return binding;
 }
 
+IRecordingCommandBuffer & CommandBuffer::clearColorBuffer(float red, float green, float blue, float alpha)
+{
+	auto colorArray = std::array<float, 4>{ red,green,blue,alpha };
+	auto color = vk::ClearColorValue(colorArray);
+	clearAttatchment(color, vk::ImageAspectFlagBits::eColor);
+	return *this;
+}
+
+IRecordingCommandBuffer & CommandBuffer::clearColorBuffer(int32_t red, int32_t green, int32_t blue, int32_t alpha)
+{
+	auto colorArray = std::array<int32_t, 4>{ red, green, blue, alpha };
+	auto color = vk::ClearColorValue(colorArray);
+	clearAttatchment(color, vk::ImageAspectFlagBits::eColor);
+	return *this;
+}
+
+IRecordingCommandBuffer & CommandBuffer::clearColorBuffer(uint32_t red, uint32_t green, uint32_t blue, uint32_t alpha)
+{
+	auto colorArray = std::array<uint32_t, 4>{ red, green, blue, alpha };
+	auto color = vk::ClearColorValue(colorArray);
+	clearAttatchment(color, vk::ImageAspectFlagBits::eColor);
+	return *this;
+}
+
+IRecordingCommandBuffer & CommandBuffer::clearDepthStencilBuffer(float depth, uint32_t stencil)
+{
+	auto color = vk::ClearDepthStencilValue({depth, stencil});
+	clearAttatchment(color, vk::ImageAspectFlagBits::eDepth | vk::ImageAspectFlagBits::eStencil);
+	return *this;
+}
+
+void CommandBuffer::clearAttatchment(const vk::ClearValue& clearValue, vk::ImageAspectFlags aspectFlags)
+{
+	vk::ClearAttachment clearInfo = {};
+	clearInfo.setAspectMask(aspectFlags)
+		.setColorAttachment(0) // As we only have a single color attatchment, it will always be at 0. Ignored if depth/stencil.
+		.setClearValue(clearValue);
+
+	vk::ClearRect clearRect = {};
+	vk::Rect2D rect = { { 0, 0 },{ m_renderTargetPtr->getWidth(), m_renderTargetPtr->getHeight() } };
+	clearRect.setRect(rect).setBaseArrayLayer(0).setLayerCount(1);
+	m_vkCommandBuffer->clearAttachments(clearInfo, { clearRect });
+
+}
+
 //TODO: make checks to see if cmd.begin(...) has been called before. -AM
 void CommandBuffer::begin(RenderPass& renderPass, SwapChain& swapChain, uint32_t imageIndex)
 {
 	m_renderPassPtr = &renderPass;
+	m_renderTargetPtr = &swapChain.m_colorResources[imageIndex];
 
 	vk::Rect2D renderArea = {};
 	renderArea.setOffset({ 0,0 })
 		.setExtent(swapChain.m_vkExtent);
 
 
-	std::array<vk::ClearValue, 2> clearValues;
-
-	clearValues[0].setColor(vk::ClearColorValue(std::array<float, 4>{0, 0, 0, 1}));
-	clearValues[1].setDepthStencil(vk::ClearDepthStencilValue{ 1.0, 0 });
-
 	vk::RenderPassBeginInfo renderPassBeginInfo = {};
 
 	renderPassBeginInfo.setRenderPass(static_cast<vk::RenderPass>(renderPass))
 		.setFramebuffer(*swapChain.m_vkFramebuffers[imageIndex])
 		.setRenderArea(renderArea)
-		.setClearValueCount(clearValues.size())
-		.setPClearValues(clearValues.data());
+		.setClearValueCount(0)
+		.setPClearValues(nullptr);
 
 	//note: no clear-values because of the specific constructor overload...
 
@@ -98,16 +139,13 @@ void CommandBuffer::begin(RenderPass& renderPass, SwapChain& swapChain, uint32_t
 void CommandBuffer::begin(RenderPass &renderPass, ImageResource & renderTarget)
 {
 	m_renderPassPtr = &renderPass;
+	m_renderTargetPtr = &renderTarget;
 
 	vk::Rect2D renderArea = {};
 	renderArea.setOffset({ 0,0 })
 		.setExtent({renderTarget.m_vkExtent.width, renderTarget.m_vkExtent.height});
 
 
-	std::array<vk::ClearValue, 2> clearValues;
-
-	clearValues[0].setColor(vk::ClearColorValue(std::array<float, 4>{1, 0, 0, 1}));
-	clearValues[1].setDepthStencil(vk::ClearDepthStencilValue{ 1.0, 0 });
 
 	auto& fbo = renderTarget.createFramebuffer(static_cast<vk::RenderPass>(renderPass));
 
@@ -115,8 +153,8 @@ void CommandBuffer::begin(RenderPass &renderPass, ImageResource & renderTarget)
 	renderPassBeginInfo.setRenderPass(static_cast<vk::RenderPass>(renderPass))
 		.setFramebuffer(*fbo)
 		.setRenderArea(renderArea)
-		.setClearValueCount(clearValues.size())
-		.setPClearValues(clearValues.data());
+		.setClearValueCount(0)
+		.setPClearValues(nullptr);
 
 	//note: no clear-values because of the specific constructor overload...
 
@@ -167,6 +205,7 @@ IRecordingCommandBuffer& CommandBuffer::setInput(IBufferResource& buffer)
 void CommandBuffer::end()
 {
 	m_renderPassPtr = nullptr;
+	m_renderTargetPtr = nullptr;
 	m_vkCommandBuffer->endRenderPass();
 	m_vkCommandBuffer->end();
 }

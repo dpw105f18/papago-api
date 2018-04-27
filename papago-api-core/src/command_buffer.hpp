@@ -56,9 +56,17 @@ private:
 	//TODO: Check that this is not null, when calling non-begin methods on the object. - Brandborg
 	// TODO: Another approach could be to create another interface and expose it via builder pattern or lambda expressions - CW 2018-04-23
 	RenderPass* m_renderPassPtr;
+	ImageResource* m_renderTargetPtr;
 
 	std::set<Resource*> m_resourcesInUse;
 
 	friend class Device;
 	friend class GraphicsQueue;
+
+	// Inherited via IRecordingCommandBuffer
+	virtual IRecordingCommandBuffer & clearColorBuffer(float red, float green, float blue, float alpha) override;
+	virtual IRecordingCommandBuffer & clearColorBuffer(int32_t red, int32_t green, int32_t blue, int32_t alpha) override;
+	virtual IRecordingCommandBuffer & clearColorBuffer(uint32_t red, uint32_t green, uint32_t blue, uint32_t alpha) override;
+	virtual IRecordingCommandBuffer & clearDepthStencilBuffer(float depth, uint32_t stencil) override;
+	void clearAttatchment(const vk::ClearValue&, vk::ImageAspectFlags);
 };

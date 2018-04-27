@@ -62,18 +62,20 @@ vk::UniqueRenderPass SwapChain::createDummyRenderPass(const vk::UniqueDevice& de
 {
 	vk::AttachmentDescription colorDesc = {};
 	colorDesc.setFormat(m_colorResources[0].m_format)
-		.setLoadOp(vk::AttachmentLoadOp::eDontCare)
+		.setLoadOp(vk::AttachmentLoadOp::eLoad)
 		.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare)
 		.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare)
-		.setFinalLayout(vk::ImageLayout::ePresentSrcKHR);
+		.setInitialLayout(vk::ImageLayout::eGeneral)
+		.setFinalLayout(vk::ImageLayout::eGeneral);
 
 	vk::AttachmentDescription depthDesc = {};
 	depthDesc.setFormat(m_depthResources[0].m_format)
-		.setLoadOp(vk::AttachmentLoadOp::eDontCare)
+		.setLoadOp(vk::AttachmentLoadOp::eLoad)
 		.setStoreOp(vk::AttachmentStoreOp::eDontCare)
 		.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare)
 		.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare)
-		.setFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
+		.setInitialLayout(vk::ImageLayout::eGeneral)
+		.setFinalLayout(vk::ImageLayout::eGeneral);
 
 	vk::AttachmentReference colorRef(0, vk::ImageLayout::eColorAttachmentOptimal);
 	vk::AttachmentReference depthRef(1, vk::ImageLayout::eDepthStencilAttachmentOptimal);
