@@ -123,7 +123,7 @@ void RenderPass::setupDescriptorSet(const vk::UniqueDevice &device, const Vertex
 	std::map<uint32_t, size_t> bindingMap;
 
 	auto vertexBindings = vertexShader.getBindings();
-	for (size_t i = 0; vertexBindings.size(); ++i) {
+	for (size_t i = 0; i < vertexBindings.size(); ++i) {
 		auto& vertexBinding = vertexBindings[i];
 
 		vk::DescriptorSetLayoutBinding binding = {};
