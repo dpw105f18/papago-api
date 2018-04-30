@@ -2,9 +2,16 @@
 #extension GL_ARB_separate_shader_objects : enable
 
 layout(location = 0) in vec3 pos;
-layout(binding = 0) uniform mat4 view_projection_matrix;
-layout(binding = 1) uniform mat4 model_matrix;
+
+//TODO: Change the uniforms to a more sensible layout
+layout(binding = 0) uniform UniformBuffer {
+	mat4 view_projection_matrix;
+} uniforms;
+
+layout(binding = 1) uniform InstanceUniformBuffer {
+	mat4 model_matrix;
+} instance;
 
 void main() {
-	gl_Position = view_projection_matrix * model_matrix * vec4(pos, 1);
+	gl_Position = uniforms.view_projection_matrix * instance.model_matrix * vec4(pos, 1);
 }

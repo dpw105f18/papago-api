@@ -11,6 +11,7 @@ Parser::Parser(const std::string & compilePath): m_compilePath(compilePath)
 #define STUPID_VERTEX_SHADER_HASH 0xa709c4e0b8ab6894
 #define COLOR_VERTEX_SHADER_HASH 0xf454a08ee86af30a
 #define TEXTURE_VERTEX_SHADER_HASH 0x19e592a304b02230
+#define MVP_VERTEX_SHADER_HASH 0x1446a0167bb870c0
 
 std::unique_ptr<IVertexShader> Parser::compileVertexShader(const std::string &source, const std::string &entryPoint)
 {
@@ -20,15 +21,22 @@ std::unique_ptr<IVertexShader> Parser::compileVertexShader(const std::string &so
 	auto hash = hashFun(source);
 
 
-	if (hash == STUPID_VERTEX_SHADER_HASH) {
-		result->m_input.push_back({ 0, vk::Format::eR32G32B32Sfloat });	//<-- position
-	}
-	else if(hash == COLOR_VERTEX_SHADER_HASH){
+	switch (hash) {
+	case STUPID_VERTEX_SHADER_HASH:
+	case COLOR_VERTEX_SHADER_HASH:
+		break;
+	case TEXTURE_VERTEX_SHADER_HASH:
 		result->m_input.push_back({ 0, vk::Format::eR32G32B32Sfloat });	//<-- position
 		result->m_input.push_back({ sizeof(float) * 3, vk::Format::eR32G32Sfloat }); //<-- uv
-	}
-	else if (hash == TEXTURE_VERTEX_SHADER_HASH) {
+		break;
+	case MVP_VERTEX_SHADER_HASH:
 		result->m_input.push_back({ 0, vk::Format::eR32G32B32Sfloat });	//<-- position
+		result->m_bindings.insert({ { "view_projection_matrix" },{ 0, vk::DescriptorType::eUniformBuffer } });
+		result->m_bindings.insert({ { "model_matrix" },{ 1, vk::DescriptorType::eUniformBuffer } });
+		break;
+	default: 
+		std::cout << "WARNING: Unknown vertex shader hash: 0x" << std::hex << hash << std::endl;
+		break;
 	}
 	return result;
 }
@@ -128,10 +136,10 @@ std::vector<char> Parser::compile(const std::string& source, const std::string& 
 		PAPAGO_ERROR("Failed to get exit code from child process.");
 
 	if (exit_code != EXIT_SUCCESS) {
-		char buffer[2048];
+		char buffer[2048] = {};
 		DWORD bytes_read;
 		ReadFile(stdout_read, &buffer, 2048, &bytes_read, nullptr);
-
+		std::cout << buffer << std::endl;
 		PAPAGO_ERROR("Validator could not validate input.");
 	}
 
