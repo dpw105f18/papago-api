@@ -24,6 +24,10 @@
 #include "idevice.hpp"
 #include "api_enums.hpp"
 
+#define GLM_ENABLE_EXPERIMENTAL
+#include "external/glm/glm.hpp"
+#include "external/glm/gtx/transform.hpp"
+
 struct vec2
 {
 	float x, y;
@@ -152,8 +156,119 @@ std::string readFile(const std::string& file_path) {
 	return result;
 }
 
+void multithreadedTest() {
+	auto hwnd = StartWindow(800, 600);
+	auto surface = ISurface::createWin32Surface(800, 600, hwnd);
+	IDevice::Features features;
+	features.samplerAnisotropy = true;
+	IDevice::Extensions extensions;
+	extensions.swapchain = true;
+	auto devices = IDevice::enumerateDevices(*surface, features, extensions);
+	auto& device = devices[0];
+
+	auto vertexBuffer = device->createVertexBuffer(std::vector<Vertex>{
+		{ { -0.5, -0.5,  0.5 } },
+		{ { -0.5,  0.5,  0.5 } },
+		{ {  0.5,  0.5,  0.5 } },
+		{ {  0.5, -0.5,  0.5 } },
+		{ { -0.5, -0.5, -0.5 } },
+		{ { -0.5,  0.5, -0.5 } },
+		{ {  0.5,  0.5, -0.5 } },
+		{ {  0.5, -0.5, -0.5 } }
+	});
+
+	auto indexBuffer = device->createIndexBuffer(std::vector<uint16_t>{
+		// Front
+		0, 1, 2,
+		0, 2, 3,
+		// Top
+		3, 7, 4,
+		3, 4, 0,
+		// Right
+		3, 2, 6,
+		3, 6, 7,
+		// Back
+		7, 6, 5,
+		7, 5, 4,
+		// Bottom
+		6, 5, 1,
+		6, 1, 2,
+		// Left
+		4, 5, 1,
+		4, 1, 0
+	});
+
+	auto parser = Parser("C:/VulkanSDK/1.0.65.0/Bin/glslangValidator.exe");
+	auto swapchain = device->createSwapChain(Format::eR8G8B8A8Unorm, 3, IDevice::PresentMode::eMailbox);
+	auto graphicsQueue = device->createGraphicsQueue(*swapchain);
+	auto modelMatrix = device->createUniformBuffer(sizeof(glm::mat4));
+	auto viewProjectionMatrix = device->createUniformBuffer(sizeof(glm::mat4));
+
+	{
+		glm::mat4 view = glm::lookAt(
+			glm::vec3(0.0f, 0.0f, 0.0f),
+			glm::vec3(9.0f, 3.0f, 0.0f),
+			glm::vec3(0.0f, 1.0f, 0.0f));
+
+		glm::mat4 projection = glm::perspective(
+			glm::radians(90.0f),
+			4.0f/3.0f,
+			0.1f,
+			100.0f);
+
+		// TODO: make it so that vector is not mandatory
+		viewProjectionMatrix->upload<glm::mat4>({
+			projection * view
+		});
+	}
+
+	auto vertexShader = parser.compileVertexShader(readFile("shader/mvpShader.vert"), "main");
+	auto fragmentShader = parser.compileFragmentShader(readFile("shader/colorFrag.frag"), "main");
+	auto program = device->createShaderProgram(*vertexShader, *fragmentShader);
+	auto renderPass = device->createRenderPass(*program, 800, 600, Format::eR8G8B8A8Unorm, false);
+
+	while (true)
+	{
+		MSG msg;
+		if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
+		{
+			if (msg.message == WM_QUIT) {
+				break;
+			}
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);
+		}
+		else {
+			auto commandBuffer = device->createCommandBuffer(Usage::eReset);
+			commandBuffer->record(*renderPass, *swapchain, graphicsQueue->getNextFrameIndex(), [&](IRecordingCommandBuffer& rCommandBuffer) {
+				rCommandBuffer.setUniform("mMatrix", *modelMatrix);
+				rCommandBuffer.setUniform("vpMatrix", *viewProjectionMatrix);
+				rCommandBuffer.setIndexBuffer(*indexBuffer);
+				rCommandBuffer.setInput(*vertexBuffer);
+				rCommandBuffer.drawIndexed(48);
+			});
+
+			graphicsQueue->submitCommands({
+				*commandBuffer
+			});
+
+			graphicsQueue->present();
+		}
+	}
+	device->waitIdle();
+}
+
 int main()
 {
+	try {
+		multithreadedTest();
+	}
+	catch (std::exception e) {
+		std::cout << "ERROR: " << e.what() << std::endl;
+	}
+	std::cout << "Press enter to continue...";
+	std::cin.ignore();
+	return 0;
 	{
 		auto hwnd = StartWindow(800, 600);
 		auto surface = ISurface::createWin32Surface(800, 600, hwnd);
