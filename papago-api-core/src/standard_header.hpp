@@ -11,7 +11,7 @@
 #define VK_USE_PLATFORM_WIN32_KHR
 #include <vulkan/vulkan.hpp>
 
-#define PAPAGO_ERROR(msg) throw std::runtime_error(msg);
+#define PAPAGO_ERROR(msg) throw std::runtime_error(__FILE__ ":" + std::to_string(__LINE__) + ": " + msg);
 #define ITERATE(collection) std::begin(collection), std::end(collection)
 #define PAPAGO_EXPORT
 
