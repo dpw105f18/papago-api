@@ -86,8 +86,55 @@ IRecordingCommandBuffer & CommandBuffer::clearColorBuffer(uint32_t red, uint32_t
 
 IRecordingCommandBuffer & CommandBuffer::clearDepthStencilBuffer(float depth, uint32_t stencil)
 {
-	auto color = vk::ClearDepthStencilValue({depth, stencil});
-	clearAttatchment(color, vk::ImageAspectFlagBits::eDepth | vk::ImageAspectFlagBits::eStencil);
+	auto flags = m_renderPassPtr->m_depthStencilFlags;
+	if (flags != DepthStencilFlags::eNone) {
+		if (flags == (DepthStencilFlags::eDepth | DepthStencilFlags::eStencil)) {
+			auto color = vk::ClearDepthStencilValue({ depth, stencil });
+			clearAttatchment(color, vk::ImageAspectFlagBits::eDepth | vk::ImageAspectFlagBits::eStencil);
+		}
+		else {
+			PAPAGO_ERROR("Tried to clear buffer which is not both depth and stencil!");
+		}
+	}
+	else {
+		PAPAGO_ERROR("Tried to clear non-existent depth/stencil buffer!");
+	}
+	return *this;
+}
+
+IRecordingCommandBuffer& CommandBuffer::clearDepthBuffer(float value)
+{
+	auto flags = m_renderPassPtr->m_depthStencilFlags;
+	if (flags != DepthStencilFlags::eNone) {
+		if (flags == DepthStencilFlags::eDepth) {
+			auto color = vk::ClearDepthStencilValue(value);
+			clearAttatchment(color, vk::ImageAspectFlagBits::eDepth);
+		}
+		else {
+			PAPAGO_ERROR("Tried to clear buffer which is not depth!");
+		}
+	}
+	else {
+		PAPAGO_ERROR("Tried to clear non-existent depth/stencil buffer!");
+	}
+	return *this;
+}
+
+IRecordingCommandBuffer& CommandBuffer::clearStencilBuffer(uint32_t value)
+{
+	auto flags = m_renderPassPtr->m_depthStencilFlags;
+	if (flags != DepthStencilFlags::eNone) {
+		if (flags == DepthStencilFlags::eStencil) {
+			auto color = vk::ClearDepthStencilValue(0, value);
+			clearAttatchment(color, vk::ImageAspectFlagBits::eStencil);
+		}
+		else {
+			PAPAGO_ERROR("Tried to clear buffer which is not stencil!");
+		}
+	}
+	else {
+		PAPAGO_ERROR("Tried to clear non-existent depth/stencil buffer!");
+	}
 	return *this;
 }
 

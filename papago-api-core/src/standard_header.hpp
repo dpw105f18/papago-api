@@ -50,6 +50,7 @@ inline vk::SamplerAddressMode to_vulkan_address_mode(TextureWrapMode mode) {
 }
 
 inline vk::Format to_vulkan_format(Format format) {
+	
 	switch (format)
 	{
 	case Format::eR8G8B8Unorm:
@@ -58,6 +59,14 @@ inline vk::Format to_vulkan_format(Format format) {
 		return vk::Format::eR8G8B8A8Unorm;
 	case Format::eB8G8R8A8Unorm:
 		return vk::Format::eB8G8R8A8Unorm;
+	case Format::eS8Uint:
+		return vk::Format::eS8Uint;
+	case Format::eD32Sfloat:
+		return vk::Format::eD32Sfloat;
+	case Format::eD32SfloatS8Uint:
+		return vk::Format::eD32SfloatS8Uint;
+	case Format::eD24UnormS8Uint:
+		return vk::Format::eD24UnormS8Uint;
 	default:
 		PAPAGO_ERROR("Invalid format");
 		break;
@@ -71,7 +80,15 @@ inline Format from_vulkan_format(vk::Format format) {
 	case vk::Format::eR8G8B8A8Unorm:
 		return Format::eR8G8B8A8Unorm;
 	case vk::Format::eB8G8R8A8Unorm:
-			return Format::eB8G8R8A8Unorm;
+		return Format::eB8G8R8A8Unorm;
+	case vk::Format::eD32Sfloat:
+		return Format::eD32Sfloat;
+	case vk::Format::eD32SfloatS8Uint:
+		return Format::eD32SfloatS8Uint;
+	case vk::Format::eD24UnormS8Uint:
+		return Format::eD24UnormS8Uint;
+	case vk::Format::eS8Uint:
+		return Format::eS8Uint;
 	default:
 		PAPAGO_ERROR("Invalid format");
 		break;
@@ -324,14 +341,18 @@ inline size_t sizeOfFormat(vk::Format format)
 	case vk::Format::eX8D24UnormPack32:
 		break;
 	case vk::Format::eD32Sfloat:
+		return 4;
 		break;
 	case vk::Format::eS8Uint:
+		return 1;
 		break;
 	case vk::Format::eD16UnormS8Uint:
 		break;
 	case vk::Format::eD24UnormS8Uint:
+		return 4;
 		break;
 	case vk::Format::eD32SfloatS8Uint:
+		return 5;
 		break;
 	case vk::Format::eBc1RgbUnormBlock:
 		break;
@@ -534,4 +555,30 @@ inline size_t sizeOfFormat(vk::Format format)
 		PAPAGO_ERROR("sizeOfFormat not implemented for this format!");
 	}
 	return result;
+}
+
+inline DepthStencilFlags GetDepthStencilFlags(vk::Format format)
+{
+	DepthStencilFlags flags = DepthStencilFlags::eNone;
+
+	switch (format)
+	{
+	case vk::Format::eUndefined:
+		break;
+	
+	case vk::Format::eD16Unorm:
+	case vk::Format::eD32Sfloat:
+		flags = DepthStencilFlags::eDepth;
+		break;
+	case vk::Format::eS8Uint:
+		flags = DepthStencilFlags::eStencil;
+		break;
+	case vk::Format::eD16UnormS8Uint:
+	case vk::Format::eD24UnormS8Uint:
+	case vk::Format::eD32SfloatS8Uint:
+		flags = DepthStencilFlags::eDepth | DepthStencilFlags::eStencil;
+		break;
+	}
+
+	return flags;
 }

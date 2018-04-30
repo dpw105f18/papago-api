@@ -183,7 +183,7 @@ int main()
 		});
 
 		auto parser = Parser("C:/VulkanSDK/1.0.65.0/Bin32/glslangValidator.exe");
-		auto swapchain = device->createSwapChain(Format::eR8G8B8A8Unorm, 3, IDevice::PresentMode::eMailbox);
+		auto swapchain = device->createSwapChain(Format::eR8G8B8A8Unorm, Format::eD32SfloatS8Uint, 3, IDevice::PresentMode::eMailbox);
 		auto graphicsQueue = device->createGraphicsQueue(*swapchain);
 		auto passOneTarget = device->createTexture2D(800, 600, Format::eR8G8B8A8Unorm);
 		auto uniformBuffer = device->createUniformBuffer(sizeof(vec3));
@@ -193,13 +193,13 @@ int main()
 		auto colVert = parser.compileVertexShader(readFile("shader/colorVert.vert"), "main");
 		auto colFrag = parser.compileFragmentShader(readFile("shader/colorFrag.frag"), "main");
 		auto colProgram = device->createShaderProgram(*colVert, *colFrag);
-		auto colPass = device->createRenderPass(*colProgram, 800, 600, Format::eR8G8B8A8Unorm, false);
+		auto colPass = device->createRenderPass(*colProgram, 800, 600, Format::eR8G8B8A8Unorm);
 		
 		// PASS 2
 		auto stupidVert = parser.compileVertexShader(readFile("shader/stupidVert.vert"), "main");
 		auto stupidFrag = parser.compileFragmentShader(readFile("shader/stupidFrag.frag"), "main");
 		auto stupidProgram = device->createShaderProgram(*stupidVert, *stupidFrag);
-		auto stupidPass = device->createRenderPass(*stupidProgram, swapchain->getWidth(), swapchain->getHeight(), swapchain->getFormat(),  true);
+		auto stupidPass = device->createRenderPass(*stupidProgram, swapchain->getWidth(), swapchain->getHeight(), swapchain->getFormat(), Format::eD32SfloatS8Uint);
 
 		while (true)
 		{

@@ -3,7 +3,12 @@
 enum class Format {
 	eR8G8B8Unorm,
 	eR8G8B8A8Unorm,
-	eB8G8R8A8Unorm
+	eB8G8R8A8Unorm,
+
+	eS8Uint,
+	eD32Sfloat,
+	eD32SfloatS8Uint,
+	eD24UnormS8Uint
 };
 
 enum class TypeEnums {
@@ -48,3 +53,16 @@ enum class TextureWrapMode {
 };
 
 enum class CommandBufferUsage {};
+
+//TODO: make in-accessible to user? (only used internally)
+enum class DepthStencilFlags
+{
+	eNone		= 0U,
+	eDepth		= 1U,
+	eStencil	= 2U
+};
+
+DepthStencilFlags operator&(DepthStencilFlags lhs, DepthStencilFlags rhs);
+
+
+DepthStencilFlags operator|(DepthStencilFlags lhs, DepthStencilFlags rhs);

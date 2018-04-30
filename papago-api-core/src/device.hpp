@@ -23,12 +23,16 @@ public:
 
 
 	std::unique_ptr<ISwapchain> createSwapChain(Format, size_t framebufferCount, PresentMode preferredPresentMode) override;
+	std::unique_ptr<ISwapchain> createSwapChain(Format colorFormat, Format depthStencilFormat, size_t framebufferCount, PresentMode preferredPresentMode) override;
 	std::unique_ptr<SwapChain> createSwapChain(const vk::Format & format, size_t framebufferCount, vk::PresentModeKHR preferredPresentMode);
+	std::unique_ptr<SwapChain> createSwapChain(const vk::Format & colorFormat, vk::Format depthStencilFormat, size_t framebufferCount, vk::PresentModeKHR preferredPresentMode);
 	CommandBuffer createCommandBuffer(Usage) const;
 	GraphicsQueue createGraphicsQueue(SwapChain&) const;
 	SubCommandBuffer createSubCommandBuffer(Usage);
-	std::unique_ptr<IRenderPass> createRenderPass(IShaderProgram&, uint32_t width, uint32_t height, Format, bool) override;
-	RenderPass createRenderPass(const ShaderProgram&, uint32_t width, uint32_t height, vk::Format, bool enableDepthBuffer) const;
+	std::unique_ptr<IRenderPass> createRenderPass(IShaderProgram&, uint32_t width, uint32_t height, Format colorFormat) override;
+	std::unique_ptr<IRenderPass> createRenderPass(IShaderProgram&, uint32_t width, uint32_t height, Format colorFormat, Format depthStencilFormat) override;
+	RenderPass createRenderPass(const ShaderProgram&, uint32_t width, uint32_t height, vk::Format colorFormat) const;
+	RenderPass createRenderPass(const ShaderProgram&, uint32_t width, uint32_t height, vk::Format colorFormat, vk::Format depthStencilFormat) const;
 	std::unique_ptr<ISampler> createTextureSampler1D(Filter magFil, Filter minFil, TextureWrapMode modeU);
 	std::unique_ptr<ISampler> createTextureSampler2D(Filter magFil, Filter minFil, TextureWrapMode modeU, TextureWrapMode modeV);
 	std::unique_ptr<ISampler> createTextureSampler3D(Filter magFil, Filter minFil, TextureWrapMode modeU, TextureWrapMode modeV, TextureWrapMode modeW);
@@ -43,7 +47,14 @@ public:
 	std::unique_ptr<IBufferResource> createUniformBuffer(size_t size) override;
 	std::unique_ptr<IGraphicsQueue> createGraphicsQueue(ISwapchain&) override;
 
+	vk::UniqueRenderPass createVkRenderpass(vk::Format colorFormat) const;
+	vk::UniqueRenderPass createVkRenderpass(vk::Format colorFormat, vk::Format depthStencilFormat) const;
+
 	void waitIdle() override;
+
+	const vk::UniqueDevice& getVkDevice() const;
+	const vk::PhysicalDevice& getVkPhysicalDevice() const;
+
 protected:
 	std::unique_ptr<IBufferResource> createVertexBufferInternal(std::vector<char>& data) override;
 	std::unique_ptr<IBufferResource> createIndexBufferInternal(std::vector<char>& data) override;
@@ -87,8 +98,6 @@ private:
 
 	static bool isPhysicalDeviceSuitable(const vk::PhysicalDevice& physicalDevice, Surface&, const std::vector<const char*> &);
 	static bool areExtensionsSupported(const vk::PhysicalDevice& physicalDevice, const std::vector<const char*> &extensions);
-
-	vk::UniqueRenderPass createVkRenderpass(vk::Format, bool withDepthBuffer = true) const;
 
 	vk::PhysicalDevice m_vkPhysicalDevice;
 	vk::UniqueDevice m_vkDevice;

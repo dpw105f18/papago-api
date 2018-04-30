@@ -29,4 +29,6 @@ public:
 	virtual IRecordingCommandBuffer& clearColorBuffer(int32_t red, int32_t green, int32_t blue, int32_t alpha) = 0;
 	virtual IRecordingCommandBuffer& clearColorBuffer(uint32_t red, uint32_t green, uint32_t blue, uint32_t alpha) = 0;
 	virtual IRecordingCommandBuffer& clearDepthStencilBuffer(float depth, uint32_t stencil) = 0;
+	virtual IRecordingCommandBuffer& clearDepthBuffer(float value) = 0;
+	virtual IRecordingCommandBuffer& clearStencilBuffer(uint32_t value) = 0;
 };

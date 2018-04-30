@@ -186,9 +186,18 @@ bool Device::areExtensionsSupported(const vk::PhysicalDevice & physicalDevice, c
 	return requiredExtensions.empty();
 }
 
-vk::UniqueRenderPass Device::createVkRenderpass(vk::Format format, bool withDepthBuffer) const
+
+
+vk::UniqueRenderPass Device::createVkRenderpass(vk::Format colorFormat, vk::Format depthStencilFormat) const
 {
 	vk::AttachmentDescription colorAttachment;
+	auto format = ImageResource::findSupportedFormat(
+		m_vkPhysicalDevice,
+		{ colorFormat }, //TODO: make sure these formats matches the format for Depth/Stencil ImageResources
+		vk::ImageTiling::eOptimal,
+		vk::FormatFeatureFlagBits::eColorAttachment
+	);
+
 	colorAttachment.setFormat(format)
 		.setSamples(vk::SampleCountFlagBits::e1)
 		.setLoadOp(vk::AttachmentLoadOp::eLoad)
@@ -210,30 +219,45 @@ vk::UniqueRenderPass Device::createVkRenderpass(vk::Format format, bool withDept
 
 	auto depthAttachmentRef = vk::AttachmentReference();
 
-	if (withDepthBuffer) {
-
-		auto format = ImageResource::findSupportedFormat(
-			m_vkPhysicalDevice, 
-			{ vk::Format::eD32SfloatS8Uint, vk::Format::eD24UnormS8Uint }, //TODO: make sure these formats matches the format for Depth/Stencil ImageResources
-			vk::ImageTiling::eOptimal, 
-			vk::FormatFeatureFlagBits::eDepthStencilAttachment
-		);
+	format = ImageResource::findSupportedFormat(
+		m_vkPhysicalDevice, 
+		{ depthStencilFormat }, //TODO: make sure these formats matches the format for Depth/Stencil ImageResources
+		vk::ImageTiling::eOptimal, 
+		vk::FormatFeatureFlagBits::eDepthStencilAttachment
+	);
 			
-		vk::AttachmentDescription depthAttachment;
-		depthAttachment.setFormat(format)
-			.setInitialLayout(vk::ImageLayout::eGeneral)
-			.setLoadOp(vk::AttachmentLoadOp::eLoad) // Don't clear buffer data at load
+	vk::AttachmentDescription depthAttachment;
+	depthAttachment.setFormat(format)
+		.setInitialLayout(vk::ImageLayout::eGeneral)
+		.setFinalLayout(vk::ImageLayout::eGeneral);
+
+	if (depthStencilFormat == vk::Format::eS8Uint)
+	{
+		depthAttachment.setLoadOp(vk::AttachmentLoadOp::eDontCare)
+			.setStoreOp(vk::AttachmentStoreOp::eDontCare)
+			.setStencilLoadOp(vk::AttachmentLoadOp::eLoad)
+			.setStencilStoreOp(vk::AttachmentStoreOp::eStore);
+	}
+	else if(depthStencilFormat == vk::Format::eD32Sfloat)
+	{
+		depthAttachment.setLoadOp(vk::AttachmentLoadOp::eLoad)
 			.setStoreOp(vk::AttachmentStoreOp::eStore)
 			.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare)
-			.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare)
-			.setFinalLayout(vk::ImageLayout::eGeneral);
-
-		attachments.push_back(depthAttachment);
-
-		depthAttachmentRef = vk::AttachmentReference(1, vk::ImageLayout::eDepthStencilAttachmentOptimal);
-
-		subpass.setPDepthStencilAttachment(&depthAttachmentRef);
+			.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare);
 	}
+	else {
+		depthAttachment.setLoadOp(vk::AttachmentLoadOp::eLoad)
+			.setStoreOp(vk::AttachmentStoreOp::eStore)
+			.setStencilLoadOp(vk::AttachmentLoadOp::eLoad)
+			.setStencilStoreOp(vk::AttachmentStoreOp::eStore);
+	}
+		
+
+	attachments.push_back(depthAttachment);
+
+	depthAttachmentRef = vk::AttachmentReference(1, vk::ImageLayout::eDepthStencilAttachmentOptimal);
+
+	subpass.setPDepthStencilAttachment(&depthAttachmentRef);
 
 	vk::SubpassDependency dependency(VK_SUBPASS_EXTERNAL);
 	dependency.setSrcStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput)
@@ -241,6 +265,45 @@ vk::UniqueRenderPass Device::createVkRenderpass(vk::Format format, bool withDept
 		.setDstStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput)
 		.setDstAccessMask(vk::AccessFlagBits::eColorAttachmentRead | vk::AccessFlagBits::eColorAttachmentWrite);
 
+
+	vk::RenderPassCreateInfo renderPassInfo;
+	renderPassInfo.setAttachmentCount(attachments.size())
+		.setPAttachments(attachments.data())
+		.setSubpassCount(1)
+		.setPSubpasses(&subpass)
+		.setDependencyCount(1)
+		.setPDependencies(&dependency);
+
+	return m_vkDevice->createRenderPassUnique(renderPassInfo);
+}
+
+vk::UniqueRenderPass Device::createVkRenderpass(vk::Format colorFormat) const
+{
+	vk::AttachmentDescription colorAttachment;
+	colorAttachment.setFormat(colorFormat)
+		.setSamples(vk::SampleCountFlagBits::e1)
+		.setLoadOp(vk::AttachmentLoadOp::eLoad)
+		.setStoreOp(vk::AttachmentStoreOp::eStore)
+		.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare)
+		.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare)
+		.setInitialLayout(vk::ImageLayout::eGeneral)
+		.setFinalLayout(vk::ImageLayout::eGeneral);
+
+	vk::AttachmentReference colorAttachmentRef(0, vk::ImageLayout::eColorAttachmentOptimal);
+
+	std::vector<vk::AttachmentDescription> attachments = { colorAttachment };
+
+
+	vk::SubpassDescription subpass = {};
+	subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics)
+		.setColorAttachmentCount(1)
+		.setPColorAttachments(&colorAttachmentRef);
+
+	vk::SubpassDependency dependency(VK_SUBPASS_EXTERNAL);
+	dependency.setSrcStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput)
+		.setSrcAccessMask(vk::AccessFlags())
+		.setDstStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput)
+		.setDstAccessMask(vk::AccessFlagBits::eColorAttachmentRead | vk::AccessFlagBits::eColorAttachmentWrite);
 
 	vk::RenderPassCreateInfo renderPassInfo;
 	renderPassInfo.setAttachmentCount(attachments.size())
@@ -278,9 +341,48 @@ std::unique_ptr<SwapChain> Device::createSwapChain(const vk::Format& format, siz
 
 	// Get image resources for framebuffers
 	std::vector<ImageResource> colorResources, depthResources;
+
+
+	auto resourceExtent = vk::Extent3D(extent.width, extent.height, 1);
+
+	for (auto i = 0; i < images.size(); ++i) {
+		colorResources.emplace_back(
+			ImageResource::createColorResource(
+				images[i],
+				*this,
+				swapFormat.format,
+				resourceExtent));
+	}
+
+	return std::make_unique<SwapChain>(*this, swapChain, colorResources, extent);
+}
+
+std::unique_ptr<SwapChain> Device::createSwapChain(const vk::Format & colorFormat, vk::Format depthStencilFormat, size_t framebufferCount, vk::PresentModeKHR preferredPresentMode)
+{
+	auto details = querySwapChainSupport(m_vkPhysicalDevice, m_surface);
+
+	auto swapFormat = chooseSwapSurfaceFormat(colorFormat, details.formats);
+
+	auto presentMode = chooseSwapPresentMode(preferredPresentMode, details.presentmodes);
+
+	auto extent = chooseSwapChainExtent(m_surface.getWidth(), m_surface.getHeight(), details.capabilities);
+
+	if (details.capabilities.maxImageCount > 0 &&
+		framebufferCount > details.capabilities.maxImageCount) {
+		framebufferCount = details.capabilities.maxImageCount;
+	}
+
+	auto createInfo = createSwapChainCreateInfo(m_surface, framebufferCount, swapFormat, extent, details.capabilities, presentMode);
+
+	auto swapChain = m_vkDevice->createSwapchainKHRUnique(createInfo);
+
+	// Get colorbuffer images
+	auto images = m_vkDevice->getSwapchainImagesKHR(*swapChain);
+
+	// Get image resources for framebuffers
+	std::vector<ImageResource> colorResources, depthResources;
 	std::vector<vk::Format> formatCandidates = {
-		vk::Format::eD32SfloatS8Uint,
-		vk::Format::eD24UnormS8Uint
+		depthStencilFormat
 	};
 
 	auto resourceExtent = vk::Extent3D(extent.width, extent.height, 1);
@@ -288,20 +390,20 @@ std::unique_ptr<SwapChain> Device::createSwapChain(const vk::Format& format, siz
 	for (auto i = 0; i < images.size(); ++i) {
 		colorResources.emplace_back(
 			ImageResource::createColorResource(
-				images[i], 
-				*this, 
+				images[i],
+				*this,
 				swapFormat.format,
 				resourceExtent));
 
 		//TODO: configurable amount of depth buffers?
 		depthResources.emplace_back(
 			ImageResource::createDepthResource(
-				*this, 
+				*this,
 				resourceExtent,
 				formatCandidates));
 	}
 
-	return std::make_unique<SwapChain>(m_vkDevice, swapChain, colorResources, depthResources, extent);
+	return std::make_unique<SwapChain>(*this, swapChain, colorResources, depthResources, extent);
 }
 
 std::unique_ptr<ISwapchain> Device::createSwapChain(Format format, size_t framebufferCount, PresentMode preferredPesentMode)
@@ -317,6 +419,21 @@ std::unique_ptr<ISwapchain> Device::createSwapChain(Format format, size_t frameb
 		break;
 	}
 	return createSwapChain(to_vulkan_format(format), framebufferCount, vkPreferredPresentMode);
+}
+
+std::unique_ptr<ISwapchain> Device::createSwapChain(Format colorFormat, Format depthStencilFormat, size_t framebufferCount, PresentMode preferredPresentMode)
+{
+	vk::PresentModeKHR vkPreferredPresentMode;
+	switch (preferredPresentMode)
+	{
+	case IDevice::PresentMode::eMailbox:
+		vkPreferredPresentMode = vk::PresentModeKHR::eMailbox;
+		break;
+	default:
+		PAPAGO_ERROR("Unknown presentmode");
+		break;
+	}
+	return createSwapChain(to_vulkan_format(colorFormat), to_vulkan_format(depthStencilFormat), framebufferCount, vkPreferredPresentMode);
 }
 
 std::unique_ptr<IGraphicsQueue> Device::createGraphicsQueue(ISwapchain& swapChain)
@@ -415,20 +532,42 @@ void Device::waitIdle()
 	m_vkDevice->waitIdle();
 }
 
-std::unique_ptr<IRenderPass> Device::createRenderPass(IShaderProgram & program, uint32_t width, uint32_t height, Format format, bool enableDepthBuffer)
+const vk::UniqueDevice& Device::getVkDevice() const
 {
-	auto vkPass = createVkRenderpass(to_vulkan_format(format), enableDepthBuffer);
+	return m_vkDevice;
+}
+
+const vk::PhysicalDevice& Device::getVkPhysicalDevice() const
+{
+	return m_vkPhysicalDevice;
+}
+
+std::unique_ptr<IRenderPass> Device::createRenderPass(IShaderProgram & program, uint32_t width, uint32_t height, Format colorFormat)
+{
+	auto vkPass = createVkRenderpass(to_vulkan_format(colorFormat));
 	return std::make_unique<RenderPass>(
 		m_vkDevice,
 		vkPass,
 		static_cast<ShaderProgram&>(program),
-		vk::Extent2D{ width, height });
+		vk::Extent2D{ width, height },
+		DepthStencilFlags::eNone);
 }
 
-RenderPass Device::createRenderPass(const ShaderProgram& program, uint32_t width, uint32_t height, vk::Format format, bool enableDepthBuffer) const
+std::unique_ptr<IRenderPass> Device::createRenderPass(IShaderProgram & program, uint32_t width, uint32_t height, Format colorFormat, Format depthStencilFormat)
 {
-	auto vkPass = createVkRenderpass(format, enableDepthBuffer);
-	return RenderPass(m_vkDevice, vkPass, program, { width, height });
+	auto vkPass = createVkRenderpass(to_vulkan_format(colorFormat), to_vulkan_format(depthStencilFormat));
+	return std::make_unique<RenderPass>(
+		m_vkDevice,
+		vkPass,
+		static_cast<ShaderProgram&>(program),
+		vk::Extent2D{ width, height },
+		GetDepthStencilFlags(to_vulkan_format(depthStencilFormat)));
+}
+
+RenderPass Device::createRenderPass(const ShaderProgram& program, uint32_t width, uint32_t height, vk::Format colorFormat, vk::Format depthStencilFormat) const
+{
+	auto vkPass = createVkRenderpass(colorFormat, depthStencilFormat);
+	return RenderPass(m_vkDevice, vkPass, program, { width, height }, GetDepthStencilFlags(depthStencilFormat));
 }
 
 std::unique_ptr<ISampler> Device::createTextureSampler1D(Filter magFilter, Filter minFilter, TextureWrapMode modeU)

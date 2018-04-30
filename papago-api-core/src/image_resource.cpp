@@ -58,19 +58,54 @@ void ImageResource::upload(const std::vector<char>& data)
 	auto map = m_vkDevice->mapMemory(*memory, 0, VK_WHOLE_SIZE);
 	memcpy(map, data.data(), data.size());
 	m_vkDevice->unmapMemory(*memory);
-	
-	vk::BufferImageCopy region;
-	region.bufferOffset = 0;
-	region.bufferRowLength = 0;
-	region.bufferImageHeight = 0;
-	region.imageSubresource.aspectMask = m_vkAspectFlags & vk::ImageAspectFlagBits::eDepth ? vk::ImageAspectFlagBits::eDepth : m_vkAspectFlags;
-	region.imageSubresource.mipLevel = 0;
-	region.imageSubresource.baseArrayLayer = 0;
-	region.imageSubresource.layerCount = 1;
-	region.imageOffset = vk::Offset3D{ 0,0,0 };
-	region.imageExtent = m_vkExtent;	//TODO: what if texture image is smaller/larger than ImageResource? -AM
 
-	commandBuffer->copyBufferToImage(*buffer, m_vkImage, vk::ImageLayout::eTransferDstOptimal, { region });
+	std::vector<vk::BufferImageCopy> regions;
+	
+	if (m_vkAspectFlags & vk::ImageAspectFlagBits::eColor) {
+		vk::BufferImageCopy region;
+		region.bufferOffset = 0;
+		region.bufferRowLength = 0;
+		region.bufferImageHeight = 0;
+		region.imageSubresource.aspectMask = m_vkAspectFlags;
+		region.imageSubresource.mipLevel = 0;
+		region.imageSubresource.baseArrayLayer = 0;
+		region.imageSubresource.layerCount = 1;
+		region.imageOffset = vk::Offset3D{ 0,0,0 };
+		region.imageExtent = m_vkExtent;
+
+		regions.push_back(region);
+	}
+	else if (m_vkAspectFlags & vk::ImageAspectFlagBits::eDepth) {
+		vk::BufferImageCopy region;
+		region.bufferOffset = 0;
+		region.bufferRowLength = 0;
+		region.bufferImageHeight = 0;
+		region.imageSubresource.aspectMask = vk::ImageAspectFlagBits::eDepth;
+		region.imageSubresource.mipLevel = 0;
+		region.imageSubresource.baseArrayLayer = 0;
+		region.imageSubresource.layerCount = 1;
+		region.imageOffset = vk::Offset3D{ 0,0,0 };
+		region.imageExtent = m_vkExtent;	//TODO: what if texture image is smaller/larger than ImageResource? -AM
+
+		regions.push_back(region);
+	}
+
+	if (m_vkAspectFlags & vk::ImageAspectFlagBits::eStencil) {
+		vk::BufferImageCopy region;
+		region.bufferOffset = m_vkExtent.width * m_vkExtent.height * sizeof(float);
+		region.bufferRowLength = 0;
+		region.bufferImageHeight = 0;
+		region.imageSubresource.aspectMask = vk::ImageAspectFlagBits::eStencil;
+		region.imageSubresource.mipLevel = 0;
+		region.imageSubresource.baseArrayLayer = 0;
+		region.imageSubresource.layerCount = 1;
+		region.imageOffset = vk::Offset3D{ 0, 0 ,0 };
+		region.imageExtent = m_vkExtent;
+
+		regions.push_back(region);
+	}
+
+	commandBuffer->copyBufferToImage(*buffer, m_vkImage, vk::ImageLayout::eTransferDstOptimal, regions.size(), regions.data());
 
 	//Transition to eGeneral, as that is our "default" layout
 	transition<vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eGeneral>(commandBuffer);
@@ -197,10 +232,28 @@ ImageResource ImageResource::createDepthResource(
 
 	auto memoryRequirements = device.m_vkDevice->getImageMemoryRequirements(image);
 
+	auto aspectFlags = vk::ImageAspectFlags();
+
+	switch (format) {
+		case vk::Format::eS8Uint:
+			aspectFlags = vk::ImageAspectFlagBits::eStencil;
+			break;
+		case vk::Format::eD32SfloatS8Uint:
+		case vk::Format::eD24UnormS8Uint:
+			aspectFlags = vk::ImageAspectFlagBits::eDepth |  vk::ImageAspectFlagBits::eStencil;
+			break;
+		case vk::Format::eD32Sfloat:
+			aspectFlags = vk::ImageAspectFlagBits::eDepth;
+			break;
+		default:
+			PAPAGO_ERROR("Unimplemented depth/stencil format!");
+			break;
+	}
+
 	return ImageResource(
-		image, 
+		image,
 		device,
-		vk::ImageAspectFlagBits::eDepth | vk::ImageAspectFlagBits::eStencil, 
+		aspectFlags,
 		format,
 		extent,
 		memoryRequirements);
@@ -244,20 +297,6 @@ ImageResource::ImageResource(
 	else if (aspectFlags & vk::ImageAspectFlagBits::eColor) {
 		transition<vk::ImageLayout::eUndefined, vk::ImageLayout::eGeneral>(m_device.m_internalCommandBuffer);
 	}
-
-	/*
-	vk::ClearAttachment clearInfo = {};
-	clearInfo.setAspectMask(aspectFlags)
-		.setColorAttachment(0) // As we only have a single color attatchment, it will always be at 0. Ignored if depth/stencil.
-		.setClearValue(clearValue);
-
-
-	vk::ClearRect clearRect = {};
-	vk::Rect2D rect = { { 0, 0 }, { extent.width, extent.height } };
-	clearRect.setRect(rect).setBaseArrayLayer(0).setLayerCount(1);
-
-	//m_device.m_internalCommandBuffer->clearAttachments(clearInfo, { rect });
-	*/
 	
 	m_device.m_internalCommandBuffer->end();
 
@@ -270,10 +309,13 @@ ImageResource::ImageResource(
 	m_device.m_internalCommandBuffer->reset(vk::CommandBufferResetFlagBits::eReleaseResources);
 	
 	auto clearVector = std::vector<char>(memoryRequirements.size);
+	auto clearFloats = std::vector<float>(m_vkExtent.width * m_vkExtent.height, 1.0f);
+	auto clearStencil = std::vector<unsigned char>(memoryRequirements.size, 1);
 
 	if (aspectFlags & vk::ImageAspectFlagBits::eDepth) {
-		auto clearFloats = std::vector<float>(memoryRequirements.size / sizeof(float), 1.0f);
-		memcpy(clearVector.data(), clearFloats.data(), clearVector.size());
+		memcpy(clearVector.data(), clearFloats.data(), clearFloats.size() * sizeof(float));
+		
+		memcpy(clearVector.data() + (clearFloats.size() * sizeof(float)), clearStencil.data(), clearVector.size() - clearFloats.size() * sizeof(float) - 1);
 	}
 	
 	upload(clearVector);

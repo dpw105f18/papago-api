@@ -22,7 +22,6 @@ public:
 
 	void end();
 	void setPrimitiveTopology(Usage);
-	void clearDepthBuffer(float value);
 	void clearFrameBuffer(Color);
 	void setDepthTest(DepthTest);
 	IRecordingCommandBuffer& setUniform(const std::string& uniformName, IBufferResource&) override;
@@ -68,5 +67,7 @@ private:
 	virtual IRecordingCommandBuffer & clearColorBuffer(int32_t red, int32_t green, int32_t blue, int32_t alpha) override;
 	virtual IRecordingCommandBuffer & clearColorBuffer(uint32_t red, uint32_t green, uint32_t blue, uint32_t alpha) override;
 	virtual IRecordingCommandBuffer & clearDepthStencilBuffer(float depth, uint32_t stencil) override;
+	virtual IRecordingCommandBuffer& clearDepthBuffer(float value) override;
+	virtual IRecordingCommandBuffer& clearStencilBuffer(uint32_t value) override;
 	void clearAttatchment(const vk::ClearValue&, vk::ImageAspectFlags);
 };
