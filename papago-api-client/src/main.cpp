@@ -2,7 +2,10 @@
 #include <Windows.h>
 
 #define STB_IMAGE_IMPLEMENTATION
-#include "external/stb_image.h"
+#include "external\stb_image.h"
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#define STBI_MSC_SECURE_CRT
+#include "external\stb_image_write.h"
 
 #include <stdexcept>
 #include <iostream>
@@ -204,8 +207,6 @@ int main()
 		auto stupidProgram = device->createShaderProgram(*stupidVert, *stupidFrag);
 		auto stupidPass = device->createRenderPass(*stupidProgram, swapchain->getWidth(), swapchain->getHeight(), swapchain->getFormat(), Format::eD32Sfloat);
 
-		bool firstRun = true;
-
 		while (true)
 		{
 			MSG msg;
@@ -242,14 +243,7 @@ int main()
 					commandBuffer.clearColorBuffer(1.0f, 0.0f, 0.0f, 1.0f);
 					commandBuffer.setUniform("val", *uniformBuffer);
 
-
-					if (firstRun) {
-						commandBuffer.setUniform("sam", *passOneTarget, *sampler);
-						firstRun = false;
-					}
-					else {
-						commandBuffer.setUniform("sam", *passOneDepth, *sampler);
-					}
+					commandBuffer.setUniform("sam", *passOneDepth, *sampler);
 
 					commandBuffer.setInput(*stupidVertexBuffer);
 					commandBuffer.setIndexBuffer(*indexBuffer);
@@ -265,6 +259,13 @@ int main()
 			}
 		}
 		device->waitIdle();
+
+		auto pixels = passOneTarget->download();
+		//TODO: test line below:
+		//auto pixels = graphicsQueue->getLastRenderedDepthBuffer().download();
+
+		//TODO: make getWidth and getHeight on ImageResource
+		stbi_write_png("passOneTarget.png", 800, 600, 4, pixels.data(), 800 * 4);
 	}
 	std::cout << "Press enter to continue...";
 	std::cin.ignore();
