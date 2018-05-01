@@ -41,7 +41,7 @@ void GraphicsQueue::submitCommands(const std::vector<std::reference_wrapper<ICom
 
 	for (auto& resource : m_submittedResources) {
 		resource->m_vkFence = &(*fence);
-	}
+		}
 
 	m_vkGraphicsQueue.submit(submitInfo, *fence);
 
@@ -50,6 +50,12 @@ void GraphicsQueue::submitCommands(const std::vector<std::reference_wrapper<ICom
 ImageResource & GraphicsQueue::getLastRenderedImage()
 {
 	return m_swapChain.m_colorResources[m_currentFrameIndex];
+}
+
+IImageResource & GraphicsQueue::getLastRenderedDepthBuffer()
+{
+	auto& colorRes = m_swapChain.m_colorResources;
+	return m_swapChain.m_depthResources[(m_currentFrameIndex + colorRes.size() - 1) % colorRes.size()];
 }
 
 void GraphicsQueue::present()

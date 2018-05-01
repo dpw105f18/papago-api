@@ -227,7 +227,7 @@ ImageResource ImageResource::createDepthResource(
 		.setArrayLayers(1)
 		.setFormat(format)
 		.setTiling(vk::ImageTiling::eOptimal)
-		.setUsage(vk::ImageUsageFlagBits::eDepthStencilAttachment | vk::ImageUsageFlagBits::eTransferDst |vk::ImageUsageFlagBits::eTransferSrc)
+		.setUsage(vk::ImageUsageFlagBits::eDepthStencilAttachment | vk::ImageUsageFlagBits::eTransferDst |vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eSampled)
 		.setSamples(vk::SampleCountFlagBits::e1));
 
 	auto memoryRequirements = device.m_vkDevice->getImageMemoryRequirements(image);

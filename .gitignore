@@ -263,3 +263,4 @@ __pycache__/
 *.spv
 papago-api-core/lastFrame.png
 papago-api-core/passOneTarget.png
+*.rdc

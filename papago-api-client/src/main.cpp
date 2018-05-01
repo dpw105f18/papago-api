@@ -154,6 +154,8 @@ std::string readFile(const std::string& file_path) {
 
 int main()
 {
+	float test = 0.5f;
+
 	{
 		auto hwnd = StartWindow(800, 600);
 		auto surface = ISurface::createWin32Surface(800, 600, hwnd);
@@ -183,7 +185,7 @@ int main()
 		});
 
 		auto parser = Parser("C:/VulkanSDK/1.0.65.0/Bin32/glslangValidator.exe");
-		auto swapchain = device->createSwapChain(Format::eR8G8B8A8Unorm, Format::eD32SfloatS8Uint, 3, IDevice::PresentMode::eMailbox);
+		auto swapchain = device->createSwapChain(Format::eR8G8B8A8Unorm, Format::eD32Sfloat, 3, IDevice::PresentMode::eMailbox);
 		auto graphicsQueue = device->createGraphicsQueue(*swapchain);
 		auto passOneTarget = device->createTexture2D(800, 600, Format::eR8G8B8A8Unorm);
 		auto uniformBuffer = device->createUniformBuffer(sizeof(vec3));
@@ -199,7 +201,9 @@ int main()
 		auto stupidVert = parser.compileVertexShader(readFile("shader/stupidVert.vert"), "main");
 		auto stupidFrag = parser.compileFragmentShader(readFile("shader/stupidFrag.frag"), "main");
 		auto stupidProgram = device->createShaderProgram(*stupidVert, *stupidFrag);
-		auto stupidPass = device->createRenderPass(*stupidProgram, swapchain->getWidth(), swapchain->getHeight(), swapchain->getFormat(), Format::eD32SfloatS8Uint);
+		auto stupidPass = device->createRenderPass(*stupidProgram, swapchain->getWidth(), swapchain->getHeight(), swapchain->getFormat(), Format::eD32Sfloat);
+
+		bool firstRun = true;
 
 		while (true)
 		{
@@ -232,10 +236,19 @@ int main()
 				}
 
 				stupidCmd->record(*stupidPass, *swapchain, graphicsQueue->getNextFrameIndex(), [&](IRecordingCommandBuffer& commandBuffer) {
-					commandBuffer.clearDepthStencilBuffer(1.0f, 0);
+					commandBuffer.clearDepthBuffer(1.0f);
 					commandBuffer.clearColorBuffer(1.0f, 0.0f, 0.0f, 1.0f);
 					commandBuffer.setUniform("val", *uniformBuffer);
-					commandBuffer.setUniform("sam", *passOneTarget, *sampler);
+
+
+					if (firstRun) {
+						commandBuffer.setUniform("sam", *passOneTarget, *sampler);
+						firstRun = false;
+					}
+					else {
+						commandBuffer.setUniform("sam", graphicsQueue->getLastRenderedDepthBuffer(), *sampler);
+					}
+
 					commandBuffer.setInput(*stupidVertexBuffer);
 					commandBuffer.setIndexBuffer(*indexBuffer);
 					commandBuffer.drawIndexed(6);
