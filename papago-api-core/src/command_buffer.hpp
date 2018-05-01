@@ -13,12 +13,9 @@ public:
 
 	void record(IRenderPass&, ISwapchain&, size_t frameIndex, std::function<void(IRecordingCommandBuffer&)>) override;
 	void record(IRenderPass&, IImageResource&, std::function<void(IRecordingCommandBuffer&)>) override;
+	void record(IRenderPass &, IImageResource & color, IImageResource & depth, std::function<void(IRecordingCommandBuffer&)>) override;
 
-	//TODO: remove "override"s - place functionality in SubCommandBuffer or redesign relationship. -AM
-	void begin(const RenderPass&);
-	void begin(RenderPass&, SwapChain&, uint32_t imageIndex);	//TODO: <-- remove imageIndex. -AM
-	void begin(RenderPass&, ImageResource& renderTarget);		//TODO: use Format and Extent iso. ImageResource? -AM
-	void begin(const RenderPass&, SwapChain&, ImageResource& depthStencilBuffer);
+	void begin(RenderPass&, const vk::UniqueFramebuffer&, vk::Extent2D);
 
 	void end();
 	void setPrimitiveTopology(Usage);
@@ -55,10 +52,9 @@ private:
 	//TODO: Check that this is not null, when calling non-begin methods on the object. - Brandborg
 	// TODO: Another approach could be to create another interface and expose it via builder pattern or lambda expressions - CW 2018-04-23
 	RenderPass* m_renderPassPtr;
-	ImageResource* m_renderTargetPtr;
-
+	vk::Extent2D m_vkCurrentRenderTargetExtent;
 	std::set<Resource*> m_resourcesInUse;
-
+	
 	friend class Device;
 	friend class GraphicsQueue;
 
@@ -70,4 +66,5 @@ private:
 	virtual IRecordingCommandBuffer& clearDepthBuffer(float value) override;
 	virtual IRecordingCommandBuffer& clearStencilBuffer(uint32_t value) override;
 	void clearAttatchment(const vk::ClearValue&, vk::ImageAspectFlags);
+
 };

@@ -30,14 +30,55 @@ CommandBuffer::CommandBuffer(const vk::UniqueDevice &device, int queueFamilyInde
 
 void CommandBuffer::record(IRenderPass & renderPass, ISwapchain & swapchain, size_t frameIndex, std::function<void(IRecordingCommandBuffer&)> func)
 {
-	begin(static_cast<RenderPass&>(renderPass), static_cast<SwapChain&>(swapchain), frameIndex);
+	auto& internalSwapChain = static_cast<SwapChain&>(swapchain);
+	begin(static_cast<RenderPass&>(renderPass), internalSwapChain.m_vkFramebuffers[frameIndex], { swapchain.getWidth(), swapchain.getHeight() });
 	func(*this);
 	end();
 }
 
 void CommandBuffer::record(IRenderPass & renderPass, IImageResource & target, std::function<void(IRecordingCommandBuffer&)> func)
 {
-	begin(static_cast<RenderPass&>(renderPass), static_cast<ImageResource&>(target));
+	auto& internalColor = static_cast<ImageResource&>(target);
+	auto& internalRenderPass = static_cast<RenderPass&>(renderPass);
+	auto extent = internalColor.m_vkExtent;
+
+	vk::ImageView attachments[1] = { *internalColor.m_vkImageView };
+
+	vk::FramebufferCreateInfo fboCreate;
+	fboCreate.setAttachmentCount(1)
+		.setPAttachments(attachments)
+		.setWidth(extent.width)
+		.setHeight(extent.height)
+		.setLayers(1)
+		.setRenderPass(static_cast<vk::RenderPass>(internalRenderPass));
+
+	//TODO: Find out if the framebuffer should reside on the image like this. Maybe commandbuffer instea? - Brandborg
+	internalColor.m_vkFramebuffer = m_vkDevice->createFramebufferUnique(fboCreate);
+
+	begin(internalRenderPass, internalColor.m_vkFramebuffer, { extent.width, extent.height });
+	func(*this);
+	end();
+}
+
+void CommandBuffer::record(IRenderPass& renderPass, IImageResource& color, IImageResource& depth, std::function<void(IRecordingCommandBuffer&)> func)
+{
+	auto& internalColor = static_cast<ImageResource&>(color);
+	auto& internalDepth = static_cast<ImageResource&>(depth);
+	auto& internalRenderPass = static_cast<RenderPass&>(renderPass);
+	auto extent = internalColor.m_vkExtent;
+	vk::ImageView attachments[2] = { *internalColor.m_vkImageView, *internalDepth.m_vkImageView };
+
+	vk::FramebufferCreateInfo fboCreate;
+	fboCreate.setAttachmentCount(2)
+		.setPAttachments(attachments)
+		.setWidth(extent.width)
+		.setHeight(extent.height)
+		.setLayers(1)
+		.setRenderPass(static_cast<vk::RenderPass>(internalRenderPass));
+
+	internalColor.m_vkFramebuffer = m_vkDevice->createFramebufferUnique(fboCreate);
+
+	begin(internalRenderPass, internalColor.m_vkFramebuffer, { extent.width, extent.height });
 	func(*this);
 	end();
 }
@@ -146,73 +187,9 @@ void CommandBuffer::clearAttatchment(const vk::ClearValue& clearValue, vk::Image
 		.setClearValue(clearValue);
 
 	vk::ClearRect clearRect = {};
-	vk::Rect2D rect = { { 0, 0 },{ m_renderTargetPtr->getWidth(), m_renderTargetPtr->getHeight() } };
+	vk::Rect2D rect = { { 0, 0 },{ m_vkCurrentRenderTargetExtent.width, m_vkCurrentRenderTargetExtent.height } };
 	clearRect.setRect(rect).setBaseArrayLayer(0).setLayerCount(1);
 	m_vkCommandBuffer->clearAttachments(clearInfo, { clearRect });
-
-}
-
-//TODO: make checks to see if cmd.begin(...) has been called before. -AM
-void CommandBuffer::begin(RenderPass& renderPass, SwapChain& swapChain, uint32_t imageIndex)
-{
-	m_renderPassPtr = &renderPass;
-	m_renderTargetPtr = &swapChain.m_colorResources[imageIndex];
-
-	vk::Rect2D renderArea = {};
-	renderArea.setOffset({ 0,0 })
-		.setExtent(swapChain.m_vkExtent);
-
-
-	vk::RenderPassBeginInfo renderPassBeginInfo = {};
-
-	renderPassBeginInfo.setRenderPass(static_cast<vk::RenderPass>(renderPass))
-		.setFramebuffer(*swapChain.m_vkFramebuffers[imageIndex])
-		.setRenderArea(renderArea)
-		.setClearValueCount(0)
-		.setPClearValues(nullptr);
-
-	//note: no clear-values because of the specific constructor overload...
-
-	vk::CommandBufferBeginInfo beginInfo = {};
-	beginInfo.setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);	//TODO: read from Usage in constructor? -AM
-
-	m_vkCommandBuffer->begin(beginInfo);
-	m_vkCommandBuffer->beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
-
-	//TODO: can we assume a graphics bindpoint and pipeline? -AM
-	m_vkCommandBuffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *renderPass.m_vkGraphicsPipeline);
-}
-
-void CommandBuffer::begin(RenderPass &renderPass, ImageResource & renderTarget)
-{
-	m_renderPassPtr = &renderPass;
-	m_renderTargetPtr = &renderTarget;
-
-	vk::Rect2D renderArea = {};
-	renderArea.setOffset({ 0,0 })
-		.setExtent({renderTarget.m_vkExtent.width, renderTarget.m_vkExtent.height});
-
-
-
-	auto& fbo = renderTarget.createFramebuffer(static_cast<vk::RenderPass>(renderPass));
-
-	vk::RenderPassBeginInfo renderPassBeginInfo = {};
-	renderPassBeginInfo.setRenderPass(static_cast<vk::RenderPass>(renderPass))
-		.setFramebuffer(*fbo)
-		.setRenderArea(renderArea)
-		.setClearValueCount(0)
-		.setPClearValues(nullptr);
-
-	//note: no clear-values because of the specific constructor overload...
-
-	vk::CommandBufferBeginInfo beginInfo = {};
-	beginInfo.setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);	//TODO: read from Usage in constructor? -AM
-
-	m_vkCommandBuffer->begin(beginInfo);
-	m_vkCommandBuffer->beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
-
-	//TODO: can we assume a graphics bindpoint and pipeline? -AM
-	m_vkCommandBuffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *renderPass.m_vkGraphicsPipeline);
 }
 
 IRecordingCommandBuffer& CommandBuffer::setUniform(const std::string & name, IImageResource & image, ISampler & sampler)
@@ -249,10 +226,36 @@ IRecordingCommandBuffer& CommandBuffer::setInput(IBufferResource& buffer)
 	return *this;
 }
 
+void CommandBuffer::begin(RenderPass& renderPass, const vk::UniqueFramebuffer& renderTarget, vk::Extent2D extent)
+{
+	m_renderPassPtr = &renderPass;
+	m_vkCurrentRenderTargetExtent = extent;
+
+	vk::Rect2D renderArea = {};
+	renderArea.setOffset({ 0,0 })
+		.setExtent(extent);
+
+	vk::RenderPassBeginInfo renderPassBeginInfo = {};
+	renderPassBeginInfo.setRenderPass(static_cast<vk::RenderPass>(renderPass))
+		.setFramebuffer(*renderTarget)
+		.setRenderArea(renderArea)
+		.setClearValueCount(0)
+		.setPClearValues(nullptr);
+
+	vk::CommandBufferBeginInfo beginInfo = {};
+	beginInfo.setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);	//TODO: read from Usage in constructor? -AM
+
+	m_vkCommandBuffer->begin(beginInfo);
+	m_vkCommandBuffer->beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
+
+	//TODO: can we assume a graphics bindpoint and pipeline? -AM
+	m_vkCommandBuffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *renderPass.m_vkGraphicsPipeline);
+}
+
 void CommandBuffer::end()
 {
 	m_renderPassPtr = nullptr;
-	m_renderTargetPtr = nullptr;
+	m_vkCurrentRenderTargetExtent = vk::Extent2D();
 	m_vkCommandBuffer->endRenderPass();
 	m_vkCommandBuffer->end();
 }

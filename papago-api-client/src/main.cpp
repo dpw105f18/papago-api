@@ -195,7 +195,8 @@ int main()
 		auto colVert = parser.compileVertexShader(readFile("shader/colorVert.vert"), "main");
 		auto colFrag = parser.compileFragmentShader(readFile("shader/colorFrag.frag"), "main");
 		auto colProgram = device->createShaderProgram(*colVert, *colFrag);
-		auto colPass = device->createRenderPass(*colProgram, 800, 600, Format::eR8G8B8A8Unorm);
+		auto passOneDepth = device->createDepthTexture2D(800, 600, Format::eD32Sfloat);
+		auto colPass = device->createRenderPass(*colProgram, 800, 600, Format::eR8G8B8A8Unorm, Format::eD32Sfloat);
 		
 		// PASS 2
 		auto stupidVert = parser.compileVertexShader(readFile("shader/stupidVert.vert"), "main");
@@ -218,13 +219,14 @@ int main()
 			}
 			else {
 				auto cmd = device->createCommandBuffer(Usage::eReset);
-				cmd->record(*colPass, *passOneTarget, [&](IRecordingCommandBuffer& commandBuffer) {
+				cmd->record(*colPass, *passOneTarget, *passOneDepth, [&](IRecordingCommandBuffer& commandBuffer) {
 					commandBuffer
 						.clearColorBuffer(0.0f, 1.0f, 0.0f, 1.0f)
 						.setInput(*vertexBuffer)
 						.setIndexBuffer(*indexBuffer)
 						.drawIndexed(6);
 				});
+
 				auto stupidCmd = device->createCommandBuffer(Usage::eReuse);
 
 				if (!uniformBuffer->inUse()) {
@@ -246,7 +248,7 @@ int main()
 						firstRun = false;
 					}
 					else {
-						commandBuffer.setUniform("sam", graphicsQueue->getLastRenderedDepthBuffer(), *sampler);
+						commandBuffer.setUniform("sam", *passOneDepth, *sampler);
 					}
 
 					commandBuffer.setInput(*stupidVertexBuffer);

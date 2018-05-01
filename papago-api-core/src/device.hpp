@@ -37,6 +37,7 @@ public:
 	std::unique_ptr<ISampler> createTextureSampler2D(Filter magFil, Filter minFil, TextureWrapMode modeU, TextureWrapMode modeV);
 	std::unique_ptr<ISampler> createTextureSampler3D(Filter magFil, Filter minFil, TextureWrapMode modeU, TextureWrapMode modeV, TextureWrapMode modeW);
 	std::unique_ptr<IImageResource> createTexture2D(size_t width, size_t height, Format) override;
+	std::unique_ptr<IImageResource> createDepthTexture2D(uint32_t width, uint32_t height, Format) override;
 	//drop the other create textureSampler idea below?
 	void createTextureSampler(Sampler sampler);
 	std::unique_ptr<ICommandBuffer> createCommandBuffer(Usage) override;

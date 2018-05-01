@@ -626,6 +626,11 @@ std::unique_ptr<IImageResource> Device::createTexture2D(size_t width, size_t hei
 	return std::make_unique<ImageResource>(image, *this, vk::ImageAspectFlagBits::eColor, to_vulkan_format(format), extent, memoryRequirements);
 }
 
+std::unique_ptr<IImageResource> Device::createDepthTexture2D(uint32_t width, uint32_t height, Format format)
+{
+	return std::make_unique<ImageResource>(ImageResource::createDepthResource(*this, { width, height, 1 }, { to_vulkan_format(format) }));
+}
+
 Device::Device(vk::PhysicalDevice physicalDevice, vk::UniqueDevice &device, Surface &surface)
 	: m_vkPhysicalDevice(physicalDevice)
 	, m_vkDevice(std::move(device))
