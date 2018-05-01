@@ -154,6 +154,8 @@ std::string readFile(const std::string& file_path) {
 
 int main()
 {
+	float test = 0.5f;
+
 	{
 		auto hwnd = StartWindow(800, 600);
 		auto surface = ISurface::createWin32Surface(800, 600, hwnd);
@@ -183,7 +185,7 @@ int main()
 		});
 
 		auto parser = Parser("C:/VulkanSDK/1.0.65.0/Bin32/glslangValidator.exe");
-		auto swapchain = device->createSwapChain(Format::eR8G8B8A8Unorm, 3, IDevice::PresentMode::eMailbox);
+		auto swapchain = device->createSwapChain(Format::eR8G8B8A8Unorm, Format::eD32Sfloat, 3, IDevice::PresentMode::eMailbox);
 		auto graphicsQueue = device->createGraphicsQueue(*swapchain);
 		auto passOneTarget = device->createTexture2D(800, 600, Format::eR8G8B8A8Unorm);
 		auto uniformBuffer = device->createUniformBuffer(sizeof(vec3));
@@ -193,13 +195,16 @@ int main()
 		auto colVert = parser.compileVertexShader(readFile("shader/colorVert.vert"), "main");
 		auto colFrag = parser.compileFragmentShader(readFile("shader/colorFrag.frag"), "main");
 		auto colProgram = device->createShaderProgram(*colVert, *colFrag);
-		auto colPass = device->createRenderPass(*colProgram, 800, 600, Format::eR8G8B8A8Unorm, false);
+		auto passOneDepth = device->createDepthTexture2D(800, 600, Format::eD32Sfloat);
+		auto colPass = device->createRenderPass(*colProgram, 800, 600, Format::eR8G8B8A8Unorm, Format::eD32Sfloat);
 		
 		// PASS 2
 		auto stupidVert = parser.compileVertexShader(readFile("shader/stupidVert.vert"), "main");
 		auto stupidFrag = parser.compileFragmentShader(readFile("shader/stupidFrag.frag"), "main");
 		auto stupidProgram = device->createShaderProgram(*stupidVert, *stupidFrag);
-		auto stupidPass = device->createRenderPass(*stupidProgram, swapchain->getWidth(), swapchain->getHeight(), swapchain->getFormat(),  true);
+		auto stupidPass = device->createRenderPass(*stupidProgram, swapchain->getWidth(), swapchain->getHeight(), swapchain->getFormat(), Format::eD32Sfloat);
+
+		bool firstRun = true;
 
 		while (true)
 		{
@@ -214,12 +219,14 @@ int main()
 			}
 			else {
 				auto cmd = device->createCommandBuffer(Usage::eReset);
-				cmd->record(*colPass, *passOneTarget, [&](IRecordingCommandBuffer& commandBuffer) {
+				cmd->record(*colPass, *passOneTarget, *passOneDepth, [&](IRecordingCommandBuffer& commandBuffer) {
 					commandBuffer
+						.clearColorBuffer(0.0f, 1.0f, 0.0f, 1.0f)
 						.setInput(*vertexBuffer)
 						.setIndexBuffer(*indexBuffer)
 						.drawIndexed(6);
 				});
+
 				auto stupidCmd = device->createCommandBuffer(Usage::eReuse);
 
 				if (!uniformBuffer->inUse()) {
@@ -231,8 +238,19 @@ int main()
 				}
 
 				stupidCmd->record(*stupidPass, *swapchain, graphicsQueue->getNextFrameIndex(), [&](IRecordingCommandBuffer& commandBuffer) {
+					commandBuffer.clearDepthBuffer(1.0f);
+					commandBuffer.clearColorBuffer(1.0f, 0.0f, 0.0f, 1.0f);
 					commandBuffer.setUniform("val", *uniformBuffer);
-					commandBuffer.setUniform("sam", *passOneTarget, *sampler);
+
+
+					if (firstRun) {
+						commandBuffer.setUniform("sam", *passOneTarget, *sampler);
+						firstRun = false;
+					}
+					else {
+						commandBuffer.setUniform("sam", *passOneDepth, *sampler);
+					}
+
 					commandBuffer.setInput(*stupidVertexBuffer);
 					commandBuffer.setIndexBuffer(*indexBuffer);
 					commandBuffer.drawIndexed(6);

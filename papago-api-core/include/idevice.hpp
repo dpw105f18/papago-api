@@ -24,10 +24,14 @@ public:
 	};
 
 	virtual std::unique_ptr<ISwapchain> createSwapChain(Format, size_t framebufferCount, PresentMode) = 0;
+	virtual std::unique_ptr<ISwapchain> createSwapChain(Format colorFormat, Format depthStencilFormat, size_t framebufferCount, PresentMode) = 0;
+	
 	template<class T>
 	std::unique_ptr<IBufferResource> createVertexBuffer(std::vector<T> data);
+	
 	template<class T>
 	std::unique_ptr<IBufferResource> createIndexBuffer(std::vector<T> data);
+	
 	virtual std::unique_ptr<IBufferResource> createUniformBuffer(size_t size) = 0;
 	virtual std::unique_ptr<ISampler> createTextureSampler1D(
 		Filter magFilter, 
@@ -45,9 +49,11 @@ public:
 		TextureWrapMode modeV,
 		TextureWrapMode modeW) = 0;
 	virtual std::unique_ptr<IImageResource> createTexture2D(size_t width, size_t height, Format) = 0;
+	virtual std::unique_ptr<IImageResource> createDepthTexture2D(uint32_t width, uint32_t height, Format) = 0;
 	virtual std::unique_ptr<ICommandBuffer> createCommandBuffer(Usage) = 0;
 	virtual std::unique_ptr<IShaderProgram> createShaderProgram(IVertexShader& vertexShader, IFragmentShader& fragmentShader) = 0;
-	virtual std::unique_ptr<IRenderPass> createRenderPass(IShaderProgram&, uint32_t width, uint32_t height, Format, bool enableDepthBuffer) = 0;
+	virtual std::unique_ptr<IRenderPass> createRenderPass(IShaderProgram&, uint32_t width, uint32_t height, Format colorFormat) = 0;
+	virtual std::unique_ptr<IRenderPass> createRenderPass(IShaderProgram&, uint32_t width, uint32_t height, Format colorFormat, Format depthStencilFormat) = 0;
 	virtual void waitIdle() = 0;
 
 	virtual std::unique_ptr<IGraphicsQueue> createGraphicsQueue(ISwapchain&) = 0;

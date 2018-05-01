@@ -30,14 +30,55 @@ CommandBuffer::CommandBuffer(const vk::UniqueDevice &device, int queueFamilyInde
 
 void CommandBuffer::record(IRenderPass & renderPass, ISwapchain & swapchain, size_t frameIndex, std::function<void(IRecordingCommandBuffer&)> func)
 {
-	begin(static_cast<RenderPass&>(renderPass), static_cast<SwapChain&>(swapchain), frameIndex);
+	auto& internalSwapChain = static_cast<SwapChain&>(swapchain);
+	begin(static_cast<RenderPass&>(renderPass), internalSwapChain.m_vkFramebuffers[frameIndex], { swapchain.getWidth(), swapchain.getHeight() });
 	func(*this);
 	end();
 }
 
 void CommandBuffer::record(IRenderPass & renderPass, IImageResource & target, std::function<void(IRecordingCommandBuffer&)> func)
 {
-	begin(static_cast<RenderPass&>(renderPass), static_cast<ImageResource&>(target));
+	auto& internalColor = static_cast<ImageResource&>(target);
+	auto& internalRenderPass = static_cast<RenderPass&>(renderPass);
+	auto extent = internalColor.m_vkExtent;
+
+	vk::ImageView attachments[1] = { *internalColor.m_vkImageView };
+
+	vk::FramebufferCreateInfo fboCreate;
+	fboCreate.setAttachmentCount(1)
+		.setPAttachments(attachments)
+		.setWidth(extent.width)
+		.setHeight(extent.height)
+		.setLayers(1)
+		.setRenderPass(static_cast<vk::RenderPass>(internalRenderPass));
+
+	//TODO: Find out if the framebuffer should reside on the image like this. Maybe commandbuffer instea? - Brandborg
+	internalColor.m_vkFramebuffer = m_vkDevice->createFramebufferUnique(fboCreate);
+
+	begin(internalRenderPass, internalColor.m_vkFramebuffer, { extent.width, extent.height });
+	func(*this);
+	end();
+}
+
+void CommandBuffer::record(IRenderPass& renderPass, IImageResource& color, IImageResource& depth, std::function<void(IRecordingCommandBuffer&)> func)
+{
+	auto& internalColor = static_cast<ImageResource&>(color);
+	auto& internalDepth = static_cast<ImageResource&>(depth);
+	auto& internalRenderPass = static_cast<RenderPass&>(renderPass);
+	auto extent = internalColor.m_vkExtent;
+	vk::ImageView attachments[2] = { *internalColor.m_vkImageView, *internalDepth.m_vkImageView };
+
+	vk::FramebufferCreateInfo fboCreate;
+	fboCreate.setAttachmentCount(2)
+		.setPAttachments(attachments)
+		.setWidth(extent.width)
+		.setHeight(extent.height)
+		.setLayers(1)
+		.setRenderPass(static_cast<vk::RenderPass>(internalRenderPass));
+
+	internalColor.m_vkFramebuffer = m_vkDevice->createFramebufferUnique(fboCreate);
+
+	begin(internalRenderPass, internalColor.m_vkFramebuffer, { extent.width, extent.height });
 	func(*this);
 	end();
 }
@@ -60,74 +101,95 @@ long CommandBuffer::getBinding(const ShaderProgram & program, const std::string&
 	return binding;
 }
 
-//TODO: make checks to see if cmd.begin(...) has been called before. -AM
-void CommandBuffer::begin(RenderPass& renderPass, SwapChain& swapChain, uint32_t imageIndex)
+IRecordingCommandBuffer & CommandBuffer::clearColorBuffer(float red, float green, float blue, float alpha)
 {
-	m_renderPassPtr = &renderPass;
-
-	vk::Rect2D renderArea = {};
-	renderArea.setOffset({ 0,0 })
-		.setExtent(swapChain.m_vkExtent);
-
-
-	std::array<vk::ClearValue, 2> clearValues;
-
-	clearValues[0].setColor(vk::ClearColorValue(std::array<float, 4>{0, 0, 0, 1}));
-	clearValues[1].setDepthStencil(vk::ClearDepthStencilValue{ 1.0, 0 });
-
-	vk::RenderPassBeginInfo renderPassBeginInfo = {};
-
-	renderPassBeginInfo.setRenderPass(static_cast<vk::RenderPass>(renderPass))
-		.setFramebuffer(*swapChain.m_vkFramebuffers[imageIndex])
-		.setRenderArea(renderArea)
-		.setClearValueCount(clearValues.size())
-		.setPClearValues(clearValues.data());
-
-	//note: no clear-values because of the specific constructor overload...
-
-	vk::CommandBufferBeginInfo beginInfo = {};
-	beginInfo.setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);	//TODO: read from Usage in constructor? -AM
-
-	m_vkCommandBuffer->begin(beginInfo);
-	m_vkCommandBuffer->beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
-
-	//TODO: can we assume a graphics bindpoint and pipeline? -AM
-	m_vkCommandBuffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *renderPass.m_vkGraphicsPipeline);
+	auto colorArray = std::array<float, 4>{ red,green,blue,alpha };
+	auto color = vk::ClearColorValue(colorArray);
+	clearAttatchment(color, vk::ImageAspectFlagBits::eColor);
+	return *this;
 }
 
-void CommandBuffer::begin(RenderPass &renderPass, ImageResource & renderTarget)
+IRecordingCommandBuffer & CommandBuffer::clearColorBuffer(int32_t red, int32_t green, int32_t blue, int32_t alpha)
 {
-	m_renderPassPtr = &renderPass;
+	auto colorArray = std::array<int32_t, 4>{ red, green, blue, alpha };
+	auto color = vk::ClearColorValue(colorArray);
+	clearAttatchment(color, vk::ImageAspectFlagBits::eColor);
+	return *this;
+}
 
-	vk::Rect2D renderArea = {};
-	renderArea.setOffset({ 0,0 })
-		.setExtent({renderTarget.m_vkExtent.width, renderTarget.m_vkExtent.height});
+IRecordingCommandBuffer & CommandBuffer::clearColorBuffer(uint32_t red, uint32_t green, uint32_t blue, uint32_t alpha)
+{
+	auto colorArray = std::array<uint32_t, 4>{ red, green, blue, alpha };
+	auto color = vk::ClearColorValue(colorArray);
+	clearAttatchment(color, vk::ImageAspectFlagBits::eColor);
+	return *this;
+}
 
+IRecordingCommandBuffer & CommandBuffer::clearDepthStencilBuffer(float depth, uint32_t stencil)
+{
+	auto flags = m_renderPassPtr->m_depthStencilFlags;
+	if (flags != DepthStencilFlags::eNone) {
+		if (flags == (DepthStencilFlags::eDepth | DepthStencilFlags::eStencil)) {
+			auto color = vk::ClearDepthStencilValue({ depth, stencil });
+			clearAttatchment(color, vk::ImageAspectFlagBits::eDepth | vk::ImageAspectFlagBits::eStencil);
+		}
+		else {
+			PAPAGO_ERROR("Tried to clear buffer which is not both depth and stencil!");
+		}
+	}
+	else {
+		PAPAGO_ERROR("Tried to clear non-existent depth/stencil buffer!");
+	}
+	return *this;
+}
 
-	std::array<vk::ClearValue, 2> clearValues;
+IRecordingCommandBuffer& CommandBuffer::clearDepthBuffer(float value)
+{
+	auto flags = m_renderPassPtr->m_depthStencilFlags;
+	if (flags != DepthStencilFlags::eNone) {
+		if (flags == DepthStencilFlags::eDepth) {
+			auto color = vk::ClearDepthStencilValue(value);
+			clearAttatchment(color, vk::ImageAspectFlagBits::eDepth);
+		}
+		else {
+			PAPAGO_ERROR("Tried to clear buffer which is not depth!");
+		}
+	}
+	else {
+		PAPAGO_ERROR("Tried to clear non-existent depth/stencil buffer!");
+	}
+	return *this;
+}
 
-	clearValues[0].setColor(vk::ClearColorValue(std::array<float, 4>{1, 0, 0, 1}));
-	clearValues[1].setDepthStencil(vk::ClearDepthStencilValue{ 1.0, 0 });
+IRecordingCommandBuffer& CommandBuffer::clearStencilBuffer(uint32_t value)
+{
+	auto flags = m_renderPassPtr->m_depthStencilFlags;
+	if (flags != DepthStencilFlags::eNone) {
+		if (flags == DepthStencilFlags::eStencil) {
+			auto color = vk::ClearDepthStencilValue(0, value);
+			clearAttatchment(color, vk::ImageAspectFlagBits::eStencil);
+		}
+		else {
+			PAPAGO_ERROR("Tried to clear buffer which is not stencil!");
+		}
+	}
+	else {
+		PAPAGO_ERROR("Tried to clear non-existent depth/stencil buffer!");
+	}
+	return *this;
+}
 
-	auto& fbo = renderTarget.createFramebuffer(static_cast<vk::RenderPass>(renderPass));
+void CommandBuffer::clearAttatchment(const vk::ClearValue& clearValue, vk::ImageAspectFlags aspectFlags)
+{
+	vk::ClearAttachment clearInfo = {};
+	clearInfo.setAspectMask(aspectFlags)
+		.setColorAttachment(0) // As we only have a single color attatchment, it will always be at 0. Ignored if depth/stencil.
+		.setClearValue(clearValue);
 
-	vk::RenderPassBeginInfo renderPassBeginInfo = {};
-	renderPassBeginInfo.setRenderPass(static_cast<vk::RenderPass>(renderPass))
-		.setFramebuffer(*fbo)
-		.setRenderArea(renderArea)
-		.setClearValueCount(clearValues.size())
-		.setPClearValues(clearValues.data());
-
-	//note: no clear-values because of the specific constructor overload...
-
-	vk::CommandBufferBeginInfo beginInfo = {};
-	beginInfo.setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);	//TODO: read from Usage in constructor? -AM
-
-	m_vkCommandBuffer->begin(beginInfo);
-	m_vkCommandBuffer->beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
-
-	//TODO: can we assume a graphics bindpoint and pipeline? -AM
-	m_vkCommandBuffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *renderPass.m_vkGraphicsPipeline);
+	vk::ClearRect clearRect = {};
+	vk::Rect2D rect = { { 0, 0 },{ m_vkCurrentRenderTargetExtent.width, m_vkCurrentRenderTargetExtent.height } };
+	clearRect.setRect(rect).setBaseArrayLayer(0).setLayerCount(1);
+	m_vkCommandBuffer->clearAttachments(clearInfo, { clearRect });
 }
 
 IRecordingCommandBuffer& CommandBuffer::setUniform(const std::string & name, IImageResource & image, ISampler & sampler)
@@ -164,9 +226,36 @@ IRecordingCommandBuffer& CommandBuffer::setInput(IBufferResource& buffer)
 	return *this;
 }
 
+void CommandBuffer::begin(RenderPass& renderPass, const vk::UniqueFramebuffer& renderTarget, vk::Extent2D extent)
+{
+	m_renderPassPtr = &renderPass;
+	m_vkCurrentRenderTargetExtent = extent;
+
+	vk::Rect2D renderArea = {};
+	renderArea.setOffset({ 0,0 })
+		.setExtent(extent);
+
+	vk::RenderPassBeginInfo renderPassBeginInfo = {};
+	renderPassBeginInfo.setRenderPass(static_cast<vk::RenderPass>(renderPass))
+		.setFramebuffer(*renderTarget)
+		.setRenderArea(renderArea)
+		.setClearValueCount(0)
+		.setPClearValues(nullptr);
+
+	vk::CommandBufferBeginInfo beginInfo = {};
+	beginInfo.setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);	//TODO: read from Usage in constructor? -AM
+
+	m_vkCommandBuffer->begin(beginInfo);
+	m_vkCommandBuffer->beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
+
+	//TODO: can we assume a graphics bindpoint and pipeline? -AM
+	m_vkCommandBuffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *renderPass.m_vkGraphicsPipeline);
+}
+
 void CommandBuffer::end()
 {
 	m_renderPassPtr = nullptr;
+	m_vkCurrentRenderTargetExtent = vk::Extent2D();
 	m_vkCommandBuffer->endRenderPass();
 	m_vkCommandBuffer->end();
 }

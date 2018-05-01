@@ -11,7 +11,7 @@ public:
 	~ImageResource();
 
 	template<vk::ImageLayout source, vk::ImageLayout destination>
-	void transition(const CommandBuffer&);
+	void transition(const CommandBuffer&, vk::AccessFlags srcAccessFlags = vk::AccessFlags(), vk::AccessFlags dstAccessFlags = vk::AccessFlags());
 
 	void upload(const std::vector<char>& data) override; 
 
@@ -68,6 +68,7 @@ private:
 	vk::Extent3D m_vkExtent;
 	const Device& m_device;
 	vk::UniqueFramebuffer m_vkFramebuffer;
+	vk::ImageAspectFlags m_vkAspectFlags;
 
 	friend class SwapChain;
 	friend class Device;
@@ -77,17 +78,20 @@ private:
 
 //create
 template<>
-inline void ImageResource::transition<vk::ImageLayout::eUndefined, vk::ImageLayout::eGeneral>(const CommandBuffer& commandBuffer)
+inline void ImageResource::transition<vk::ImageLayout::eUndefined, vk::ImageLayout::eGeneral>(
+	const CommandBuffer& commandBuffer
+	, vk::AccessFlags srcAccessFlags
+	, vk::AccessFlags dstAccessFlags)
 {
 	auto imageMemeoryBarrier = vk::ImageMemoryBarrier(
-		vk::AccessFlags(), //srcAccessMask
-		vk::AccessFlags(), //dstAccessMask
+		srcAccessFlags, //srcAccessMask
+		dstAccessFlags, //dstAccessMask
 		vk::ImageLayout::eUndefined, //oldLayout
 		vk::ImageLayout::eGeneral, //newLayout
 		VK_QUEUE_FAMILY_IGNORED,	//srcQueueFamilyIndex
 		VK_QUEUE_FAMILY_IGNORED,	//dstQueueFamliyIndex
 		m_vkImage, //image
-		{vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1} //subresourceRange
+		{m_vkAspectFlags, 0, 1, 0, 1} //subresourceRange
 	);
 
 	commandBuffer->pipelineBarrier(
@@ -102,17 +106,20 @@ inline void ImageResource::transition<vk::ImageLayout::eUndefined, vk::ImageLayo
 
 //pre-upload
 template<>
-inline void ImageResource::transition<vk::ImageLayout::eGeneral, vk::ImageLayout::eTransferDstOptimal>(const CommandBuffer& commandBuffer)
+inline void ImageResource::transition<vk::ImageLayout::eGeneral, vk::ImageLayout::eTransferDstOptimal>(
+	const CommandBuffer& commandBuffer
+	, vk::AccessFlags srcAccessFlags
+	, vk::AccessFlags dstAccessFlags)
 {
 	auto imageMemoryBarrier = vk::ImageMemoryBarrier(
-		vk::AccessFlags(),
-		vk::AccessFlags(),
+		srcAccessFlags, //srcAccessMask
+		dstAccessFlags, //dstAccessMask
 		vk::ImageLayout::eGeneral,
 		vk::ImageLayout::eTransferDstOptimal,
 		VK_QUEUE_FAMILY_IGNORED,
 		VK_QUEUE_FAMILY_IGNORED,
 		m_vkImage,
-		{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
+		{ m_vkAspectFlags, 0, 1, 0, 1 });
 
 	commandBuffer->pipelineBarrier(
 		vk::PipelineStageFlagBits::eBottomOfPipe,
@@ -126,17 +133,20 @@ inline void ImageResource::transition<vk::ImageLayout::eGeneral, vk::ImageLayout
 
 //post-upload
 template<>
-inline void ImageResource::transition<vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eGeneral>(const CommandBuffer& commandBuffer)
+inline void ImageResource::transition<vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eGeneral>(
+	const CommandBuffer& commandBuffer
+	, vk::AccessFlags srcAccessFlags
+	, vk::AccessFlags dstAccessFlags)
 {
 	auto imageMemoryBarrier = vk::ImageMemoryBarrier(
-		vk::AccessFlags(),
-		vk::AccessFlags(),
+		srcAccessFlags, //srcAccessMask
+		dstAccessFlags, //dstAccessMask
 		vk::ImageLayout::eTransferDstOptimal,
 		vk::ImageLayout::eGeneral,
 		VK_QUEUE_FAMILY_IGNORED,
 		VK_QUEUE_FAMILY_IGNORED,
 		m_vkImage,
-		{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
+		{ m_vkAspectFlags, 0, 1, 0, 1 });
 
 	commandBuffer->pipelineBarrier(
 		vk::PipelineStageFlagBits::eBottomOfPipe,
@@ -150,17 +160,20 @@ inline void ImageResource::transition<vk::ImageLayout::eTransferDstOptimal, vk::
 
 //pre-download
 template<>
-inline void ImageResource::transition<vk::ImageLayout::eGeneral, vk::ImageLayout::eTransferSrcOptimal>(const CommandBuffer& commandBuffer)
+inline void ImageResource::transition<vk::ImageLayout::eGeneral, vk::ImageLayout::eTransferSrcOptimal>(
+	const CommandBuffer& commandBuffer
+	, vk::AccessFlags srcAccessFlags
+	, vk::AccessFlags dstAccessFlags)
 {
 	auto imageMemeoryBarrier = vk::ImageMemoryBarrier(
-		vk::AccessFlags(), //srcAccessMask
-		vk::AccessFlags(), //dstAccessMask
+		srcAccessFlags, //srcAccessMask
+		dstAccessFlags, //dstAccessMask
 		vk::ImageLayout::eGeneral, //oldLayout
 		vk::ImageLayout::eTransferSrcOptimal, //newLayout
 		VK_QUEUE_FAMILY_IGNORED,	//srcQueueFamilyIndex
 		VK_QUEUE_FAMILY_IGNORED,	//dstQueueFamliyIndex
 		m_vkImage, //image
-		{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 } //subresourceRange
+		{ m_vkAspectFlags, 0, 1, 0, 1 } //subresourceRange
 	);
 
 	commandBuffer->pipelineBarrier(
@@ -175,17 +188,20 @@ inline void ImageResource::transition<vk::ImageLayout::eGeneral, vk::ImageLayout
 
 //post-download
 template<>
-inline void ImageResource::transition<vk::ImageLayout::eTransferSrcOptimal, vk::ImageLayout::eGeneral>(const CommandBuffer& commandBuffer)
+inline void ImageResource::transition<vk::ImageLayout::eTransferSrcOptimal, vk::ImageLayout::eGeneral>(
+	const CommandBuffer& commandBuffer
+	, vk::AccessFlags srcAccessFlags
+	, vk::AccessFlags dstAccessFlags)
 {
 	auto imageMemeoryBarrier = vk::ImageMemoryBarrier(
-		vk::AccessFlags(), //srcAccessMask
-		vk::AccessFlags(), //dstAccessMask
+		srcAccessFlags, //srcAccessMask
+		dstAccessFlags, //dstAccessMask
 		vk::ImageLayout::eTransferSrcOptimal, //oldLayout
 		vk::ImageLayout::eGeneral, //newLayout
 		VK_QUEUE_FAMILY_IGNORED,	//srcQueueFamilyIndex
 		VK_QUEUE_FAMILY_IGNORED,	//dstQueueFamliyIndex
 		m_vkImage, //image
-		{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 } //subresourceRange
+		{ m_vkAspectFlags, 0, 1, 0, 1 } //subresourceRange
 	);
 
 	commandBuffer->pipelineBarrier(
@@ -200,17 +216,20 @@ inline void ImageResource::transition<vk::ImageLayout::eTransferSrcOptimal, vk::
 
 //pre-setUniform
 template<>
-inline void ImageResource::transition<vk::ImageLayout::eGeneral, vk::ImageLayout::eShaderReadOnlyOptimal>(const CommandBuffer& commandBuffer)
+inline void ImageResource::transition<vk::ImageLayout::eGeneral, vk::ImageLayout::eShaderReadOnlyOptimal>(
+	const CommandBuffer& commandBuffer
+	, vk::AccessFlags srcAccessFlags
+	, vk::AccessFlags dstAccessFlags)
 {
 	auto imageMemeoryBarrier = vk::ImageMemoryBarrier(
-		vk::AccessFlags(), //srcAccessMask
-		vk::AccessFlags(), //dstAccessMask
+		srcAccessFlags, //srcAccessMask
+		dstAccessFlags, //dstAccessMask
 		vk::ImageLayout::eGeneral, //oldLayout
 		vk::ImageLayout::eShaderReadOnlyOptimal, //newLayout
 		VK_QUEUE_FAMILY_IGNORED,	//srcQueueFamilyIndex
 		VK_QUEUE_FAMILY_IGNORED,	//dstQueueFamliyIndex
 		m_vkImage, //image
-		{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 } //subresourceRange
+		{ m_vkAspectFlags, 0, 1, 0, 1 } //subresourceRange
 	);
 
 	commandBuffer->pipelineBarrier(
@@ -225,17 +244,20 @@ inline void ImageResource::transition<vk::ImageLayout::eGeneral, vk::ImageLayout
 
 //post-setUniform
 template<>
-inline void ImageResource::transition<vk::ImageLayout::eShaderReadOnlyOptimal, vk::ImageLayout::eGeneral>(const CommandBuffer& commandBuffer)
+inline void ImageResource::transition<vk::ImageLayout::eShaderReadOnlyOptimal, vk::ImageLayout::eGeneral>(
+	const CommandBuffer& commandBuffer
+	, vk::AccessFlags srcAccessFlags
+	, vk::AccessFlags dstAccessFlags)
 {
 	auto imageMemeoryBarrier = vk::ImageMemoryBarrier(
-		vk::AccessFlags(), //srcAccessMask
-		vk::AccessFlags(), //dstAccessMask
+		srcAccessFlags, //srcAccessMask
+		dstAccessFlags, //dstAccessMask
 		vk::ImageLayout::eShaderReadOnlyOptimal, //oldLayout
 		vk::ImageLayout::eGeneral, //newLayout
 		VK_QUEUE_FAMILY_IGNORED,	//srcQueueFamilyIndex
 		VK_QUEUE_FAMILY_IGNORED,	//dstQueueFamliyIndex
 		m_vkImage, //image
-		{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 } //subresourceRange
+		{ m_vkAspectFlags, 0, 1, 0, 1 } //subresourceRange
 	);
 
 	commandBuffer->pipelineBarrier(
@@ -250,17 +272,20 @@ inline void ImageResource::transition<vk::ImageLayout::eShaderReadOnlyOptimal, v
 
 //pre-present
 template<>
-inline void ImageResource::transition<vk::ImageLayout::eGeneral, vk::ImageLayout::ePresentSrcKHR>(const CommandBuffer& commandBuffer)
+inline void ImageResource::transition<vk::ImageLayout::eGeneral, vk::ImageLayout::ePresentSrcKHR>(
+	const CommandBuffer& commandBuffer
+	, vk::AccessFlags srcAccessFlags
+	, vk::AccessFlags dstAccessFlags)
 {
 	auto imageMemeoryBarrier = vk::ImageMemoryBarrier(
-		vk::AccessFlags(), //srcAccessMask
-		vk::AccessFlags(), //dstAccessMask
+		srcAccessFlags, //srcAccessMask
+		dstAccessFlags, //dstAccessMask
 		vk::ImageLayout::eGeneral, //oldLayout
 		vk::ImageLayout::ePresentSrcKHR, //newLayout
 		VK_QUEUE_FAMILY_IGNORED,	//srcQueueFamilyIndex
 		VK_QUEUE_FAMILY_IGNORED,	//dstQueueFamliyIndex
 		m_vkImage, //image
-		{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 } //subresourceRange
+		{ m_vkAspectFlags, 0, 1, 0, 1 } //subresourceRange
 	);
 
 	commandBuffer->pipelineBarrier(
@@ -275,17 +300,20 @@ inline void ImageResource::transition<vk::ImageLayout::eGeneral, vk::ImageLayout
 
 //post-present
 template<>
-inline void ImageResource::transition<vk::ImageLayout::ePresentSrcKHR, vk::ImageLayout::eGeneral>(const CommandBuffer& commandBuffer)
+inline void ImageResource::transition<vk::ImageLayout::ePresentSrcKHR, vk::ImageLayout::eGeneral>(
+	const CommandBuffer& commandBuffer
+	, vk::AccessFlags srcAccessFlags
+	, vk::AccessFlags dstAccessFlags)
 {
 	auto imageMemeoryBarrier = vk::ImageMemoryBarrier(
-		vk::AccessFlags(), //srcAccessMask
-		vk::AccessFlags(), //dstAccessMask
+		srcAccessFlags, //srcAccessMask
+		dstAccessFlags, //dstAccessMask
 		vk::ImageLayout::ePresentSrcKHR, //oldLayout
 		vk::ImageLayout::eGeneral, //newLayout
 		VK_QUEUE_FAMILY_IGNORED,	//srcQueueFamilyIndex
 		VK_QUEUE_FAMILY_IGNORED,	//dstQueueFamliyIndex
 		m_vkImage, //image
-		{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 } //subresourceRange
+		{ m_vkAspectFlags, 0, 1, 0, 1 } //subresourceRange
 	);
 
 	commandBuffer->pipelineBarrier(
@@ -298,9 +326,13 @@ inline void ImageResource::transition<vk::ImageLayout::ePresentSrcKHR, vk::Image
 	);
 }
 
+/*
 //depth resource
 template<>
-inline void ImageResource::transition<vk::ImageLayout::eUndefined, vk::ImageLayout::eDepthStencilAttachmentOptimal>(const CommandBuffer & commandBuffer)
+inline void ImageResource::transition<vk::ImageLayout::eUndefined, vk::ImageLayout::eDepthStencilAttachmentOptimal>(
+	const CommandBuffer& commandBuffer
+	, vk::AccessFlags srcAccessFlags
+	, vk::AccessFlags dstAccessFlags)
 {
 	auto imageMemoryBarrier = vk::ImageMemoryBarrier(
 		vk::AccessFlags(),
@@ -320,10 +352,14 @@ inline void ImageResource::transition<vk::ImageLayout::eUndefined, vk::ImageLayo
 		{}, 
 		{ imageMemoryBarrier });
 }
+*/
 
 //NOTE: this must always be after the other template definitions!
 template<vk::ImageLayout source, vk::ImageLayout destination>
-void ImageResource::transition(const CommandBuffer &)
+void ImageResource::transition(
+	const CommandBuffer& commandBuffer
+	, vk::AccessFlags srcAccessFlags
+	, vk::AccessFlags dstAccessFlags)
 {
 	std::stringstream stream;
 

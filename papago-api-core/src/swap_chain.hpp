@@ -5,7 +5,8 @@
 
 class SwapChain : public ISwapchain {
 public:
-	SwapChain(vk::UniqueDevice&, vk::UniqueSwapchainKHR&, std::vector<ImageResource>& colorResources, std::vector<ImageResource>& depthResources, vk::Extent2D);
+	SwapChain(const Device&, vk::UniqueSwapchainKHR&, std::vector<ImageResource>& colorResources, std::vector<ImageResource>& depthResources, vk::Extent2D);
+	SwapChain(const Device&, vk::UniqueSwapchainKHR&, std::vector<ImageResource>& colorResources, vk::Extent2D);
 	
 	explicit operator vk::SwapchainKHR&();
 
@@ -23,7 +24,7 @@ private:
 	std::vector<vk::UniqueFence> m_vkFences;
 
 	
-	vk::UniqueRenderPass createDummyRenderPass(const vk::UniqueDevice& device); //<-- TODO: use proper RenderPass
+	//vk::UniqueRenderPass createDummyRenderPass(const vk::UniqueDevice& device); //<-- TODO: use proper RenderPass
 
 
 	//TODO: use ImageResource when it's done?

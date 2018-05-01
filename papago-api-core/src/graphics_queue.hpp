@@ -18,8 +18,9 @@ public:
 	void present() override;
 	size_t getNextFrameIndex() override;
 	void wait() override;
-	void submitCommands(const std::vector<std::reference_wrapper<ICommandBuffer>>&);
+	void submitCommands(const std::vector<std::reference_wrapper<ICommandBuffer>>&) override;
 	ImageResource& getLastRenderedImage();
+	IImageResource& getLastRenderedDepthBuffer() override;
 private:
 	uint32_t getCurrentFrameIndex();
 	void createSemaphores(const vk::UniqueDevice&);
@@ -44,7 +45,6 @@ template<vk::ImageLayout from, vk::ImageLayout to>
 inline void GraphicsQueue::transitionImageResources(const CommandBuffer& commandBuffer, const vk::Queue& queue, std::set<ImageResource*> resources) {
 	auto commandBeginInfo = vk::CommandBufferBeginInfo().setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);
 	commandBuffer->begin(commandBeginInfo);
-
 	//Transition submitted ImageResources to ePresentSrcKHR:
 	for (auto& resource : resources) {
 		resource->transition<from, to>(commandBuffer);
