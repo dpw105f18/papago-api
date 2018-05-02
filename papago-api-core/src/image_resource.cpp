@@ -18,7 +18,6 @@ ImageResource::ImageResource(ImageResource&& other) noexcept
 
 ImageResource::~ImageResource()
 {
-	// std::cout << "ImageResource::~ImageResource Called (this: " << this << ")\n";
 	// HACK: If size is zero then memory was externally allocated
 	if (m_size && m_vkImage) {
 		m_vkDevice->destroyImage(m_vkImage);
@@ -39,7 +38,6 @@ void ImageResource::upload(const std::vector<char>& data)
 	
 
 	//Do the actual uploading
-	//TODO: use BufferResource? -AM
 	vk::BufferCreateInfo bufferInfo = {};
 	bufferInfo.setSize(data.size())
 		.setUsage(vk::BufferUsageFlagBits::eTransferSrc);
@@ -85,7 +83,7 @@ void ImageResource::upload(const std::vector<char>& data)
 		region.imageSubresource.baseArrayLayer = 0;
 		region.imageSubresource.layerCount = 1;
 		region.imageOffset = vk::Offset3D{ 0,0,0 };
-		region.imageExtent = m_vkExtent;	//TODO: what if texture image is smaller/larger than ImageResource? -AM
+		region.imageExtent = m_vkExtent;
 
 		regions.push_back(region);
 	}
@@ -384,19 +382,4 @@ void ImageResource::createImageView(const vk::UniqueDevice &device, vk::ImageAsp
 			.setLevelCount(1)
 			.setLayerCount(1))
 	);
-}
-
-vk::UniqueFramebuffer & ImageResource::createFramebuffer(vk::RenderPass & renderPass)
-{
-	vk::FramebufferCreateInfo fboCreate;
-	fboCreate.setAttachmentCount(1)
-		.setPAttachments(&m_vkImageView.get())
-		.setWidth(m_vkExtent.width)
-		.setHeight(m_vkExtent.height)
-		.setLayers(1) //TODO: <--- make setable? -AM
-		.setRenderPass(static_cast<vk::RenderPass>(renderPass));
-
-	m_vkFramebuffer = m_vkDevice->createFramebufferUnique(fboCreate);
-
-	return m_vkFramebuffer;
 }

@@ -21,44 +21,34 @@ public:
 	static std::vector<Device> enumerateDevices(Surface& surface, const vk::PhysicalDeviceFeatures &features, const std::vector<const char*> &extensions);
 	Device(vk::PhysicalDevice, vk::UniqueDevice&, Surface&);
 
-
 	std::unique_ptr<ISwapchain> createSwapChain(Format, size_t framebufferCount, PresentMode preferredPresentMode) override;
 	std::unique_ptr<ISwapchain> createSwapChain(Format colorFormat, Format depthStencilFormat, size_t framebufferCount, PresentMode preferredPresentMode) override;
-	std::unique_ptr<SwapChain> createSwapChain(const vk::Format & format, size_t framebufferCount, vk::PresentModeKHR preferredPresentMode);
-	std::unique_ptr<SwapChain> createSwapChain(const vk::Format & colorFormat, vk::Format depthStencilFormat, size_t framebufferCount, vk::PresentModeKHR preferredPresentMode);
-	CommandBuffer createCommandBuffer(Usage) const;
-	GraphicsQueue createGraphicsQueue(SwapChain&) const;
-	SubCommandBuffer createSubCommandBuffer(Usage);
 	std::unique_ptr<IRenderPass> createRenderPass(IShaderProgram&, uint32_t width, uint32_t height, Format colorFormat) override;
 	std::unique_ptr<IRenderPass> createRenderPass(IShaderProgram&, uint32_t width, uint32_t height, Format colorFormat, Format depthStencilFormat) override;
-	RenderPass createRenderPass(const ShaderProgram&, uint32_t width, uint32_t height, vk::Format colorFormat) const;
-	RenderPass createRenderPass(const ShaderProgram&, uint32_t width, uint32_t height, vk::Format colorFormat, vk::Format depthStencilFormat) const;
-	std::unique_ptr<ISampler> createTextureSampler1D(Filter magFil, Filter minFil, TextureWrapMode modeU);
-	std::unique_ptr<ISampler> createTextureSampler2D(Filter magFil, Filter minFil, TextureWrapMode modeU, TextureWrapMode modeV);
-	std::unique_ptr<ISampler> createTextureSampler3D(Filter magFil, Filter minFil, TextureWrapMode modeU, TextureWrapMode modeV, TextureWrapMode modeW);
+	std::unique_ptr<ISampler> createTextureSampler1D(Filter magFil, Filter minFil, TextureWrapMode modeU) override;
+	std::unique_ptr<ISampler> createTextureSampler2D(Filter magFil, Filter minFil, TextureWrapMode modeU, TextureWrapMode modeV) override;
+	std::unique_ptr<ISampler> createTextureSampler3D(Filter magFil, Filter minFil, TextureWrapMode modeU, TextureWrapMode modeV, TextureWrapMode modeW) override;
 	std::unique_ptr<IImageResource> createTexture2D(size_t width, size_t height, Format) override;
 	std::unique_ptr<IImageResource> createDepthTexture2D(uint32_t width, uint32_t height, Format) override;
-	//drop the other create textureSampler idea below?
-	void createTextureSampler(Sampler sampler);
 	std::unique_ptr<ICommandBuffer> createCommandBuffer(Usage) override;
-
-	ImageResource createTexture2D(uint32_t width, uint32_t height, vk::Format format);
-
-	std::unique_ptr<IShaderProgram> createShaderProgram(IVertexShader&, IFragmentShader&);
+	std::unique_ptr<IShaderProgram> createShaderProgram(IVertexShader&, IFragmentShader&) override;
 	std::unique_ptr<IBufferResource> createUniformBuffer(size_t size) override;
 	std::unique_ptr<IGraphicsQueue> createGraphicsQueue(ISwapchain&) override;
+
 
 	vk::UniqueRenderPass createVkRenderpass(vk::Format colorFormat) const;
 	vk::UniqueRenderPass createVkRenderpass(vk::Format colorFormat, vk::Format depthStencilFormat) const;
 
-	void waitIdle() override;
+	std::unique_ptr<SwapChain> createSwapChain(const vk::Format & format, size_t framebufferCount, vk::PresentModeKHR preferredPresentMode) ;
+	std::unique_ptr<SwapChain> createSwapChain(const vk::Format & colorFormat, vk::Format depthStencilFormat, size_t framebufferCount, vk::PresentModeKHR preferredPresentMode) ;
 
+	void waitIdle() override;
 	const vk::UniqueDevice& getVkDevice() const;
 	const vk::PhysicalDevice& getVkPhysicalDevice() const;
 
 protected:
 	std::unique_ptr<IBufferResource> createVertexBufferInternal(std::vector<char>& data) override;
-	std::unique_ptr<IBufferResource> createIndexBufferInternal(std::vector<char>& data) override;
+	std::unique_ptr<IBufferResource> createIndexBufferInternal(std::vector<char>& data, BufferResourceElementType) override;
 private:
 	struct SwapChainSupportDetails
 	{

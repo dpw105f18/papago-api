@@ -25,6 +25,7 @@ std::vector<std::unique_ptr<IDevice>> IDevice::enumerateDevices(ISurface & surfa
 		// Should this be forced on by default ?? - CW 2018-04-18
 		vkExtensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 	}
+
 	auto devices = Device::enumerateDevices((Surface&)surface, vkFeatures, vkExtensions);
 	std::vector<std::unique_ptr<IDevice>> result;
 	result.reserve(devices.size());
@@ -186,14 +187,20 @@ bool Device::areExtensionsSupported(const vk::PhysicalDevice & physicalDevice, c
 	return requiredExtensions.empty();
 }
 
-
-
 vk::UniqueRenderPass Device::createVkRenderpass(vk::Format colorFormat, vk::Format depthStencilFormat) const
 {
+	if (GetDepthStencilFlags(colorFormat) != DepthStencilFlags::eNone) {
+		PAPAGO_ERROR("Supplied color format is a depth/stencil buffer format!");
+	}
+
+	if (GetDepthStencilFlags(depthStencilFormat) == DepthStencilFlags::eNone) {
+		PAPAGO_ERROR("Supplied depth/stencil format is a color format!");
+	}
+
 	vk::AttachmentDescription colorAttachment;
 	auto format = ImageResource::findSupportedFormat(
 		m_vkPhysicalDevice,
-		{ colorFormat }, //TODO: make sure these formats matches the format for Depth/Stencil ImageResources
+		{ colorFormat }, 
 		vk::ImageTiling::eOptimal,
 		vk::FormatFeatureFlagBits::eColorAttachment
 	);
@@ -221,7 +228,7 @@ vk::UniqueRenderPass Device::createVkRenderpass(vk::Format colorFormat, vk::Form
 
 	format = ImageResource::findSupportedFormat(
 		m_vkPhysicalDevice, 
-		{ depthStencilFormat }, //TODO: make sure these formats matches the format for Depth/Stencil ImageResources
+		{ depthStencilFormat },
 		vk::ImageTiling::eOptimal, 
 		vk::FormatFeatureFlagBits::eDepthStencilAttachment
 	);
@@ -279,6 +286,10 @@ vk::UniqueRenderPass Device::createVkRenderpass(vk::Format colorFormat, vk::Form
 
 vk::UniqueRenderPass Device::createVkRenderpass(vk::Format colorFormat) const
 {
+	if (GetDepthStencilFlags(colorFormat) != DepthStencilFlags::eNone) {
+		PAPAGO_ERROR("Supplied color format is a depth/stencil buffer format!");
+	}
+
 	vk::AttachmentDescription colorAttachment;
 	colorAttachment.setFormat(colorFormat)
 		.setSamples(vk::SampleCountFlagBits::e1)
@@ -395,7 +406,6 @@ std::unique_ptr<SwapChain> Device::createSwapChain(const vk::Format & colorForma
 				swapFormat.format,
 				resourceExtent));
 
-		//TODO: configurable amount of depth buffers?
 		depthResources.emplace_back(
 			ImageResource::createDepthResource(
 				*this,
@@ -455,33 +465,6 @@ std::unique_ptr<ICommandBuffer> Device::createCommandBuffer(Usage usage)
 		usage);
 }
 
-//TODO: rename? make as public method on sampler? -AM/AB
-void Device::createTextureSampler(Sampler sampler)
-{
-	m_vkDevice->createSamplerUnique(sampler.m_vkSamplerCreateInfo);
-}
-
-//TODO: remove 2D from method name and let dimension be determined by the (number of) arguments? -AM
-ImageResource Device::createTexture2D(uint32_t width, uint32_t height, vk::Format format )
-{
-	vk::Extent3D extent = { width, height, 1 };
-	vk::ImageCreateInfo info;
-	info.setImageType(vk::ImageType::e2D)
-		.setExtent(extent)
-		.setFormat(format)
-		.setInitialLayout(vk::ImageLayout::eUndefined)
-		.setMipLevels(1)
-		.setArrayLayers(1)
-		.setUsage(vk::ImageUsageFlagBits::eTransferDst 
-			| vk::ImageUsageFlagBits::eSampled 
-			| vk::ImageUsageFlagBits::eColorAttachment
-			| vk::ImageUsageFlagBits::eTransferSrc);
-
-	auto image = m_vkDevice->createImage(info);
-	auto memoryRequirements = m_vkDevice->getImageMemoryRequirements(image);
-	return ImageResource(image, *this, vk::ImageAspectFlagBits::eColor, format, extent, memoryRequirements);
-}
-
 std::unique_ptr<IShaderProgram> Device::createShaderProgram(IVertexShader &vertexShader, IFragmentShader &fragmentShader)
 {
 	return std::make_unique<ShaderProgram>(m_vkDevice, (VertexShader&)vertexShader, (FragmentShader&)fragmentShader);
@@ -512,7 +495,7 @@ std::unique_ptr<IBufferResource> Device::createVertexBufferInternal(std::vector<
 	return buffer;
 }
 
-std::unique_ptr<IBufferResource> Device::createIndexBufferInternal(std::vector<char>& data)
+std::unique_ptr<IBufferResource> Device::createIndexBufferInternal(std::vector<char>& data, BufferResourceElementType type)
 {
 	size_t bufferSize = data.size();
 	auto buffer = BufferResource::createBufferResource(
@@ -521,7 +504,8 @@ std::unique_ptr<IBufferResource> Device::createIndexBufferInternal(std::vector<c
 		bufferSize,
 		vk::BufferUsageFlagBits::eIndexBuffer,
 		// TODO: Convert to device local memory when command pool and buffers are ready
-		vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+		vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
+		type);
 
 	buffer->upload(data);
 	return buffer;
@@ -562,12 +546,6 @@ std::unique_ptr<IRenderPass> Device::createRenderPass(IShaderProgram & program, 
 		static_cast<ShaderProgram&>(program),
 		vk::Extent2D{ width, height },
 		GetDepthStencilFlags(to_vulkan_format(depthStencilFormat)));
-}
-
-RenderPass Device::createRenderPass(const ShaderProgram& program, uint32_t width, uint32_t height, vk::Format colorFormat, vk::Format depthStencilFormat) const
-{
-	auto vkPass = createVkRenderpass(colorFormat, depthStencilFormat);
-	return RenderPass(m_vkDevice, vkPass, program, { width, height }, GetDepthStencilFlags(depthStencilFormat));
 }
 
 std::unique_ptr<ISampler> Device::createTextureSampler1D(Filter magFilter, Filter minFilter, TextureWrapMode modeU)
