@@ -19,7 +19,7 @@ public:
 	size_t getNextFrameIndex() override;
 	void wait() override;
 	void submitCommands(const std::vector<std::reference_wrapper<ICommandBuffer>>&) override;
-	ImageResource& getLastRenderedImage();
+	IImageResource& getLastRenderedImage();
 	IImageResource& getLastRenderedDepthBuffer() override;
 private:
 	uint32_t getCurrentFrameIndex();

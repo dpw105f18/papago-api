@@ -47,7 +47,7 @@ void GraphicsQueue::submitCommands(const std::vector<std::reference_wrapper<ICom
 
 }
 
-ImageResource & GraphicsQueue::getLastRenderedImage()
+IImageResource & GraphicsQueue::getLastRenderedImage()
 {
 	return m_swapChain.m_colorResources[m_currentFrameIndex];
 }
