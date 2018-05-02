@@ -15,13 +15,11 @@ public:
 
 	void upload(const std::vector<char>& data) override; 
 
-	std::vector<char> download();
+	std::vector<char> download() override;
 
-	uint32_t getWidth() const;
-	uint32_t getHeight() const;
+	uint32_t getWidth() const override;
+	uint32_t getHeight() const override;
 	Format getFormat() const override;
-
-	void destroy() override;
 
 	ImageResource(
 		vk::Image&,

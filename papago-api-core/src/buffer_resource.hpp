@@ -17,7 +17,6 @@ public:
 	BufferResource(BufferResource&& other) noexcept;
 
 	// Inherited via Resource
-	void destroy() override;
 	bool inUse() override;
 protected:
 	void internalUpload(const std::vector<char>& data) override;
