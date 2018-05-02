@@ -25,7 +25,7 @@ CommandBuffer::CommandBuffer(const vk::UniqueDevice &device, int queueFamilyInde
 		.setCommandPool(*m_vkCommandPool)
 		.setLevel(vk::CommandBufferLevel::ePrimary);
 
-	m_vkCommandBuffer = std::move(device->allocateCommandBuffersUnique(allocateInfo)[0]);	//TODO: remove "[0]"-hack. -AM
+	m_vkCommandBuffer = std::move(device->allocateCommandBuffersUnique(allocateInfo)[0]);
 }
 
 void CommandBuffer::record(IRenderPass & renderPass, ISwapchain & swapchain, size_t frameIndex, std::function<void(IRecordingCommandBuffer&)> func)
@@ -52,7 +52,7 @@ void CommandBuffer::record(IRenderPass & renderPass, IImageResource & target, st
 		.setLayers(1)
 		.setRenderPass(static_cast<vk::RenderPass>(internalRenderPass));
 
-	//TODO: Find out if the framebuffer should reside on the image like this. Maybe commandbuffer instea? - Brandborg
+	//TODO: Find out if the framebuffer should reside on the image like this. Maybe commandbuffer instead? - Brandborg
 	internalColor.m_vkFramebuffer = m_vkDevice->createFramebufferUnique(fboCreate);
 
 	begin(internalRenderPass, internalColor.m_vkFramebuffer, { extent.width, extent.height });
@@ -83,7 +83,7 @@ void CommandBuffer::record(IRenderPass& renderPass, IImageResource& color, IImag
 	end();
 }
 
-long CommandBuffer::getBinding(const ShaderProgram & program, const std::string& name)
+long CommandBuffer::getBinding(const std::string& name)
 {
 	long binding = -1;
 	auto& shaderProgram = m_renderPassPtr->m_shaderProgram;
@@ -103,6 +103,11 @@ long CommandBuffer::getBinding(const ShaderProgram & program, const std::string&
 
 IRecordingCommandBuffer & CommandBuffer::clearColorBuffer(float red, float green, float blue, float alpha)
 {
+	if (m_renderPassPtr == nullptr)
+	{
+		PAPAGO_ERROR("clearColorBuffer(float red...) called while not in a begin-context (begin(...) has not been called)");
+	}
+
 	auto colorArray = std::array<float, 4>{ red,green,blue,alpha };
 	auto color = vk::ClearColorValue(colorArray);
 	clearAttatchment(color, vk::ImageAspectFlagBits::eColor);
@@ -111,6 +116,11 @@ IRecordingCommandBuffer & CommandBuffer::clearColorBuffer(float red, float green
 
 IRecordingCommandBuffer & CommandBuffer::clearColorBuffer(int32_t red, int32_t green, int32_t blue, int32_t alpha)
 {
+	if (m_renderPassPtr == nullptr)
+	{
+		PAPAGO_ERROR("clearColorBuffer(int32_t red...) called while not in a begin-context (begin(...) has not been called)");
+	}
+
 	auto colorArray = std::array<int32_t, 4>{ red, green, blue, alpha };
 	auto color = vk::ClearColorValue(colorArray);
 	clearAttatchment(color, vk::ImageAspectFlagBits::eColor);
@@ -119,6 +129,11 @@ IRecordingCommandBuffer & CommandBuffer::clearColorBuffer(int32_t red, int32_t g
 
 IRecordingCommandBuffer & CommandBuffer::clearColorBuffer(uint32_t red, uint32_t green, uint32_t blue, uint32_t alpha)
 {
+	if (m_renderPassPtr == nullptr)
+	{
+		PAPAGO_ERROR("clearColorBuffer(uint32_t red...) called while not in a begin-context (begin(...) has not been called)");
+	}
+
 	auto colorArray = std::array<uint32_t, 4>{ red, green, blue, alpha };
 	auto color = vk::ClearColorValue(colorArray);
 	clearAttatchment(color, vk::ImageAspectFlagBits::eColor);
@@ -127,6 +142,11 @@ IRecordingCommandBuffer & CommandBuffer::clearColorBuffer(uint32_t red, uint32_t
 
 IRecordingCommandBuffer & CommandBuffer::clearDepthStencilBuffer(float depth, uint32_t stencil)
 {
+	if (m_renderPassPtr == nullptr)
+	{
+		PAPAGO_ERROR("clearDepthStencilBuffer(...) called while not in a begin-context (begin(...) has not been called)");
+	}
+
 	auto flags = m_renderPassPtr->m_depthStencilFlags;
 	if (flags != DepthStencilFlags::eNone) {
 		if (flags == (DepthStencilFlags::eDepth | DepthStencilFlags::eStencil)) {
@@ -145,6 +165,11 @@ IRecordingCommandBuffer & CommandBuffer::clearDepthStencilBuffer(float depth, ui
 
 IRecordingCommandBuffer& CommandBuffer::clearDepthBuffer(float value)
 {
+	if (m_renderPassPtr == nullptr)
+	{
+		PAPAGO_ERROR("clearDepthBuffer(...) called while not in a begin-context (begin(...) has not been called)");
+	}
+
 	auto flags = m_renderPassPtr->m_depthStencilFlags;
 	if (flags != DepthStencilFlags::eNone) {
 		if (flags == DepthStencilFlags::eDepth) {
@@ -163,6 +188,11 @@ IRecordingCommandBuffer& CommandBuffer::clearDepthBuffer(float value)
 
 IRecordingCommandBuffer& CommandBuffer::clearStencilBuffer(uint32_t value)
 {
+	if (m_renderPassPtr == nullptr)
+	{
+		PAPAGO_ERROR("clearStencilBuffer(...) called while not in a begin-context (begin(...) has not been called)");
+	}
+
 	auto flags = m_renderPassPtr->m_depthStencilFlags;
 	if (flags != DepthStencilFlags::eNone) {
 		if (flags == DepthStencilFlags::eStencil) {
@@ -194,9 +224,14 @@ void CommandBuffer::clearAttatchment(const vk::ClearValue& clearValue, vk::Image
 
 IRecordingCommandBuffer& CommandBuffer::setUniform(const std::string & name, IImageResource & image, ISampler & sampler)
 {
+	if (m_renderPassPtr == nullptr)
+	{
+		PAPAGO_ERROR("setUniform(name, image, sampler) called while not in a begin-context (begin(...) has not been called)");
+	}
+
 	auto& backendImage = static_cast<ImageResource&>(image);
 	auto& backendSampler = static_cast<Sampler&>(sampler);
-	auto binding = getBinding(m_renderPassPtr->m_shaderProgram, name);
+	auto binding = getBinding(name);
 
 	vk::DescriptorImageInfo info = {};
 	info.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
@@ -217,8 +252,12 @@ IRecordingCommandBuffer& CommandBuffer::setUniform(const std::string & name, IIm
 
 IRecordingCommandBuffer& CommandBuffer::setInput(IBufferResource& buffer)
 {
+	if (m_renderPassPtr == nullptr)
+	{
+		PAPAGO_ERROR("setInput(buffer) called while not in a begin-context (begin(...) has not been called)");
+	}
+
 	//TODO: find a more general way to fix offsets
-	//TODO: make it work with m_vkCommandBuffer->bindVertexBuffers(...);
 	m_vkCommandBuffer->bindVertexBuffers(
 		0, 
 		{ *(static_cast<BufferResource&>(buffer)).m_vkBuffer }, 
@@ -262,24 +301,35 @@ void CommandBuffer::end()
 
 IRecordingCommandBuffer& CommandBuffer::setIndexBuffer(IBufferResource &indexBuffer)
 {
-	// TODO: Retrieve wheter uint16 or uint32 is used for index buffer from somewhere - CW 2018-04-13
+	if (m_renderPassPtr == nullptr)
+	{
+		PAPAGO_ERROR("setIndexBuffer(indexBuffer) called while not in a begin-context (begin(...) has not been called)");
+	}
+
+	auto& internalIndexBuffer = static_cast<BufferResource&>(indexBuffer);
+	auto indexType = internalIndexBuffer.m_elementType == BufferResourceElementType::eUint32 ? vk::IndexType::eUint32 : vk::IndexType::eUint16;
+
 	m_vkCommandBuffer->bindIndexBuffer(
-		*(static_cast<BufferResource&>(indexBuffer)).m_vkBuffer, 
+		*internalIndexBuffer.m_vkBuffer, 
 		0, 
-		vk::IndexType::eUint16);
+		indexType);
 	return *this;
 }
 
 void CommandBuffer::drawInstanced(size_t instanceVertexCount, size_t instanceCount, size_t startVertexLocation, size_t startInstanceLocation)
 {
-	//TODO: choose the correct draw-command based on how the buffer has been used? -AM
 	m_vkCommandBuffer->draw(instanceVertexCount, instanceCount, startVertexLocation, startInstanceLocation);
 }
 
 IRecordingCommandBuffer& CommandBuffer::setUniform(const std::string & uniformName, IBufferResource & buffer)
 {
+	if (m_renderPassPtr == nullptr)
+	{
+		PAPAGO_ERROR("setUniform(uniformName, buffer) called while not in a begin-context (begin(...) has not been called)");
+	}
+
 	auto& backendBuffer = static_cast<BufferResource&>(buffer);
-	auto binding = getBinding(m_renderPassPtr->m_shaderProgram, uniformName);
+	auto binding = getBinding(uniformName);
 	auto& descriptorSet = m_renderPassPtr->m_vkDescriptorSet;
 
 	auto writeDescriptorSet = vk::WriteDescriptorSet()
@@ -299,6 +349,11 @@ IRecordingCommandBuffer& CommandBuffer::setUniform(const std::string & uniformNa
 
 IRecordingCommandBuffer& CommandBuffer::drawIndexed(size_t indexCount, size_t instanceCount, size_t firstIndex, size_t vertexOffset, size_t firstInstance)
 {
+	if (m_renderPassPtr == nullptr)
+	{
+		PAPAGO_ERROR("drawIndexed(...) called while not in a begin-context (begin(...) has not been called)");
+	}
+
 	m_vkCommandBuffer->drawIndexed(indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
 	return *this;
 }

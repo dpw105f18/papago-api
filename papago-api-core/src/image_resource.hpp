@@ -58,8 +58,6 @@ private:
 		const vk::UniqueDevice&, 
 		vk::ImageAspectFlags = vk::ImageAspectFlagBits::eColor);
 
-	vk::UniqueFramebuffer& createFramebuffer(vk::RenderPass& renderPass);
-
 	vk::Image m_vkImage;
 	vk::UniqueImageView m_vkImageView;
 	vk::Format m_format;

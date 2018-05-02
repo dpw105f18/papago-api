@@ -54,6 +54,14 @@ enum class TextureWrapMode {
 
 enum class CommandBufferUsage {};
 
+
+enum class BufferResourceElementType		//<-- Used when BufferResource is an index buffer.
+{		
+	eChar,
+	eUint16,
+	eUint32
+};
+
 //TODO: make in-accessible to user? (only used internally)
 enum class DepthStencilFlags
 {

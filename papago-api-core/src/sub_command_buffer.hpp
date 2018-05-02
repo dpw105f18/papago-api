@@ -8,7 +8,6 @@ class ImageResource;
 class BufferResource;
 class Resource;
 class Sampler;
-class Color;	//<-- TODO: find out what to do about this
 class SwapChain;
 
 class SubCommandBuffer
@@ -23,7 +22,6 @@ public:
 	virtual void end();
 	virtual void setPrimitiveTopology(Usage);
 	virtual void clearDepthBuffer(float value);
-	virtual void clearFrameBuffer(Color);
 	virtual void setDepthTest(DepthTest);
 	virtual void setUniform(const std::string&, const BufferResource&);
 	virtual void setUniform(const std::string&, const ImageResource&, Sampler&);

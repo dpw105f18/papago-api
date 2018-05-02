@@ -22,7 +22,7 @@ void GraphicsQueue::submitCommands(const std::vector<std::reference_wrapper<ICom
 		.setPWaitSemaphores(waitSemaphores.data())
 		.setPWaitDstStageMask(waitStages.data())
 		.setCommandBufferCount(vkCommandBuffers.size())
-		.setPCommandBuffers(vkCommandBuffers.data())	//TODO: find out how to cast a vector<CommandBuffer> to vector<vk::CommandBuffer> -AM
+		.setPCommandBuffers(vkCommandBuffers.data())
 		.setSignalSemaphoreCount(semaphores.size())
 		.setPSignalSemaphores(semaphores.data());
 
@@ -41,10 +41,9 @@ void GraphicsQueue::submitCommands(const std::vector<std::reference_wrapper<ICom
 
 	for (auto& resource : m_submittedResources) {
 		resource->m_vkFence = &(*fence);
-		}
+	}
 
 	m_vkGraphicsQueue.submit(submitInfo, *fence);
-
 }
 
 IImageResource & GraphicsQueue::getLastRenderedImage()
@@ -69,7 +68,6 @@ void GraphicsQueue::present()
 
 	// Find image resources from the submitted resources 
 	for (auto& resource : m_submittedResources) {
-		//TODO: separate the resourcesInUse on CommandBuffer into Buffer and Image iso this check? -AM
 		if (typeid(*resource) == typeid(ImageResource)) {
 			auto imageResource = reinterpret_cast<ImageResource*>(resource);
 			imageResources.emplace(imageResource);
@@ -102,6 +100,8 @@ void GraphicsQueue::present()
 		m_device.m_vkInternalQueue,
 		imageResources
 	);
+
+	m_submittedResources.clear();
 }
 
 size_t GraphicsQueue::getNextFrameIndex() {
@@ -110,13 +110,6 @@ size_t GraphicsQueue::getNextFrameIndex() {
 	auto result = m_device.m_vkDevice->acquireNextImageKHR(static_cast<vk::SwapchainKHR>(m_swapChain), 0, *m_vkImageAvailableSemaphore, vk::Fence());
 	m_currentFrameIndex = result.value;
 	return m_currentFrameIndex;
-}
-
-//TODO: don't present this to API users. -AM
-void GraphicsQueue::wait()
-{
-	m_vkGraphicsQueue.waitIdle();
-	m_vkPresentQueue.waitIdle();
 }
 
 uint32_t GraphicsQueue::getCurrentFrameIndex()

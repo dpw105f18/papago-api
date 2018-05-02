@@ -71,7 +71,7 @@ public:
 
 protected:
 	virtual std::unique_ptr<IBufferResource> createVertexBufferInternal(std::vector<char>& data) = 0;
-	virtual std::unique_ptr<IBufferResource> createIndexBufferInternal(std::vector<char>& data) = 0;
+	virtual std::unique_ptr<IBufferResource> createIndexBufferInternal(std::vector<char>& data, BufferResourceElementType) = 0;
 };
 
 template<class T>
@@ -87,7 +87,7 @@ inline std::unique_ptr<IBufferResource> IDevice::createIndexBuffer<uint32_t>(std
 	size_t size = sizeof(uint32_t) * index_data.size();
 	std::vector<char> data(size);
 	memcpy(data.data(), index_data.data(), size);
-	return createIndexBufferInternal(data);
+	return createIndexBufferInternal(data, BufferResourceElementType::eUint32);
 }
 
 template<> 
@@ -95,7 +95,7 @@ inline std::unique_ptr<IBufferResource> IDevice::createIndexBuffer<uint16_t>(std
 	size_t size = sizeof(uint16_t) * index_data.size();
 	std::vector<char> data(size);
 	memcpy(data.data(), index_data.data(), size);
-	return createIndexBufferInternal(data);
+	return createIndexBufferInternal(data, BufferResourceElementType::eUint16);
 }
 
 template<class T>

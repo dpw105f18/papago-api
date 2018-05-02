@@ -267,7 +267,6 @@ int main()
 		auto& colourBuffer = graphicsQueue->getLastRenderedImage();
 		auto morePixels = colourBuffer.download();
 		
-		//TODO: make getWidth and getHeight on ImageResource
 		stbi_write_png("passOneDepthTarget.png", depthBuffer.getWidth(), depthBuffer.getHeight(), 4, pixels.data(), depthBuffer.getWidth() * 4);
 		stbi_write_png("passOneColourTarget.png", colourBuffer.getWidth(), colourBuffer.getHeight(), 4, morePixels.data(), colourBuffer.getWidth() * 4);
 	}

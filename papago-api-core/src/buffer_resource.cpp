@@ -4,6 +4,7 @@
 BufferResource::BufferResource(BufferResource&& other) noexcept
 	: Resource(std::move(other))
 	, m_vkBuffer(std::move(other.m_vkBuffer))
+	, m_elementType(other.m_elementType)
 {
 }
 
@@ -30,11 +31,12 @@ std::vector<char> BufferResource::internalDownload()
 }
 
 std::unique_ptr<BufferResource> BufferResource::createBufferResource(
-	vk::PhysicalDevice		physicalDevice, 
-	const vk::UniqueDevice& device, 
-	size_t					size, 
-	vk::BufferUsageFlags	usageFlags, 
-	vk::MemoryPropertyFlags memoryFlags)
+	vk::PhysicalDevice			physicalDevice, 
+	const vk::UniqueDevice&		device, 
+	size_t						size, 
+	vk::BufferUsageFlags		usageFlags, 
+	vk::MemoryPropertyFlags		memoryFlags,
+	BufferResourceElementType	type)
 {
 	auto bufferCreateInfo = vk::BufferCreateInfo()
 		.setSize(size)
@@ -48,14 +50,16 @@ std::unique_ptr<BufferResource> BufferResource::createBufferResource(
 }
 
 BufferResource::BufferResource(
-	const vk::UniqueDevice&		device,
-	const vk::PhysicalDevice&	physicalDevice,
-	vk::UniqueBuffer&&			buffer,
-	vk::MemoryPropertyFlags		memoryFlags,
-	vk::MemoryRequirements		memoryRequirements,
-	size_t						range)
+	const vk::UniqueDevice&					device,
+	const vk::PhysicalDevice&				physicalDevice,
+	vk::UniqueBuffer&&						buffer,
+	vk::MemoryPropertyFlags					memoryFlags,
+	vk::MemoryRequirements					memoryRequirements,
+	size_t									range,
+	const BufferResourceElementType			type)
 		: Resource(physicalDevice, device, memoryFlags, memoryRequirements)
 		, m_vkBuffer(std::move(buffer))
+		, m_elementType(type)
 {
 	m_vkInfo.setBuffer(*m_vkBuffer)
 		.setOffset(0)
