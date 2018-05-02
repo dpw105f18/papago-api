@@ -239,7 +239,7 @@ int main()
 					uniformBuffer->upload(std::vector<vec3>{ randomColor });
 				}
 
-				stupidCmd->record(*stupidPass, *swapchain, graphicsQueue->getNextFrameIndex(), [&](IRecordingCommandBuffer& commandBuffer) {
+				stupidCmd->record(*stupidPass, *swapchain, [&](IRecordingCommandBuffer& commandBuffer) {
 					commandBuffer.clearDepthBuffer(1.0f);
 					commandBuffer.clearColorBuffer(1.0f, 0.0f, 0.0f, 1.0f);
 					commandBuffer.setUniform("val", *uniformBuffer);

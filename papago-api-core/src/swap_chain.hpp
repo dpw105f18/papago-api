@@ -23,9 +23,8 @@ private:
 	vk::Extent2D m_vkExtent;
 	std::vector<vk::UniqueFence> m_vkFences;
 
-	
-	//vk::UniqueRenderPass createDummyRenderPass(const vk::UniqueDevice& device); //<-- TODO: use proper RenderPass
-
+	//updated through GraphicsQueue (both present() and constructor)
+	uint32_t m_currentFramebufferIndex;
 
 	//TODO: use ImageResource when it's done?
 	friend class Device;

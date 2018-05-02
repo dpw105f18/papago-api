@@ -28,10 +28,10 @@ CommandBuffer::CommandBuffer(const vk::UniqueDevice &device, int queueFamilyInde
 	m_vkCommandBuffer = std::move(device->allocateCommandBuffersUnique(allocateInfo)[0]);
 }
 
-void CommandBuffer::record(IRenderPass & renderPass, ISwapchain & swapchain, size_t frameIndex, std::function<void(IRecordingCommandBuffer&)> func)
+void CommandBuffer::record(IRenderPass & renderPass, ISwapchain & swapchain, std::function<void(IRecordingCommandBuffer&)> func)
 {
 	auto& internalSwapChain = static_cast<SwapChain&>(swapchain);
-	begin(static_cast<RenderPass&>(renderPass), internalSwapChain.m_vkFramebuffers[frameIndex], { swapchain.getWidth(), swapchain.getHeight() });
+	begin(static_cast<RenderPass&>(renderPass), internalSwapChain.m_vkFramebuffers[internalSwapChain.m_currentFramebufferIndex], { swapchain.getWidth(), swapchain.getHeight() });
 	func(*this);
 	end();
 }
