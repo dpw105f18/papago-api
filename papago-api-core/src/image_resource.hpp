@@ -21,8 +21,6 @@ public:
 	uint32_t getHeight() const override;
 	Format getFormat() const override;
 
-	void destroy() override;
-
 	ImageResource(
 		vk::Image&,
 		const Device&,

@@ -8,7 +8,6 @@ public:
 	Resource(const Resource&) = delete;
 
 	virtual ~Resource() = default;
-	virtual void destroy() = 0;
 protected:
 	explicit Resource(const vk::UniqueDevice& device);
 

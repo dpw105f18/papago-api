@@ -7,11 +7,6 @@ BufferResource::BufferResource(BufferResource&& other) noexcept
 {
 }
 
-void BufferResource::destroy()
-{
-
-}
-
 inline bool BufferResource::inUse()
 {
 	return m_vkFence

@@ -205,9 +205,6 @@ Format ImageResource::getFormat() const
 	return  from_vulkan_format(m_format);
 }
 
-void ImageResource::destroy()
-{
-}
 
 ImageResource ImageResource::createDepthResource(
 	const Device& device, 
