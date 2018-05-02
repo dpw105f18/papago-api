@@ -50,13 +50,13 @@ std::unique_ptr<BufferResource> BufferResource::createBufferResource(
 }
 
 BufferResource::BufferResource(
-	const vk::UniqueDevice&					device,
-	const vk::PhysicalDevice&				physicalDevice,
-	vk::UniqueBuffer&&						buffer,
-	vk::MemoryPropertyFlags					memoryFlags,
-	vk::MemoryRequirements					memoryRequirements,
-	size_t									range,
-	const BufferResourceElementType			type)
+	const vk::UniqueDevice&				device,
+	const vk::PhysicalDevice&			physicalDevice,
+	vk::UniqueBuffer&&					buffer,
+	vk::MemoryPropertyFlags				memoryFlags,
+	vk::MemoryRequirements				memoryRequirements,
+	size_t								range,
+	const BufferResourceElementType		type)
 		: Resource(physicalDevice, device, memoryFlags, memoryRequirements)
 		, m_vkBuffer(std::move(buffer))
 		, m_elementType(type)
