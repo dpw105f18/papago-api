@@ -160,7 +160,7 @@ std::vector<char> ImageResource::download()
 	region.bufferOffset = 0;
 	region.bufferRowLength = 0;
 	region.bufferImageHeight = 0;
-	region.imageSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
+	region.imageSubresource.aspectMask = m_vkAspectFlags; //TODO: subresource.aspectMask can only have 1 bit set. Handle case where *this is a depth/stencil buffer. -AM
 	region.imageSubresource.mipLevel = 0;
 	region.imageSubresource.baseArrayLayer = 0;
 	region.imageSubresource.layerCount = 1;

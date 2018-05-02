@@ -223,6 +223,7 @@ int main()
 				cmd->record(*colPass, *passOneTarget, *passOneDepth, [&](IRecordingCommandBuffer& commandBuffer) {
 					commandBuffer
 						.clearColorBuffer(0.0f, 1.0f, 0.0f, 1.0f)
+						.clearDepthBuffer(1.0f)
 						.setInput(*vertexBuffer)
 						.setIndexBuffer(*indexBuffer)
 						.drawIndexed(6);
@@ -243,7 +244,7 @@ int main()
 					commandBuffer.clearColorBuffer(1.0f, 0.0f, 0.0f, 1.0f);
 					commandBuffer.setUniform("val", *uniformBuffer);
 
-					commandBuffer.setUniform("sam", *passOneDepth, *sampler);
+					commandBuffer.setUniform("sam", *passOneTarget, *sampler);
 
 					commandBuffer.setInput(*stupidVertexBuffer);
 					commandBuffer.setIndexBuffer(*indexBuffer);
@@ -260,12 +261,12 @@ int main()
 		}
 		device->waitIdle();
 
-		auto pixels = passOneTarget->download();
-		//TODO: test line below:
-		//auto pixels = graphicsQueue->getLastRenderedDepthBuffer().download();
-
+		//auto pixels = passOneTarget->download();
+		auto& depthBuffer = graphicsQueue->getLastRenderedDepthBuffer();
+		auto pixels = depthBuffer.download();
+		
 		//TODO: make getWidth and getHeight on ImageResource
-		stbi_write_png("passOneTarget.png", 800, 600, 4, pixels.data(), 800 * 4);
+		stbi_write_png("passOneTarget.png", depthBuffer.getWidth(), depthBuffer.getHeight(), 4, pixels.data(), depthBuffer.getWidth() * 4);
 	}
 	std::cout << "Press enter to continue...";
 	std::cin.ignore();
