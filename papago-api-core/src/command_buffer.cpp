@@ -167,6 +167,8 @@ IRecordingCommandBuffer& CommandBuffer::setInput(IBufferResource& buffer)
 void CommandBuffer::end()
 {
 	m_renderPassPtr = nullptr;
+	m_boundDescriptorBindings.clear();
+
 	m_vkCommandBuffer->endRenderPass();
 	m_vkCommandBuffer->end();
 }
@@ -182,12 +184,51 @@ IRecordingCommandBuffer& CommandBuffer::setIndexBuffer(IBufferResource &indexBuf
 }
 
 IRecordingCommandBuffer& CommandBuffer::setUniform(
-	const std::string& uniformName,
-	DynamicBuffer&	   buffer)
+	const std::string&	uniformName,
+	DynamicBuffer&		buffer,
+	size_t				index)
 {
 	auto& innerBuffer = dynamic_cast<BufferResource&>(buffer.innerBuffer());
-	// TODO: Add dynamic buffer specific things here
-	setUniform(uniformName, innerBuffer);
+	
+	auto binding = getBinding(m_renderPassPtr->m_shaderProgram, uniformName);
+	auto& descriptorSet = m_renderPassPtr->m_vkDescriptorSet;
+
+	bool bindingAlreadyBound = false;
+	for (auto boundBinding : m_boundDescriptorBindings) {
+		bindingAlreadyBound = boundBinding == binding;
+
+		if (bindingAlreadyBound) break;
+	}
+
+	if (!bindingAlreadyBound) {
+
+		auto writeDescriptorSet = vk::WriteDescriptorSet()
+			.setDstSet(*descriptorSet)
+			.setDstBinding(binding)
+			.setDescriptorType(vk::DescriptorType::eUniformBufferDynamic)
+			.setDescriptorCount(1)
+			.setPBufferInfo(&innerBuffer.m_vkInfo);
+
+		m_vkDevice->updateDescriptorSets({ writeDescriptorSet }, {});
+		m_boundDescriptorBindings.push_back(binding);
+	}
+	// TODO: Find the amount of dynamic offsets that is required by the number of dynamic uniform buffers
+
+	auto dynamicOffsets = std::vector<uint32_t>(buffer.m_objectCount);
+	
+	for (auto i = 0; i < buffer.m_objectCount; ++i) {
+		if (i == index) {
+			dynamicOffsets[i] = i * buffer.m_alignment;
+		}
+		else {
+			//TODO: find some way to get the dynamic offsets of the uniforms we are NOT setting with this method. -AM
+			//HACK: using 0 as a placeholder value for dynamic offsets
+			dynamicOffsets[i] = 0;
+		}
+	}
+
+	m_vkCommandBuffer->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *m_renderPassPtr->m_vkPipelineLayout, 0, { *descriptorSet }, dynamicOffsets);
+
 	return *this;
 }
 
@@ -204,13 +245,14 @@ IRecordingCommandBuffer& CommandBuffer::setUniform(const std::string & uniformNa
 	auto& descriptorSet = m_renderPassPtr->m_vkDescriptorSet;
 
 	auto writeDescriptorSet = vk::WriteDescriptorSet()
-		.setDstSet(*descriptorSet)
-		.setDstBinding(binding)
-		.setDescriptorType(vk::DescriptorType::eUniformBufferDynamic)
-		.setDescriptorCount(1)
-		.setPBufferInfo(&backendBuffer.m_vkInfo);
+	.setDstSet(*descriptorSet)
+	.setDstBinding(binding)
+	.setDescriptorType(vk::DescriptorType::eUniformBufferDynamic)
+	.setDescriptorCount(1)
+	.setPBufferInfo(&backendBuffer.m_vkInfo);
 
 	m_vkDevice->updateDescriptorSets({writeDescriptorSet}, {});
+
 	// TODO: Find the amount of dynamic offsets that is required by the number of dynamic uniform buffers
 	m_vkCommandBuffer->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *m_renderPassPtr->m_vkPipelineLayout, 0, { *descriptorSet }, {0,0}); 
 

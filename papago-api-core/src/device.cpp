@@ -337,9 +337,9 @@ std::unique_ptr<ICommandBuffer> Device::createCommandBuffer(Usage usage)
 		usage);
 }
 
-std::unique_ptr<DynamicBuffer> Device::createDynamicUniformBuffer(size_t object_size, int object_count)
+std::unique_ptr<DynamicBuffer> Device::createDynamicUniformBuffer(size_t objectSize, int objectCount)
 {
-	auto dynamic_alligment = object_size;
+	auto dynamic_alligment = objectSize;
 	const auto properties = m_vkPhysicalDevice.getProperties();
 	const auto allignment = properties.limits.minUniformBufferOffsetAlignment;
 
@@ -348,14 +348,15 @@ std::unique_ptr<DynamicBuffer> Device::createDynamicUniformBuffer(size_t object_
 		dynamic_alligment = (dynamic_alligment + allignment - 1) & ~(allignment - 1);
 	}
 
-	const auto buffer_size = dynamic_alligment * object_count;
+	const auto buffer_size = dynamic_alligment * objectCount;
 	auto buffer = BufferResource::createBufferResource(
 		m_vkPhysicalDevice, 
 		m_vkDevice, 
 		buffer_size, 
 		vk::BufferUsageFlagBits::eUniformBuffer, 
 		vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
-	return std::make_unique<DynamicBuffer>(std::move(buffer), dynamic_alligment);
+	buffer->m_vkInfo.range = dynamic_alligment;
+	return std::make_unique<DynamicBuffer>(std::move(buffer), dynamic_alligment, objectCount);
 }
 
 //TODO: rename? make as public method on sampler? -AM/AB

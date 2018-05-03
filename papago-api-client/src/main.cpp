@@ -231,7 +231,7 @@ void multithreadedTest() {
 
 	d_buffer->upload<UniformData>(std::vector<UniformData> {
 		{translate(glm::vec3{ 0.0f, 0.0f, 0.0f })},
-		{translate(glm::vec3{ 1.0f, 0.0f, 0.0f })}
+		{translate(glm::vec3{ 2.0f, 2.0f, 0.0f })}
 	});
 
 	auto cube = std::make_shared<Mesh>(Mesh::Cube(*device));
@@ -289,8 +289,10 @@ void multithreadedTest() {
 				auto commandBuffer = device->createCommandBuffer(Usage::eReset);
 				commandBuffer->record(*renderPass, *swapchain, frame_index, [&](IRecordingCommandBuffer& rCommandBuffer) {
 					rCommandBuffer.setUniform("view_projection_matrix", *viewProjectionMatrix);
-					rCommandBuffer.setUniform("model_matrix", *d_buffer);
+					rCommandBuffer.setUniform("model_matrix", *d_buffer, 0);
 					cube->use(rCommandBuffer);
+					rCommandBuffer.drawIndexed(36);
+					rCommandBuffer.setUniform("model_matrix", *d_buffer, 1);
 					rCommandBuffer.drawIndexed(36);
 				});
 				commandBuffers.push_back(std::move(commandBuffer));
@@ -320,6 +322,7 @@ int main()
 	std::cout << "Press enter to continue...";
 	std::cin.ignore();
 	return 0;
+	/*
 	{
 		auto hwnd = StartWindow(800, 600);
 		auto surface = ISurface::createWin32Surface(800, 600, hwnd);
@@ -416,4 +419,5 @@ int main()
 	}
 	std::cout << "Press enter to continue...";
 	std::cin.ignore();
+	*/
 }

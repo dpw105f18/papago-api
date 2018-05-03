@@ -16,13 +16,17 @@ protected:
 	virtual std::vector<char> internalDownload() = 0;
 };
 
+//TODO: make IDynamicBuffer
 class DynamicBuffer {
 	std::unique_ptr<IBufferResource> m_buffer;
-	size_t m_alignment;
 public:
+	size_t m_alignment;
+	size_t m_objectCount;
+
 	DynamicBuffer(
-		std::unique_ptr<IBufferResource>&& buffer,
-		size_t                             alignment);
+		std::unique_ptr<IBufferResource>&&	buffer,
+		size_t								alignment,
+		size_t								objectCount);
 
 	IBufferResource& innerBuffer() { return *m_buffer; }
 
@@ -32,11 +36,15 @@ public:
 	void upload(std::vector<T>);
 };
 
+//TODO: move to buffer_resource.cpp?
 inline DynamicBuffer::DynamicBuffer(
 	std::unique_ptr<IBufferResource>&& buffer,
-	const size_t                       alignment)
+	const size_t                       alignment,
+	const size_t						objectCount)
 	: m_buffer(std::move(buffer))
-	, m_alignment(alignment) { }
+	, m_alignment(alignment)
+	, m_objectCount(objectCount)
+{ }
 
 template<>
 inline void IBufferResource::upload<char>(const std::vector<char>& data)

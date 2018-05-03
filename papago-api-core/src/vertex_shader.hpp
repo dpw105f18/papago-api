@@ -7,7 +7,6 @@ class VertexShader : public Shader, public IVertexShader
 public:
 	VertexShader(const std::vector<char>& bytecode, const std::string& entryPoint);
 
-private:
 	struct Input
 	{
 		uint32_t offset;	//<-- offset in bytes from the beginning of the vertex data
@@ -29,10 +28,12 @@ private:
 			}
 		}
 	};
-	
+
 	//must be set by parser:
 	std::vector<Input> m_input;	 //<-- the index in this vector = order of in-vars in shader.
-
+private:
+	
+	
 	friend class RenderPass;
 	friend class Parser;
 	friend class ShaderProgram;

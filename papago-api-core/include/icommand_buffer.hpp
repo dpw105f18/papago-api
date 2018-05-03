@@ -22,7 +22,7 @@ public:
 	virtual IRecordingCommandBuffer& setInput(IBufferResource&) = 0;
 	virtual IRecordingCommandBuffer& setUniform(const std::string& uniformName, IImageResource&, ISampler&) = 0;
 	virtual IRecordingCommandBuffer& setUniform(const std::string& uniformName, IBufferResource&) = 0;
-	virtual IRecordingCommandBuffer& setUniform(const std::string& uniformName, DynamicBuffer&) = 0;
+	virtual IRecordingCommandBuffer& setUniform(const std::string& uniformName, DynamicBuffer&, size_t) = 0;
 	virtual IRecordingCommandBuffer& setIndexBuffer(IBufferResource&) = 0;
 	virtual IRecordingCommandBuffer& drawIndexed(size_t indexCount, size_t instanceCount = 1, size_t firstIndex = 0, size_t vertexOffset = 0, size_t firstInstance = 0) = 0;
 	
