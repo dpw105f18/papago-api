@@ -167,7 +167,6 @@ IRecordingCommandBuffer& CommandBuffer::setInput(IBufferResource& buffer)
 void CommandBuffer::end()
 {
 	m_renderPassPtr = nullptr;
-	m_boundDescriptorBindings.clear();
 
 	m_vkCommandBuffer->endRenderPass();
 	m_vkCommandBuffer->end();
@@ -194,7 +193,7 @@ IRecordingCommandBuffer& CommandBuffer::setUniform(
 	auto& descriptorSet = m_renderPassPtr->m_vkDescriptorSet;
 
 	bool bindingAlreadyBound = false;
-	for (auto boundBinding : m_boundDescriptorBindings) {
+	for (auto boundBinding : s_boundDescriptorBindings) {
 		bindingAlreadyBound = boundBinding == binding;
 
 		if (bindingAlreadyBound) break;
@@ -202,29 +201,57 @@ IRecordingCommandBuffer& CommandBuffer::setUniform(
 
 	if (!bindingAlreadyBound) {
 
+		vk::DescriptorBufferInfo info = innerBuffer.m_vkInfo;
+		info.setRange(buffer.m_alignment);
+
 		auto writeDescriptorSet = vk::WriteDescriptorSet()
 			.setDstSet(*descriptorSet)
 			.setDstBinding(binding)
 			.setDescriptorType(vk::DescriptorType::eUniformBufferDynamic)
 			.setDescriptorCount(1)
-			.setPBufferInfo(&innerBuffer.m_vkInfo);
+			.setPBufferInfo(&info);	
 
 		m_vkDevice->updateDescriptorSets({ writeDescriptorSet }, {});
-		m_boundDescriptorBindings.push_back(binding);
+		s_boundDescriptorBindings.push_back(binding);
 	}
-	// TODO: Find the amount of dynamic offsets that is required by the number of dynamic uniform buffers
 
-	auto dynamicOffsets = std::vector<uint32_t>(buffer.m_objectCount);
+	/* 
+			"If any of the sets being bound include dynamic uniform or storage buffers, 
+			 then pDynamicOffsets includes one element for each array element in each 
+			 dynamic descriptor type binding in each set. 
+		 
+			 Values are taken from pDynamicOffsets in an order such that:
+				1) all entries for set N come before set N+1; 
+				2) within a set, entries are ordered by the binding numbers in the descriptor set layouts; 
+				3) and within a binding array, elements are in order. 
+			
+			dynamicOffsetCount must equal the total number of dynamic descriptors in the sets being bound."
+		
+		From Vulkan Specification (edited format for clarity)
+		https://www.khronos.org/registry/vulkan/specs/1.1-extensions/man/html/vkCmdBindDescriptorSets.html#descriptorsets-binding-dynamicoffsets
+	*/
+
+
+	std::set<uint32_t> uniqueBindings;
+	auto& vertexBindings = m_renderPassPtr->m_shaderProgram.m_vertexShader.m_bindings;
+	auto& fragmentBindings = m_renderPassPtr->m_shaderProgram.m_fragmentShader.m_bindings;
+
+	for (auto& binding : vertexBindings)
+	{
+		uniqueBindings.insert(binding.second.binding);
+	}
+
+	for (auto& binding : fragmentBindings)
+	{
+		uniqueBindings.insert(binding.second.binding);
+	}
+
+	auto offsetCount = uniqueBindings.size();
+	auto dynamicOffsets = std::vector<uint32_t>(offsetCount);
 	
-	for (auto i = 0; i < buffer.m_objectCount; ++i) {
-		if (i == index) {
-			dynamicOffsets[i] = i * buffer.m_alignment;
-		}
-		else {
-			//TODO: find some way to get the dynamic offsets of the uniforms we are NOT setting with this method. -AM
-			//HACK: using 0 as a placeholder value for dynamic offsets
-			dynamicOffsets[i] = 0;
-		}
+	m_bindingDynamicOffset[binding] = buffer.m_alignment * index;
+	for (auto i = 0; i < offsetCount; ++i) {
+		dynamicOffsets[i] = m_bindingDynamicOffset[i];
 	}
 
 	m_vkCommandBuffer->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *m_renderPassPtr->m_vkPipelineLayout, 0, { *descriptorSet }, dynamicOffsets);
@@ -266,3 +293,6 @@ IRecordingCommandBuffer& CommandBuffer::drawIndexed(size_t indexCount, size_t in
 	m_vkCommandBuffer->drawIndexed(indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
 	return *this;
 }
+
+//static:
+std::vector<uint32_t> CommandBuffer::s_boundDescriptorBindings;

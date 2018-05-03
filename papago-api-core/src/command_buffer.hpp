@@ -1,5 +1,6 @@
 #pragma once
 #include <set>
+#include <map>
 #include "sub_command_buffer.hpp"
 #include "api_enums.hpp"
 #include "icommand_buffer.hpp"
@@ -58,9 +59,11 @@ private:
 	//TODO: Check that this is not null, when calling non-begin methods on the object. - Brandborg
 	// TODO: Another approach could be to create another interface and expose it via builder pattern or lambda expressions - CW 2018-04-23
 	RenderPass* m_renderPassPtr;
-	std::vector<uint32_t> m_boundDescriptorBindings;
-
+	std::map<uint32_t, uint32_t> m_bindingDynamicOffset;
 	std::set<Resource*> m_resourcesInUse;
+
+	//TODO: handle boundDescriptorBindings state differently? perhaps let it reside in RenderPass, and then just point to it in here? -AM
+	static std::vector<uint32_t> s_boundDescriptorBindings;
 
 	friend class Device;
 	friend class GraphicsQueue;

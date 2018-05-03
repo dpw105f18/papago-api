@@ -39,6 +39,8 @@ void GraphicsQueue::submitCommands(const std::vector<std::reference_wrapper<ICom
 		commandBuffer.m_resourcesInUse.clear();
 	}
 
+	CommandBuffer::s_boundDescriptorBindings.clear();
+
 	for (auto& resource : m_submittedResources) {
 		resource->m_vkFence = &(*fence);
 	}

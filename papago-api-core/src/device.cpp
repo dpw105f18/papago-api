@@ -355,7 +355,6 @@ std::unique_ptr<DynamicBuffer> Device::createDynamicUniformBuffer(size_t objectS
 		buffer_size, 
 		vk::BufferUsageFlagBits::eUniformBuffer, 
 		vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
-	buffer->m_vkInfo.range = dynamic_alligment;
 	return std::make_unique<DynamicBuffer>(std::move(buffer), dynamic_alligment, objectCount);
 }
 
