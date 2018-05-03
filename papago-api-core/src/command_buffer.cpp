@@ -175,9 +175,19 @@ IRecordingCommandBuffer& CommandBuffer::setIndexBuffer(IBufferResource &indexBuf
 {
 	// TODO: Retrieve wheter uint16 or uint32 is used for index buffer from somewhere - CW 2018-04-13
 	m_vkCommandBuffer->bindIndexBuffer(
-		*(static_cast<BufferResource&>(indexBuffer)).m_vkBuffer, 
+		*(dynamic_cast<BufferResource&>(indexBuffer)).m_vkBuffer, 
 		0, 
 		vk::IndexType::eUint16);
+	return *this;
+}
+
+IRecordingCommandBuffer& CommandBuffer::setUniform(
+	const std::string& uniformName,
+	DynamicBuffer&	   buffer)
+{
+	auto& innerBuffer = dynamic_cast<BufferResource&>(buffer.innerBuffer());
+	// TODO: Add dynamic buffer specific things here
+	setUniform(uniformName, innerBuffer);
 	return *this;
 }
 
@@ -189,19 +199,20 @@ void CommandBuffer::drawInstanced(size_t instanceVertexCount, size_t instanceCou
 
 IRecordingCommandBuffer& CommandBuffer::setUniform(const std::string & uniformName, IBufferResource & buffer)
 {
-	auto& backendBuffer = static_cast<BufferResource&>(buffer);
+	auto& backendBuffer = dynamic_cast<BufferResource&>(buffer);
 	auto binding = getBinding(m_renderPassPtr->m_shaderProgram, uniformName);
 	auto& descriptorSet = m_renderPassPtr->m_vkDescriptorSet;
 
 	auto writeDescriptorSet = vk::WriteDescriptorSet()
 		.setDstSet(*descriptorSet)
 		.setDstBinding(binding)
-		.setDescriptorType(vk::DescriptorType::eUniformBuffer)
+		.setDescriptorType(vk::DescriptorType::eUniformBufferDynamic)
 		.setDescriptorCount(1)
 		.setPBufferInfo(&backendBuffer.m_vkInfo);
 
 	m_vkDevice->updateDescriptorSets({writeDescriptorSet}, {});
-	m_vkCommandBuffer->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *m_renderPassPtr->m_vkPipelineLayout, 0, { *descriptorSet }, {});
+	// TODO: Find the amount of dynamic offsets that is required by the number of dynamic uniform buffers
+	m_vkCommandBuffer->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *m_renderPassPtr->m_vkPipelineLayout, 0, { *descriptorSet }, {0,0}); 
 
 	m_resourcesInUse.emplace(&backendBuffer);
 	return *this;

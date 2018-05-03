@@ -156,65 +156,109 @@ std::string readFile(const std::string& file_path) {
 	return result;
 }
 
+struct Mesh
+{
+	static Mesh Cube(IDevice& device)
+	{
+		auto vertex_buffer = device.createVertexBuffer(std::vector<glm::vec3>{
+			{ -0.5f, -0.5f,  0.5f },
+			{ -0.5f,  0.5f,  0.5f },
+			{  0.5f,  0.5f,  0.5f },
+			{  0.5f, -0.5f,  0.5f },
+			{ -0.5f, -0.5f, -0.5f },
+			{ -0.5f,  0.5f, -0.5f },
+			{  0.5f,  0.5f, -0.5f },
+			{  0.5f, -0.5f, -0.5f }
+		});
+
+		auto index_buffer = device.createIndexBuffer(std::vector<uint16_t>{
+			// Front
+			0, 1, 2,
+			0, 2, 3,
+			// Top
+			3, 7, 4,
+			3, 4, 0,
+			// Right
+			3, 2, 6,
+			3, 6, 7,
+			// Back
+			7, 6, 5,
+			7, 5, 4,
+			// Bottom
+			1, 5, 6,
+			1, 6, 2,
+			// Left
+			4, 5, 1,
+			4, 1, 0
+		});
+
+		return {std::move(vertex_buffer), std::move(index_buffer), 48};
+	}
+
+	std::unique_ptr<IBufferResource> vertex_buffer;
+	std::unique_ptr<IBufferResource> index_buffer;
+	size_t index_count;
+
+	void use(IRecordingCommandBuffer& rCommandBuffer) const
+	{
+		rCommandBuffer.setInput(*vertex_buffer);
+		rCommandBuffer.setIndexBuffer(*index_buffer);
+	}
+};
+
+struct UniformData
+{
+	glm::mat4 model_matrix = glm::mat4(1.0f);
+};
+
 void multithreadedTest() {
 	auto hwnd = StartWindow(800, 600);
 	auto surface = ISurface::createWin32Surface(800, 600, hwnd);
-	IDevice::Features features;
+	IDevice::Features features { };
 	features.samplerAnisotropy = true;
-	IDevice::Extensions extensions;
+	IDevice::Extensions extensions { };
 	extensions.swapchain = true;
 	auto devices = IDevice::enumerateDevices(*surface, features, extensions);
 	auto& device = devices[0];
 
-	auto vertexBuffer = device->createVertexBuffer(std::vector<Vertex>{
-		{ { -0.5, -0.5,  0.5 } },
-		{ { -0.5,  0.5,  0.5 } },
-		{ {  0.5,  0.5,  0.5 } },
-		{ {  0.5, -0.5,  0.5 } },
-		{ { -0.5, -0.5, -0.5 } },
-		{ { -0.5,  0.5, -0.5 } },
-		{ {  0.5,  0.5, -0.5 } },
-		{ {  0.5, -0.5, -0.5 } }
-	});
-
-	auto indexBuffer = device->createIndexBuffer(std::vector<uint16_t>{
-		// Front
-		0, 1, 2,
-		0, 2, 3,
-		// Top
-		3, 7, 4,
-		3, 4, 0,
-		// Right
-		3, 2, 6,
-		3, 6, 7,
-		// Back
-		7, 6, 5,
-		7, 5, 4,
-		// Bottom
-		6, 5, 1,
-		6, 1, 2,
-		// Left
-		4, 5, 1,
-		4, 1, 0
-	});
 
 	auto parser = Parser("C:/VulkanSDK/1.0.65.0/Bin/glslangValidator.exe");
 	auto swapchain = device->createSwapChain(Format::eR8G8B8A8Unorm, 3, IDevice::PresentMode::eMailbox);
 	auto graphicsQueue = device->createGraphicsQueue(*swapchain);
-	auto modelMatrix = device->createUniformBuffer(sizeof(glm::mat4));
 	auto viewProjectionMatrix = device->createUniformBuffer(sizeof(glm::mat4));
 
+	auto d_buffer = device->createDynamicUniformBuffer(sizeof UniformData, 2);
+
+	d_buffer->upload<UniformData>(std::vector<UniformData> {
+		{translate(glm::vec3{ 0.0f, 0.0f, 0.0f })},
+		{translate(glm::vec3{ 1.0f, 0.0f, 0.0f })}
+	});
+
+	auto cube = std::make_shared<Mesh>(Mesh::Cube(*device));
+	/*
+	Instance instances[] = {
+		Instance(cube, *device, {glm::translate(glm::vec3{ 0.0f, 0.0f, 0.0f })}),
+		Instance(cube, *device, {glm::translate(glm::vec3{ 1.0f, 0.0f, 0.0f })}),
+		// Instance(cube, *device, {glm::translate(glm::vec3{ 2.0f, 0.0f, 0.0f })}),
+		// Instance(cube, *device, {glm::translate(glm::vec3{ 3.0f, 0.0f, 0.0f })}),
+		// Instance(cube, *device, {glm::translate(glm::vec3{ 4.0f, 0.0f, 0.0f })}),
+		// Instance(cube, *device, {glm::translate(glm::vec3{ 5.0f, 0.0f, 0.0f })}),
+		// Instance(cube, *device, {glm::translate(glm::vec3{ 6.0f, 0.0f, 0.0f })}),
+		// Instance(cube, *device, {glm::translate(glm::vec3{ 7.0f, 0.0f, 0.0f })}),
+		// Instance(cube, *device, {glm::translate(glm::vec3{ 8.0f, 0.0f, 0.0f })})
+	};
+	*/
 	{
 		glm::mat4 view = glm::lookAt(
+			glm::vec3(5.0f, 3.0f, 2.0f),
 			glm::vec3(0.0f, 0.0f, 0.0f),
-			glm::vec3(9.0f, 3.0f, 0.0f),
 			glm::vec3(0.0f, 1.0f, 0.0f));
 
 		glm::mat4 projection = glm::perspective(
 			glm::radians(90.0f),
 			4.0f/3.0f,
-			0.1f,
-			100.0f);
+			1.0f,
+			15.0f);
 
 		// TODO: make it so that vector is not mandatory
 		viewProjectionMatrix->upload<glm::mat4>({
@@ -225,7 +269,7 @@ void multithreadedTest() {
 	auto vertexShader = parser.compileVertexShader(readFile("shader/mvpShader.vert"), "main");
 	auto fragmentShader = parser.compileFragmentShader(readFile("shader/colorFrag.frag"), "main");
 	auto program = device->createShaderProgram(*vertexShader, *fragmentShader);
-	auto renderPass = device->createRenderPass(*program, 800, 600, Format::eR8G8B8A8Unorm, false);
+	auto renderPass = device->createRenderPass(*program, 800, 600, Format::eR8G8B8A8Unorm, true);
 
 	while (true)
 	{
@@ -239,18 +283,25 @@ void multithreadedTest() {
 			DispatchMessage(&msg);
 		}
 		else {
-			auto commandBuffer = device->createCommandBuffer(Usage::eReset);
-			commandBuffer->record(*renderPass, *swapchain, graphicsQueue->getNextFrameIndex(), [&](IRecordingCommandBuffer& rCommandBuffer) {
-				rCommandBuffer.setUniform("mMatrix", *modelMatrix);
-				rCommandBuffer.setUniform("vpMatrix", *viewProjectionMatrix);
-				rCommandBuffer.setIndexBuffer(*indexBuffer);
-				rCommandBuffer.setInput(*vertexBuffer);
-				rCommandBuffer.drawIndexed(48);
-			});
+			std::vector<std::unique_ptr<ICommandBuffer>> commandBuffers;
+			const auto frame_index = graphicsQueue->getNextFrameIndex();
+			{
+				auto commandBuffer = device->createCommandBuffer(Usage::eReset);
+				commandBuffer->record(*renderPass, *swapchain, frame_index, [&](IRecordingCommandBuffer& rCommandBuffer) {
+					rCommandBuffer.setUniform("view_projection_matrix", *viewProjectionMatrix);
+					rCommandBuffer.setUniform("model_matrix", *d_buffer);
+					cube->use(rCommandBuffer);
+					rCommandBuffer.drawIndexed(36);
+				});
+				commandBuffers.push_back(std::move(commandBuffer));
+			}
+			std::vector<std::reference_wrapper<ICommandBuffer>> submissions;
+			for(auto& commandBuffer : commandBuffers)
+			{
+				submissions.emplace_back(*commandBuffer);
+			}
 
-			graphicsQueue->submitCommands({
-				*commandBuffer
-			});
+			graphicsQueue->submitCommands(submissions);
 
 			graphicsQueue->present();
 		}

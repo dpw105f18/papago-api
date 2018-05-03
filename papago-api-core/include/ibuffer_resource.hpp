@@ -16,6 +16,28 @@ protected:
 	virtual std::vector<char> internalDownload() = 0;
 };
 
+class DynamicBuffer {
+	std::unique_ptr<IBufferResource> m_buffer;
+	size_t m_alignment;
+public:
+	DynamicBuffer(
+		std::unique_ptr<IBufferResource>&& buffer,
+		size_t                             alignment);
+
+	IBufferResource& innerBuffer() { return *m_buffer; }
+
+	template<typename T>
+	std::vector<T> download();
+	template<typename T>
+	void upload(std::vector<T>);
+};
+
+inline DynamicBuffer::DynamicBuffer(
+	std::unique_ptr<IBufferResource>&& buffer,
+	const size_t                       alignment)
+	: m_buffer(std::move(buffer))
+	, m_alignment(alignment) { }
+
 template<>
 inline void IBufferResource::upload<char>(const std::vector<char>& data)
 {
@@ -23,7 +45,7 @@ inline void IBufferResource::upload<char>(const std::vector<char>& data)
 }
 
 template<typename T>
-inline void IBufferResource::upload(const std::vector<T>& data)
+void IBufferResource::upload(const std::vector<T>& data)
 {
 	std::vector<char> buffer(sizeof(T)*data.size());
 	memcpy(buffer.data(), data.data(), buffer.size());
@@ -38,11 +60,35 @@ inline std::vector<char> IBufferResource::download<char>()
 }
 
 template<typename T>
-inline std::vector<T> IBufferResource::download()
+std::vector<T> IBufferResource::download()
 {
 	auto data = internalDownload();
 	std::vector<T> buffer;
 	buffer.resize(data.size() / sizeof(T));
 	memcpy(buffer.data(), data.data(), sizeof(T));
 	return buffer;
+}
+
+template<typename T>
+std::vector<T> DynamicBuffer::download()
+{
+	auto data = m_buffer->download();
+	std::vector<T> result(data.size()/m_alignment);
+	for(auto index = 0, offset = 0; offset < data.size(); ++index, offset += m_alignment)
+	{
+		memcpy(&result[index], &data[offset], sizeof(T));
+	}
+	return result;
+}
+
+template<typename T>
+void DynamicBuffer::upload(std::vector<T> data)
+{
+	std::vector<char> result(data.size() * m_alignment);
+	auto size = sizeof(T);
+	for(auto index = 0, offset = 0; index < data.size(); ++index, offset += m_alignment)
+	{
+		memcpy(&result[offset], &data[index], sizeof(T));
+	}
+	m_buffer->upload(result);
 }

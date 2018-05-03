@@ -3,7 +3,6 @@
 #include "vertex_shader.hpp"
 #include "fragment_shader.hpp"
 #include "shader_program.h"
-#include "image_resource.hpp"
 #include "sampler.hpp"
 
 RenderPass::operator vk::RenderPass&()

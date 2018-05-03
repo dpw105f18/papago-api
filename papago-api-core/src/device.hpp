@@ -36,6 +36,7 @@ public:
 	//drop the other create textureSampler idea below?
 	void createTextureSampler(Sampler sampler);
 	std::unique_ptr<ICommandBuffer> createCommandBuffer(Usage) override;
+	std::unique_ptr<DynamicBuffer> createDynamicUniformBuffer(size_t object_size, int object_count) override;
 
 	ImageResource createTexture2D(uint32_t width, uint32_t height, vk::Format format);
 

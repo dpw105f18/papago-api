@@ -29,6 +29,8 @@ public:
 	IRecordingCommandBuffer& setUniform(const std::string&, IImageResource&, ISampler&) override;
 	IRecordingCommandBuffer& setInput(IBufferResource&) override;
 	IRecordingCommandBuffer& setIndexBuffer(IBufferResource&) override;
+	IRecordingCommandBuffer& setUniform(const std::string& uniformName, DynamicBuffer&) override;
+	
 	void setInterleavedInput(const std::vector<const std::string>&, const Resource&);
 	void drawInstanced(size_t instanceVertexCount, size_t instanceCount, size_t startVertexLocation, size_t startInstanceLocation);
 	IRecordingCommandBuffer& drawIndexed(size_t indexCount, size_t instanceCount, size_t firstIndex, size_t vertexOffset, size_t firstInstance) override;

@@ -1,6 +1,7 @@
 #pragma once
 #include "common.hpp"
 #include "api_enums.hpp"
+#include "ibuffer_resource.hpp"
 
 class ISurface;
 enum class Format;
@@ -49,9 +50,10 @@ public:
 	virtual std::unique_ptr<IShaderProgram> createShaderProgram(IVertexShader& vertexShader, IFragmentShader& fragmentShader) = 0;
 	virtual std::unique_ptr<IRenderPass> createRenderPass(IShaderProgram&, uint32_t width, uint32_t height, Format, bool enableDepthBuffer) = 0;
 	virtual void waitIdle() = 0;
+	virtual std::unique_ptr<DynamicBuffer> createDynamicUniformBuffer(size_t object_size, int object_count) = 0;
 
 	virtual std::unique_ptr<IGraphicsQueue> createGraphicsQueue(ISwapchain&) = 0;
-	
+
 	struct Features {
 		bool samplerAnisotropy;
 	};
@@ -86,13 +88,13 @@ inline std::unique_ptr<IBufferResource> IDevice::createIndexBuffer<uint32_t>(std
 
 template<> 
 inline std::unique_ptr<IBufferResource> IDevice::createIndexBuffer<uint16_t>(std::vector<uint16_t> index_data) {
-	size_t size = sizeof(uint16_t) * index_data.size();
+	const auto size = sizeof(uint16_t) * index_data.size();
 	std::vector<char> data(size);
 	memcpy(data.data(), index_data.data(), size);
 	return createIndexBufferInternal(data);
 }
 
 template<class T>
-inline std::unique_ptr<IBufferResource> IDevice::createIndexBuffer(std::vector<T>) {
+std::unique_ptr<IBufferResource> IDevice::createIndexBuffer(std::vector<T>) {
 	throw std::runtime_error("Only the types uint16 and uint32 can be used in index buffers.");
 }

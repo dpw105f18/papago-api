@@ -19,7 +19,7 @@ private:
 	/* 
 	 * Compiles the source GLSL code into spir-v bytecode and returns that.
 	 */
-	std::vector<char> compile(const std::string& source, const std::string& shaderType);
+	std::vector<char> compile(const std::string& source, const std::string& shaderType) const;
 
 	void setShaderInput(VertexShader& shader, const std::string& source);
 	void setShaderUniforms(Shader& shader, const std::string& source);
