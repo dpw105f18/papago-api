@@ -17,10 +17,9 @@ public:
 	Sampler& setTextureWrapV(vk::SamplerAddressMode mode);
 	Sampler& setTextureWrapW(vk::SamplerAddressMode mode);
 
-private:
-	friend class Device;
 	vk::SamplerCreateInfo m_vkSamplerCreateInfo;
 	vk::UniqueSampler m_vkTextureSampler;
 	SamplerD m_dimension;
+private:
 
 };

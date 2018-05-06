@@ -1,5 +1,6 @@
 #include "standard_header.hpp"
 #include "sampler.hpp"
+#include "ibuffer_resource.hpp"
 
 Sampler::Sampler(SamplerD dimension)
 {

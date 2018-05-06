@@ -2,8 +2,9 @@
 #include "render_pass.hpp"
 #include "vertex_shader.hpp"
 #include "fragment_shader.hpp"
-#include "shader_program.h"
+#include "shader_program.hpp"
 #include "sampler.hpp"
+#include "ibuffer_resource.hpp"
 
 RenderPass::operator vk::RenderPass&()
 {

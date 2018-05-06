@@ -36,8 +36,6 @@ private:
 	uint32_t m_currentFrameIndex = 0; // ASSUMPTION: Start index is always 0
 
 	std::set<Resource*> m_submittedResources;
-
-	friend class Device;
 };
 
 template<vk::ImageLayout from, vk::ImageLayout to>

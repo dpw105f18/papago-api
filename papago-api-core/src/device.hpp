@@ -3,7 +3,6 @@
 #include "IDevice.hpp"
 #include "api_enums.hpp"
 #include "command_buffer.hpp"
-#include "buffer_resource.hpp"
 
 class IVertexShader;
 class IFragmentShader;
@@ -15,6 +14,9 @@ class ImageResource;
 class Sampler;
 class IShaderProgram;
 class IGraphicsQueue;
+class ShaderProgram;
+class RenderPass;
+class IBufferResource;
 
 class Device : public IDevice {
 public:
@@ -24,9 +26,6 @@ public:
 
 	std::unique_ptr<ISwapchain> createSwapChain(Format, size_t framebufferCount, PresentMode preferredPresentMode) override;
 	std::unique_ptr<SwapChain> createSwapChain(const vk::Format & format, size_t framebufferCount, vk::PresentModeKHR preferredPresentMode);
-	CommandBuffer createCommandBuffer(Usage) const;
-	GraphicsQueue createGraphicsQueue(SwapChain&) const;
-	SubCommandBuffer createSubCommandBuffer(Usage);
 	std::unique_ptr<IRenderPass> createRenderPass(IShaderProgram&, uint32_t width, uint32_t height, Format, bool) override;
 	RenderPass createRenderPass(const ShaderProgram&, uint32_t width, uint32_t height, vk::Format, bool enableDepthBuffer) const;
 	std::unique_ptr<ISampler> createTextureSampler1D(Filter magFil, Filter minFil, TextureWrapMode modeU);
@@ -47,9 +46,19 @@ public:
 	std::unique_ptr<IGraphicsQueue> createGraphicsQueue(ISwapchain&) override;
 
 	void waitIdle() override;
+
+	vk::PhysicalDevice m_vkPhysicalDevice;
+	vk::UniqueDevice m_vkDevice;
+
+	Surface& m_surface;
+
+	vk::Queue m_vkInternalQueue;
+	CommandBuffer m_internalCommandBuffer;
 protected:
 	std::unique_ptr<IBufferResource> createVertexBufferInternal(std::vector<char>& data) override;
 	std::unique_ptr<IBufferResource> createIndexBufferInternal(std::vector<char>& data) override;
+
+
 private:
 	struct SwapChainSupportDetails
 	{
@@ -92,15 +101,4 @@ private:
 	static bool areExtensionsSupported(const vk::PhysicalDevice& physicalDevice, const std::vector<const char*> &extensions);
 
 	vk::UniqueRenderPass createVkRenderpass(vk::Format, bool withDepthBuffer = true) const;
-
-	vk::PhysicalDevice m_vkPhysicalDevice;
-	vk::UniqueDevice m_vkDevice;
-
-	Surface& m_surface;
-
-	vk::Queue m_vkInternalQueue;
-	CommandBuffer m_internalCommandBuffer;
-
-	friend class ImageResource;
-	friend class GraphicsQueue;
 };

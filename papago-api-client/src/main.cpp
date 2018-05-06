@@ -1,5 +1,6 @@
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
+#include <WinUser.h>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "external/stb_image.h"
@@ -8,6 +9,8 @@
 #include <iostream>
 #include <vector>
 #include <fstream>
+#include <chrono>
+#include <sstream>
 
 #include "ishader.hpp"
 #include "parser.hpp"
@@ -27,6 +30,8 @@
 #define GLM_ENABLE_EXPERIMENTAL
 #include "external/glm/glm.hpp"
 #include "external/glm/gtx/transform.hpp"
+
+#include "thread_pool.h"
 
 struct vec2
 {
@@ -126,6 +131,11 @@ HWND StartWindow(size_t width, size_t height)
 	return nullptr;
 }
 
+void SetWindowName(HWND hwnd, const std::string& text)
+{
+	SetWindowTextA(hwnd, text.c_str());
+}
+
 struct UniformBufferObject {};
 
 std::unique_ptr<IImageResource> createTexture(IDevice& device) {
@@ -212,11 +222,13 @@ struct UniformData
 };
 
 void multithreadedTest() {
-	auto hwnd = StartWindow(800, 600);
-	auto surface = ISurface::createWin32Surface(800, 600, hwnd);
-	IDevice::Features features { };
+	const size_t windowWidth = 800;
+	const size_t windowHeight = 600;
+	auto hwnd = StartWindow(windowWidth, windowHeight);
+	auto surface = ISurface::createWin32Surface(windowWidth, windowHeight, hwnd);
+	IDevice::Features features{ };
 	features.samplerAnisotropy = true;
-	IDevice::Extensions extensions { };
+	IDevice::Extensions extensions{ };
 	extensions.swapchain = true;
 	auto devices = IDevice::enumerateDevices(*surface, features, extensions);
 	auto& device = devices[0];
@@ -227,38 +239,36 @@ void multithreadedTest() {
 	auto graphicsQueue = device->createGraphicsQueue(*swapchain);
 	auto viewProjectionMatrix = device->createUniformBuffer(sizeof(glm::mat4));
 
-	auto d_buffer = device->createDynamicUniformBuffer(sizeof UniformData, 2);
+	glm::vec3 grid = { 30, 30, 30 };
+	glm::vec3 padding = {2.0f, 2.0f, 2.0f};
+	glm::vec3 dim = 0.5f * grid;
+	std::vector<UniformData> dynamicData;
 
-	d_buffer->upload<UniformData>(std::vector<UniformData> {
-		{translate(glm::vec3{ 0.0f, 0.0f, 0.0f })},
-		{translate(glm::vec3{ 2.0f, 2.0f, 0.0f })}
-	});
+	for (auto x = -dim.x; x < dim.x; ++x) {
+		for (auto y = -dim.y; y < dim.y; ++y) {
+			for (auto z = -dim.z; z < dim.z; ++z) {
+				dynamicData.push_back({ glm::translate(glm::vec3{ x, y, z } * padding) });
+			}
+		}
+	}
+	
+	auto d_buffer = device->createDynamicUniformBuffer(sizeof(UniformData), dynamicData.size());
+
+	d_buffer->upload<UniformData>(dynamicData);
 
 	auto cube = std::make_shared<Mesh>(Mesh::Cube(*device));
-	/*
-	Instance instances[] = {
-		Instance(cube, *device, {glm::translate(glm::vec3{ 0.0f, 0.0f, 0.0f })}),
-		Instance(cube, *device, {glm::translate(glm::vec3{ 1.0f, 0.0f, 0.0f })}),
-		// Instance(cube, *device, {glm::translate(glm::vec3{ 2.0f, 0.0f, 0.0f })}),
-		// Instance(cube, *device, {glm::translate(glm::vec3{ 3.0f, 0.0f, 0.0f })}),
-		// Instance(cube, *device, {glm::translate(glm::vec3{ 4.0f, 0.0f, 0.0f })}),
-		// Instance(cube, *device, {glm::translate(glm::vec3{ 5.0f, 0.0f, 0.0f })}),
-		// Instance(cube, *device, {glm::translate(glm::vec3{ 6.0f, 0.0f, 0.0f })}),
-		// Instance(cube, *device, {glm::translate(glm::vec3{ 7.0f, 0.0f, 0.0f })}),
-		// Instance(cube, *device, {glm::translate(glm::vec3{ 8.0f, 0.0f, 0.0f })})
-	};
-	*/
+	
 	{
 		glm::mat4 view = glm::lookAt(
-			glm::vec3(5.0f, 3.0f, 2.0f),
+			glm::vec3(0.0f, 0.0f, grid.z * 2.0f),
 			glm::vec3(0.0f, 0.0f, 0.0f),
 			glm::vec3(0.0f, 1.0f, 0.0f));
 
 		glm::mat4 projection = glm::perspective(
 			glm::radians(90.0f),
-			4.0f/3.0f,
+			surface->getWidth() * 1.0f / surface->getHeight(),
 			1.0f,
-			15.0f);
+			2500.0f);
 
 		// TODO: make it so that vector is not mandatory
 		viewProjectionMatrix->upload<glm::mat4>({
@@ -270,6 +280,11 @@ void multithreadedTest() {
 	auto fragmentShader = parser.compileFragmentShader(readFile("shader/colorFrag.frag"), "main");
 	auto program = device->createShaderProgram(*vertexShader, *fragmentShader);
 	auto renderPass = device->createRenderPass(*program, 800, 600, Format::eR8G8B8A8Unorm, true);
+
+	using Clock = std::chrono::high_resolution_clock;
+	auto lastUpdate = Clock::now();
+	auto lastFrame = Clock::now();
+	long fps = 0;
 
 	while (true)
 	{
@@ -283,17 +298,33 @@ void multithreadedTest() {
 			DispatchMessage(&msg);
 		}
 		else {
+			auto deltaTime = (Clock::now() - lastUpdate);
+			auto frameTime = (Clock::now() - lastFrame);
+			lastFrame = Clock::now();
+
+			using namespace std::chrono_literals;
+			if (deltaTime > 1s) {
+				lastUpdate = Clock::now();
+				std::stringstream ss;
+				ss << "FPS: " << fps 
+					<< " --- Avg. Frame Time: " << 1000.0 / fps << "ms"
+					<< " --- Last Frame Time: " << std::chrono::duration_cast<std::chrono::duration<double, std::milli>>(frameTime).count() << "ms";
+				SetWindowName(hwnd, ss.str());
+				fps = 0;
+				
+			}
+
 			std::vector<std::unique_ptr<ICommandBuffer>> commandBuffers;
 			const auto frame_index = graphicsQueue->getNextFrameIndex();
 			{
 				auto commandBuffer = device->createCommandBuffer(Usage::eReset);
 				commandBuffer->record(*renderPass, *swapchain, frame_index, [&](IRecordingCommandBuffer& rCommandBuffer) {
-					rCommandBuffer.setUniform("view_projection_matrix", *viewProjectionMatrix);
-					rCommandBuffer.setUniform("model_matrix", *d_buffer, 0);
 					cube->use(rCommandBuffer);
-					rCommandBuffer.drawIndexed(36);
-					rCommandBuffer.setUniform("model_matrix", *d_buffer, 1);
-					rCommandBuffer.drawIndexed(36);
+					rCommandBuffer.setUniform("view_projection_matrix", *viewProjectionMatrix);
+					for (auto i = 0; i < dynamicData.size(); ++i) {
+						rCommandBuffer.setUniform("model_matrix", *d_buffer, i);
+						rCommandBuffer.drawIndexed(36);
+					}
 				});
 				commandBuffers.push_back(std::move(commandBuffer));
 			}
@@ -306,6 +337,7 @@ void multithreadedTest() {
 			graphicsQueue->submitCommands(submissions);
 
 			graphicsQueue->present();
+			fps++;
 		}
 	}
 	device->waitIdle();

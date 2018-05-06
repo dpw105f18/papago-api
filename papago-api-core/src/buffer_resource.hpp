@@ -1,4 +1,5 @@
 #pragma once
+#include "vulkan\vulkan.hpp"
 #include "resource.hpp"
 #include "ibuffer_resource.hpp"
 #include "device.hpp"
@@ -19,10 +20,7 @@ public:
 	// Inherited via Resource
 	void destroy() override;
 	bool inUse() override;
-protected:
-	void internalUpload(const std::vector<char>& data) override;
-	std::vector<char> internalDownload() override;
-private:
+
 	vk::UniqueBuffer m_vkBuffer;
 	vk::DescriptorBufferInfo m_vkInfo;
 
@@ -33,7 +31,8 @@ private:
 		vk::BufferUsageFlags	usageFlags,
 		vk::MemoryPropertyFlags memoryFlags);
 
-	friend class Device;
-	friend class CommandBuffer;
-	friend class GraphicsQueue;
+protected:
+	void internalUpload(const std::vector<char>& data) override;
+	std::vector<char> internalDownload() override;
+private:
 };

@@ -1,5 +1,5 @@
 #include "standard_header.hpp"
-#include "shader_program.h"
+#include "shader_program.hpp"
 #include "vertex_shader.hpp"
 #include "fragment_shader.hpp"
 #include "command_buffer.hpp"

@@ -13,7 +13,6 @@ public:
 	uint32_t getHeight() const override;
 	Format getFormat() const override;
 
-private:
 	vk::UniqueSwapchainKHR m_vkSwapChain;
 	std::vector<ImageResource> m_colorResources;
 	std::vector<ImageResource> m_depthResources;
@@ -23,13 +22,7 @@ private:
 	std::vector<vk::UniqueFence> m_vkFences;
 
 	
+private:
 	vk::UniqueRenderPass createDummyRenderPass(const vk::UniqueDevice& device); //<-- TODO: use proper RenderPass
 
-
-	//TODO: use ImageResource when it's done?
-	friend class Device;
-
-	friend class CommandBuffer; //<-- used to get vk::Framebuffer's
-
-	friend class GraphicsQueue;
 };

@@ -1,4 +1,6 @@
 #include "standard_header.hpp"
+#include <set>
+#include "command_buffer.hpp"
 #include "surface.hpp"
 #include "device.hpp"
 #include "swap_chain.hpp"
@@ -8,8 +10,8 @@
 #include "render_pass.hpp"
 #include "sampler.hpp"
 #include "graphics_queue.hpp"
-#include "shader_program.h"
-#include <set>
+#include "shader_program.hpp"
+#include "buffer_resource.hpp"
 
 std::vector<std::unique_ptr<IDevice>> IDevice::enumerateDevices(ISurface & surface, const Features & features, const Extensions & extensions)
 {

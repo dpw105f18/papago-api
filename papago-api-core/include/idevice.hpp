@@ -1,12 +1,12 @@
 #pragma once
 #include "common.hpp"
 #include "api_enums.hpp"
-#include "ibuffer_resource.hpp"
 
 class ISurface;
 enum class Format;
 class ISwapchain;
 class IBufferResource;
+class DynamicBuffer;
 class IImageResource;
 class ISampler;
 class IShaderProgram;
