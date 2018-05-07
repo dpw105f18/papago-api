@@ -135,8 +135,8 @@ void CommandBuffer::begin(RenderPass& renderPass, const vk::UniqueFramebuffer& r
 	renderArea.setOffset({ 0,0 })
 		.setExtent(extent);
 
-	vk::RenderPassBeginInfo renderPassBeginInfo = {};
-	renderPassBeginInfo.setRenderPass(static_cast<vk::RenderPass>(renderPass))
+	m_vkRenderPassBeginInfo = {};
+	m_vkRenderPassBeginInfo.setRenderPass(static_cast<vk::RenderPass>(renderPass))
 		.setFramebuffer(*renderTarget)
 		.setRenderArea(renderArea)
 		.setClearValueCount(0)
@@ -146,7 +146,7 @@ void CommandBuffer::begin(RenderPass& renderPass, const vk::UniqueFramebuffer& r
 	beginInfo.setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);	//TODO: read from Usage in constructor? -AM
 
 	m_vkCommandBuffer->begin(beginInfo);
-	m_vkCommandBuffer->beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
+	m_vkCommandBuffer->beginRenderPass(m_vkRenderPassBeginInfo, vk::SubpassContents::eInline);
 
 	//TODO: can we assume a graphics bindpoint and pipeline? -AM
 	m_vkCommandBuffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *renderPass.m_vkGraphicsPipeline);

@@ -235,7 +235,7 @@ void multithreadedTest() {
 
 
 	auto parser = Parser("C:/VulkanSDK/1.0.65.0/Bin/glslangValidator.exe");
-	auto swapchain = device->createSwapChain(Format::eR8G8B8A8Unorm, Format::eD32Sfloat, 3, IDevice::PresentMode::eMailbox);
+	auto swapchain = device->createSwapChain(Format::eR8G8B8A8Unorm, 3, IDevice::PresentMode::eMailbox);
 	auto graphicsQueue = device->createGraphicsQueue(*swapchain);
 	auto viewProjectionMatrix = device->createUniformBuffer(sizeof(glm::mat4));
 
@@ -279,7 +279,7 @@ void multithreadedTest() {
 	auto vertexShader = parser.compileVertexShader(readFile("shader/mvpShader.vert"), "main");
 	auto fragmentShader = parser.compileFragmentShader(readFile("shader/colorFrag.frag"), "main");
 	auto program = device->createShaderProgram(*vertexShader, *fragmentShader);
-	auto renderPass = device->createRenderPass(*program, 800, 600, Format::eR8G8B8A8Unorm, Format::eD32Sfloat);
+	auto renderPass = device->createRenderPass(*program, 800, 600, swapchain->getFormat());
 
 	using Clock = std::chrono::high_resolution_clock;
 	auto lastUpdate = Clock::now();
