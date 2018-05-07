@@ -48,7 +48,7 @@ class IRecordingCommandBuffer
 public:
 	virtual ~IRecordingCommandBuffer() = default;
 
-	virtual IRecordingCommandBuffer& execute(std::vector<ISubCommandBuffer>) = 0;
+	virtual IRecordingCommandBuffer& execute(std::vector<std::unique_ptr<ISubCommandBuffer>>&) = 0;
 };
 
 class IRecordingSubCommandBuffer 

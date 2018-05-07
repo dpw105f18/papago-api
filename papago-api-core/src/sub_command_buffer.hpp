@@ -14,6 +14,8 @@ class SubCommandBuffer : public ISubCommandBuffer, public CommandRecorder<IRecor
 {
 public:
 	SubCommandBuffer(const vk::UniqueDevice&, uint32_t queueFamilyIndex);
+
+	explicit operator vk::CommandBuffer&();
 	
 	// Inherited via ISubCommandBuffer
 	void record(IRenderPass &, ISwapchain &, size_t frameIndex, std::function<void(IRecordingSubCommandBuffer&)>) override;

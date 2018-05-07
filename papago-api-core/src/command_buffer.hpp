@@ -15,7 +15,7 @@ public:
 	void record(IRenderPass&, IImageResource&, std::function<void(IRecordingCommandBuffer&)>) override;
 	std::unique_ptr<ISubCommandBuffer> createSubCommandBuffer() override;
 
-	IRecordingCommandBuffer& execute(std::vector<ISubCommandBuffer>) override;
+	IRecordingCommandBuffer& execute(std::vector<std::unique_ptr<ISubCommandBuffer>>&) override;
 
 	void begin(RenderPass&, SwapChain&, uint32_t imageIndex);	//TODO: <-- remove imageIndex. -AM
 	void begin(RenderPass&, ImageResource& renderTarget);		//TODO: use Format and Extent iso. ImageResource? -AM

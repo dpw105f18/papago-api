@@ -239,7 +239,7 @@ void multithreadedTest() {
 	auto graphicsQueue = device->createGraphicsQueue(*swapchain);
 	auto viewProjectionMatrix = device->createUniformBuffer(sizeof(glm::mat4));
 
-	glm::vec3 grid = { 30, 30, 30 };
+	glm::vec3 grid = { 2, 2, 2 };
 	glm::vec3 padding = {2.0f, 2.0f, 2.0f};
 	glm::vec3 dim = 0.5f * grid;
 	std::vector<UniformData> dynamicData;
@@ -314,17 +314,31 @@ void multithreadedTest() {
 				
 			}
 
+			std::vector<std::unique_ptr<ISubCommandBuffer>> subCommands;
 			std::vector<std::unique_ptr<ICommandBuffer>> commandBuffers;
 			const auto frame_index = graphicsQueue->getNextFrameIndex();
 			{
 				auto commandBuffer = device->createCommandBuffer(Usage::eReset);
-				commandBuffer->record(*renderPass, *swapchain, frame_index, [&](IRecordingCommandBuffer& rCommandBuffer) {
-					cube->use(rCommandBuffer);
-					rCommandBuffer.setUniform("view_projection_matrix", *viewProjectionMatrix);
-					for (auto i = 0; i < dynamicData.size(); ++i) {
-						rCommandBuffer.setUniform("model_matrix", *d_buffer, i);
-						rCommandBuffer.drawIndexed(36);
+
+				auto subCmd = commandBuffer->createSubCommandBuffer();
+				auto dataSize = dynamicData.size();
+				subCmd->record(*renderPass, *swapchain, frame_index, [&](IRecordingSubCommandBuffer& rSubCmd) {
+					rSubCmd.setInput(*cube->vertex_buffer);
+					rSubCmd.setIndexBuffer(*cube->index_buffer);
+					rSubCmd.setUniform("view_projection_matrix", *viewProjectionMatrix);
+					
+					for (auto i = 0; i < dataSize; ++i) {
+						rSubCmd.setUniform("model_matrix", *d_buffer, i);
+						rSubCmd.drawIndexed(36);
 					}
+				});
+
+				subCommands.push_back(std::move(subCmd));
+
+				commandBuffer->record(*renderPass, *swapchain, frame_index, [&](IRecordingCommandBuffer& rCommandBuffer) {
+					//cube->use(rCommandBuffer);
+					
+					rCommandBuffer.execute(subCommands);
 				});
 				commandBuffers.push_back(std::move(commandBuffer));
 			}

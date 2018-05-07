@@ -23,10 +23,15 @@ SubCommandBuffer::SubCommandBuffer(const vk::UniqueDevice& device, uint32_t queu
 	m_vkCommandBuffer = std::move(device->allocateCommandBuffersUnique(allocateInfo)[0]);
 }
 
+SubCommandBuffer::operator vk::CommandBuffer&()
+{
+	return *m_vkCommandBuffer;
+}
+
 void SubCommandBuffer::begin()
 {
 	vk::CommandBufferInheritanceInfo inheritInfo = {};
-	inheritInfo.framebuffer = m_vkFramebuffer;
+	//inheritInfo.framebuffer = m_vkFramebuffer;
 	inheritInfo.occlusionQueryEnable = VK_FALSE;
 	
 	/* //Unsupported ATM
@@ -50,7 +55,7 @@ void SubCommandBuffer::begin()
 	beginInfo.flags = vk::CommandBufferUsageFlagBits::eRenderPassContinue | vk::CommandBufferUsageFlagBits::eSimultaneousUse;
 	beginInfo.pInheritanceInfo = &inheritInfo;
 
-	m_vkCommandBuffer->reset(vk::CommandBufferResetFlagBits::eReleaseResources);	//TODO: have usage and (don't) reset accordingly. -AM
+	m_vkCommandBuffer->reset(vk::CommandBufferResetFlagBits::eReleaseResources);	//TODO: have usage and reset (or not) accordingly. -AM
 	m_vkCommandBuffer->begin(beginInfo);
 
 	m_vkCommandBuffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *m_renderPassPtr->m_vkGraphicsPipeline);
@@ -59,7 +64,7 @@ void SubCommandBuffer::begin()
 
 void SubCommandBuffer::end()
 {
-	m_vkCommandBuffer->endRenderPass();
+	m_vkCommandBuffer->end();
 }
 
 

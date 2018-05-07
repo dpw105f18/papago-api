@@ -43,6 +43,7 @@ protected:
 	RenderPass* m_renderPassPtr;
 	vk::UniqueCommandPool m_vkCommandPool;
 	vk::UniqueCommandBuffer m_vkCommandBuffer;
+	vk::RenderPassBeginInfo m_vkRenderPassBeginInfo;
 	std::map<uint32_t, uint32_t> m_bindingDynamicOffset;
 
 	const vk::UniqueDevice& m_vkDevice;

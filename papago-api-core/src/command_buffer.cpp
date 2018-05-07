@@ -14,9 +14,26 @@ CommandBuffer::operator vk::CommandBuffer&()
 	return *m_vkCommandBuffer;
 }
 
-IRecordingCommandBuffer & CommandBuffer::execute(std::vector<ISubCommandBuffer>)
+IRecordingCommandBuffer & CommandBuffer::execute(std::vector<std::unique_ptr<ISubCommandBuffer>>& subCommands)
 {
-	//TODO: implement CommandBuffer::execute(...)
+	//TODO: check subCommands to see if they are ready to be executed? -AM
+
+	auto secondaryCommandBuffers = std::vector<vk::CommandBuffer>();
+	secondaryCommandBuffers.reserve(subCommands.size());
+
+	for (auto& isub : subCommands) {
+		auto& internalSub = dynamic_cast<SubCommandBuffer&>(*isub);
+		secondaryCommandBuffers.push_back(static_cast<vk::CommandBuffer>(internalSub));
+	}
+	
+	m_vkCommandBuffer->endRenderPass();
+	m_vkCommandBuffer->beginRenderPass(m_vkRenderPassBeginInfo, vk::SubpassContents::eSecondaryCommandBuffers);
+
+	m_vkCommandBuffer->executeCommands(secondaryCommandBuffers);
+
+	m_vkCommandBuffer->endRenderPass();
+	m_vkCommandBuffer->beginRenderPass(m_vkRenderPassBeginInfo, vk::SubpassContents::eInline);
+
 	return *this;
 }
 
@@ -76,9 +93,7 @@ void CommandBuffer::begin(RenderPass& renderPass, SwapChain& swapChain, uint32_t
 	clearValues[0].setColor(vk::ClearColorValue(std::array<float, 4>{0, 0, 0, 1}));
 	clearValues[1].setDepthStencil(vk::ClearDepthStencilValue{ 1.0, 0 });
 
-	vk::RenderPassBeginInfo renderPassBeginInfo = {};
-
-	renderPassBeginInfo.setRenderPass(static_cast<vk::RenderPass>(renderPass))
+	m_vkRenderPassBeginInfo.setRenderPass(static_cast<vk::RenderPass>(renderPass))
 		.setFramebuffer(*swapChain.m_vkFramebuffers[imageIndex])
 		.setRenderArea(renderArea)
 		.setClearValueCount(clearValues.size())
@@ -90,7 +105,7 @@ void CommandBuffer::begin(RenderPass& renderPass, SwapChain& swapChain, uint32_t
 	beginInfo.setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);	//TODO: read from Usage in constructor? -AM
 
 	m_vkCommandBuffer->begin(beginInfo);
-	m_vkCommandBuffer->beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
+	m_vkCommandBuffer->beginRenderPass(m_vkRenderPassBeginInfo, vk::SubpassContents::eInline);
 
 	//TODO: can we assume a graphics bindpoint and pipeline? -AM
 	m_vkCommandBuffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *renderPass.m_vkGraphicsPipeline);
@@ -112,8 +127,8 @@ void CommandBuffer::begin(RenderPass &renderPass, ImageResource & renderTarget)
 
 	auto& fbo = renderTarget.createFramebuffer(static_cast<vk::RenderPass>(renderPass));
 
-	vk::RenderPassBeginInfo renderPassBeginInfo = {};
-	renderPassBeginInfo.setRenderPass(static_cast<vk::RenderPass>(renderPass))
+	
+	m_vkRenderPassBeginInfo.setRenderPass(static_cast<vk::RenderPass>(renderPass))
 		.setFramebuffer(*fbo)
 		.setRenderArea(renderArea)
 		.setClearValueCount(clearValues.size())
@@ -125,7 +140,7 @@ void CommandBuffer::begin(RenderPass &renderPass, ImageResource & renderTarget)
 	beginInfo.setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);	//TODO: read from Usage in constructor? -AM
 
 	m_vkCommandBuffer->begin(beginInfo);
-	m_vkCommandBuffer->beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
+	m_vkCommandBuffer->beginRenderPass(m_vkRenderPassBeginInfo, vk::SubpassContents::eInline);
 
 	//TODO: can we assume a graphics bindpoint and pipeline? -AM
 	m_vkCommandBuffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *renderPass.m_vkGraphicsPipeline);
@@ -134,6 +149,7 @@ void CommandBuffer::begin(RenderPass &renderPass, ImageResource & renderTarget)
 void CommandBuffer::end()
 {
 	m_renderPassPtr = nullptr;
+	m_vkRenderPassBeginInfo = {};
 
 	m_vkCommandBuffer->endRenderPass();
 	m_vkCommandBuffer->end();
