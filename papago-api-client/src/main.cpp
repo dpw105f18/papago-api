@@ -235,7 +235,7 @@ void multithreadedTest() {
 
 
 	auto parser = Parser("C:/VulkanSDK/1.0.65.0/Bin/glslangValidator.exe");
-	auto swapchain = device->createSwapChain(Format::eR8G8B8A8Unorm, 3, IDevice::PresentMode::eMailbox);
+	auto swapchain = device->createSwapChain(Format::eR8G8B8A8Unorm, Format::eD32Sfloat, 3, IDevice::PresentMode::eMailbox);
 	auto graphicsQueue = device->createGraphicsQueue(*swapchain);
 	auto viewProjectionMatrix = device->createUniformBuffer(sizeof(glm::mat4));
 
@@ -279,7 +279,7 @@ void multithreadedTest() {
 	auto vertexShader = parser.compileVertexShader(readFile("shader/mvpShader.vert"), "main");
 	auto fragmentShader = parser.compileFragmentShader(readFile("shader/colorFrag.frag"), "main");
 	auto program = device->createShaderProgram(*vertexShader, *fragmentShader);
-	auto renderPass = device->createRenderPass(*program, 800, 600, Format::eR8G8B8A8Unorm, true);
+	auto renderPass = device->createRenderPass(*program, 800, 600, Format::eR8G8B8A8Unorm, Format::eD32Sfloat);
 
 	using Clock = std::chrono::high_resolution_clock;
 	auto lastUpdate = Clock::now();
@@ -316,13 +316,12 @@ void multithreadedTest() {
 
 			std::vector<std::unique_ptr<ISubCommandBuffer>> subCommands;
 			std::vector<std::unique_ptr<ICommandBuffer>> commandBuffers;
-			const auto frame_index = graphicsQueue->getNextFrameIndex();
 			{
 				auto commandBuffer = device->createCommandBuffer(Usage::eReset);
 
 				auto subCmd = commandBuffer->createSubCommandBuffer();
 				auto dataSize = dynamicData.size();
-				subCmd->record(*renderPass, *swapchain, frame_index, [&](IRecordingSubCommandBuffer& rSubCmd) {
+				subCmd->record(*renderPass, *swapchain, [&](IRecordingSubCommandBuffer& rSubCmd) {
 					rSubCmd.setInput(*cube->vertex_buffer);
 					rSubCmd.setIndexBuffer(*cube->index_buffer);
 					rSubCmd.setUniform("view_projection_matrix", *viewProjectionMatrix);
@@ -335,7 +334,7 @@ void multithreadedTest() {
 
 				subCommands.push_back(std::move(subCmd));
 
-				commandBuffer->record(*renderPass, *swapchain, frame_index, [&](IRecordingCommandBuffer& rCommandBuffer) {
+				commandBuffer->record(*renderPass, *swapchain, [&](IRecordingCommandBuffer& rCommandBuffer) {
 					//cube->use(rCommandBuffer);
 					
 					rCommandBuffer.execute(subCommands);

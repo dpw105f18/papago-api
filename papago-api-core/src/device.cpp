@@ -189,6 +189,7 @@ bool Device::areExtensionsSupported(const vk::PhysicalDevice & physicalDevice, c
 	return requiredExtensions.empty();
 }
 
+
 vk::UniqueRenderPass Device::createVkRenderpass(vk::Format colorFormat, vk::Format depthStencilFormat) const
 {
 	if (GetDepthStencilFlags(colorFormat) != DepthStencilFlags::eNone) {
@@ -488,12 +489,7 @@ std::unique_ptr<DynamicBuffer> Device::createDynamicUniformBuffer(size_t objectS
 	return std::make_unique<DynamicBuffer>(std::move(buffer), dynamic_alligment, objectCount);
 }
 
-//TODO: rename? make as public method on sampler? -AM/AB
-void Device::createTextureSampler(Sampler sampler)
-{
-	m_vkDevice->createSamplerUnique(sampler.m_vkSamplerCreateInfo);
-}
-
+/* //TODO: delete if not used!
 //TODO: remove 2D from method name and let dimension be determined by the (number of) arguments? -AM
 ImageResource Device::createTexture2D(uint32_t width, uint32_t height, vk::Format format )
 {
@@ -514,6 +510,7 @@ ImageResource Device::createTexture2D(uint32_t width, uint32_t height, vk::Forma
 	auto memoryRequirements = m_vkDevice->getImageMemoryRequirements(image);
 	return ImageResource(image, *this, vk::ImageAspectFlagBits::eColor, format, extent, memoryRequirements);
 }
+*/
 
 std::unique_ptr<IShaderProgram> Device::createShaderProgram(IVertexShader &vertexShader, IFragmentShader &fragmentShader)
 {

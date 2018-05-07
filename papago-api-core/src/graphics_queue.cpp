@@ -4,6 +4,8 @@
 #include "swap_chain.hpp"
 #include "device.hpp"
 #include "ibuffer_resource.hpp"
+#include "image_resource.hpp"
+#include "image_resource.impl"
 
 void GraphicsQueue::submitCommands(const std::vector<std::reference_wrapper<ICommandBuffer>>& commandBuffers)
 {
@@ -124,4 +126,27 @@ void GraphicsQueue::createSemaphores(const vk::UniqueDevice &device)
 {
 	m_vkRenderFinishSemaphore = device->createSemaphoreUnique(vk::SemaphoreCreateInfo());
 	m_vkImageAvailableSemaphore = device->createSemaphoreUnique(vk::SemaphoreCreateInfo());
+}
+
+
+
+template<vk::ImageLayout from, vk::ImageLayout to>
+inline void GraphicsQueue::transitionImageResources(const CommandBuffer& commandBuffer, const vk::Queue& queue, std::set<ImageResource*> resources) {
+	auto commandBeginInfo = vk::CommandBufferBeginInfo().setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);
+	commandBuffer->begin(commandBeginInfo);
+	//Transition submitted ImageResources to ePresentSrcKHR:
+	for (auto& resource : resources) {
+		resource->transition<from, to>(commandBuffer);
+	}
+
+	commandBuffer->end();
+
+	vk::SubmitInfo submitInfo = {};
+	submitInfo.setCommandBufferCount(1)
+		.setPCommandBuffers(&*commandBuffer);
+	queue.submit(submitInfo, vk::Fence());
+
+	queue.waitIdle();
+
+	commandBuffer->reset(vk::CommandBufferResetFlagBits::eReleaseResources);
 }

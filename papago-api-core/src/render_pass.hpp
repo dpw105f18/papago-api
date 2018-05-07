@@ -23,7 +23,6 @@ public:
 	vk::UniqueDescriptorSetLayout m_vkDescriptorSetLayout;
 	const ShaderProgram& m_shaderProgram;
 	const vk::UniqueDevice& m_vkDevice;
-	const ShaderProgram& m_shaderProgram;
 	DepthStencilFlags m_depthStencilFlags;
 
 

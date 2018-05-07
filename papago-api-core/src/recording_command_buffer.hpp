@@ -36,6 +36,13 @@ public:
 	T& setIndexBuffer(IBufferResource &) override;
 	T& drawIndexed(size_t indexCount, size_t instanceCount = 1, size_t firstIndex = 0, size_t vertexOffset = 0, size_t firstInstance = 0) override;
 
+	T& clearColorBuffer(float red, float green, float blue, float alpha) override;
+	T& clearColorBuffer(int32_t red, int32_t green, int32_t blue, int32_t alpha) override;
+	T& clearColorBuffer(uint32_t red, uint32_t green, uint32_t blue, uint32_t alpha) override;
+	T& clearDepthStencilBuffer(float depth, uint32_t stencil) override;
+	T& clearDepthBuffer(float value) override;
+	T& clearStencilBuffer(uint32_t value) override;
+
 	std::set<Resource*> m_resourcesInUse;
 protected:
 	//TODO: Check that this is not null, when calling non-begin methods on the object. - Brandborg
@@ -44,12 +51,17 @@ protected:
 	vk::UniqueCommandPool m_vkCommandPool;
 	vk::UniqueCommandBuffer m_vkCommandBuffer;
 	vk::RenderPassBeginInfo m_vkRenderPassBeginInfo;
+	vk::Extent2D m_vkCurrentRenderTargetExtent;
 	std::map<uint32_t, uint32_t> m_bindingDynamicOffset;
+
+
 
 	const vk::UniqueDevice& m_vkDevice;
 
 private:
-	long getBinding(const ShaderProgram & program, const std::string& name);
+
+	void clearAttachment(const vk::ClearValue& clearValue, vk::ImageAspectFlags aspectFlags);
+	long getBinding(const std::string& name);
 };
 
 //NOTE: method implementations given in .cpp file

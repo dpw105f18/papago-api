@@ -18,9 +18,7 @@ public:
 
 	IRecordingCommandBuffer& execute(std::vector<std::unique_ptr<ISubCommandBuffer>>&) override;
 
-	void begin(RenderPass&, SwapChain&, uint32_t imageIndex);	//TODO: <-- remove imageIndex. -AM
-	void begin(RenderPass&, ImageResource& renderTarget);		//TODO: use Format and Extent iso. ImageResource? -AM
-
+	void begin(RenderPass&, const vk::UniqueFramebuffer&, vk::Extent2D);	//TODO: <-- remove imageIndex. -AM
 	void end();
 
 	void drawInstanced(size_t instanceVertexCount, size_t instanceCount, size_t startVertexLocation, size_t startInstanceLocation);
@@ -38,5 +36,6 @@ public:
 private:
 	Usage m_usage; //TODO: <-- use this! -AM
 	uint32_t m_queueFamilyIndex;
-	vk::Extent2D m_vkCurrentRenderTargetExtent;
+
+	void clearAttachment(const vk::ClearValue&, vk::ImageAspectFlags);
 };

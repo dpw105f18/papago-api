@@ -13,7 +13,21 @@
 
 
 template<class T>
-long CommandRecorder<T>::getBinding(const ShaderProgram & program, const std::string& name)
+void CommandRecorder<T>::clearAttachment(const vk::ClearValue & clearValue, vk::ImageAspectFlags aspectFlags)
+{
+	vk::ClearAttachment clearInfo = {};
+	clearInfo.setAspectMask(aspectFlags)
+		.setColorAttachment(0) // As we only have a single color attatchment, it will always be at 0. Ignored if depth/stencil.
+		.setClearValue(clearValue);
+
+	vk::ClearRect clearRect = {};
+	vk::Rect2D rect = { { 0, 0 },{ m_vkCurrentRenderTargetExtent.width, m_vkCurrentRenderTargetExtent.height } };
+	clearRect.setRect(rect).setBaseArrayLayer(0).setLayerCount(1);
+	m_vkCommandBuffer->clearAttachments(clearInfo, { clearRect });
+}
+
+template<class T>
+long CommandRecorder<T>::getBinding(const std::string& name)
 {
 	long binding = -1;
 	auto& shaderProgram = m_renderPassPtr->m_shaderProgram;
@@ -35,9 +49,14 @@ long CommandRecorder<T>::getBinding(const ShaderProgram & program, const std::st
 template<class T>
 T& CommandRecorder<T>::setUniform(const std::string& uniformName, IImageResource& image, ISampler& sampler)
 {
-	auto& backendImage = dynamic_cast<ImageResource&>(image);
-	auto& backendSampler = dynamic_cast<Sampler&>(sampler);
-	auto binding = getBinding(m_renderPassPtr->m_shaderProgram, uniformName);
+	if (m_renderPassPtr == nullptr)
+	{
+		PAPAGO_ERROR("setUniform(name, image, sampler) called while not in a begin-context (begin(...) has not been called)");
+	}
+
+	auto& backendImage = static_cast<ImageResource&>(image);
+	auto& backendSampler = static_cast<Sampler&>(sampler);
+	auto binding = getBinding(uniformName);
 
 	vk::DescriptorImageInfo info = {};
 	info.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
@@ -59,8 +78,12 @@ T& CommandRecorder<T>::setUniform(const std::string& uniformName, IImageResource
 template<class T>
 T& CommandRecorder<T>::setInput(IBufferResource& buffer)
 {
+	if (m_renderPassPtr == nullptr)
+	{
+		PAPAGO_ERROR("setInput(buffer) called while not in a begin-context (begin(...) has not been called)");
+	}
+
 	//TODO: find a more general way to fix offsets
-	//TODO: make it work with m_vkCommandBuffer->bindVertexBuffers(...);
 	m_vkCommandBuffer->bindVertexBuffers(
 		0,
 		{ *(static_cast<BufferResource&>(buffer)).m_vkBuffer },
@@ -72,20 +95,32 @@ T& CommandRecorder<T>::setInput(IBufferResource& buffer)
 template<class T>
 T& CommandRecorder<T>::setIndexBuffer(IBufferResource &indexBuffer)
 {
-	// TODO: Retrieve wheter uint16 or uint32 is used for index buffer from somewhere - CW 2018-04-13
+	if (m_renderPassPtr == nullptr)
+	{
+		PAPAGO_ERROR("setIndexBuffer(indexBuffer) called while not in a begin-context (begin(...) has not been called)");
+	}
+
+	auto& internalIndexBuffer = static_cast<BufferResource&>(indexBuffer);
+	auto indexType = internalIndexBuffer.m_elementType == BufferResourceElementType::eUint32 ? vk::IndexType::eUint32 : vk::IndexType::eUint16;
+
 	m_vkCommandBuffer->bindIndexBuffer(
-		*(dynamic_cast<BufferResource&>(indexBuffer)).m_vkBuffer,
+		*internalIndexBuffer.m_vkBuffer,
 		0,
-		vk::IndexType::eUint16);
+		indexType);
 	return *this;
 };
 
 template<class T>
 T& CommandRecorder<T>::setUniform(const std::string& uniformName, DynamicBuffer& buffer, size_t	index)
 {
+	if (m_renderPassPtr == nullptr)
+	{
+		PAPAGO_ERROR("setUniform(uniformName, buffer) called while not in a begin-context (begin(...) has not been called)");
+	}
+
 	auto& innerBuffer = dynamic_cast<BufferResource&>(buffer.innerBuffer());
 
-	auto binding = getBinding(m_renderPassPtr->m_shaderProgram, uniformName);
+	auto binding = getBinding(uniformName);
 	auto& descriptorSet = m_renderPassPtr->m_vkDescriptorSet;
 
 	bool bindingAlreadyBound = false;
@@ -158,11 +193,17 @@ T& CommandRecorder<T>::setUniform(const std::string& uniformName, DynamicBuffer&
 
 
 
+//TODO: check if setUnifor(..., IBufferResource) is equal to setUniform(..., DynamicUniform)
 template<class T>
 T& CommandRecorder<T>::setUniform(const std::string & uniformName, IBufferResource & buffer)
 {
-	auto& backendBuffer = dynamic_cast<BufferResource&>(buffer);
-	auto binding = getBinding(m_renderPassPtr->m_shaderProgram, uniformName);
+	if (m_renderPassPtr == nullptr)
+	{
+		PAPAGO_ERROR("setUniform(uniformName, buffer) called while not in a begin-context (begin(...) has not been called)");
+	}
+
+	auto& backendBuffer = static_cast<BufferResource&>(buffer);
+	auto binding = getBinding(uniformName);
 	auto& descriptorSet = m_renderPassPtr->m_vkDescriptorSet;
 
 	auto writeDescriptorSet = vk::WriteDescriptorSet()
@@ -174,8 +215,30 @@ T& CommandRecorder<T>::setUniform(const std::string & uniformName, IBufferResour
 
 	m_vkDevice->updateDescriptorSets({ writeDescriptorSet }, {});
 
-	// TODO: Find the amount of dynamic offsets that is required by the number of dynamic uniform buffers
-	m_vkCommandBuffer->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *m_renderPassPtr->m_vkPipelineLayout, 0, { *descriptorSet }, { 0,0 });
+	std::set<uint32_t> uniqueBindings;
+	auto& vertexBindings = m_renderPassPtr->m_shaderProgram.m_vertexShader.m_bindings;
+	auto& fragmentBindings = m_renderPassPtr->m_shaderProgram.m_fragmentShader.m_bindings;
+
+	for (auto& binding : vertexBindings)
+	{
+		uniqueBindings.insert(binding.second.binding);
+	}
+
+	for (auto& binding : fragmentBindings)
+	{
+		uniqueBindings.insert(binding.second.binding);
+	}
+
+	auto offsetCount = uniqueBindings.size();
+	auto dynamicOffsets = std::vector<uint32_t>(offsetCount);
+
+	m_bindingDynamicOffset[binding] = 0;
+
+	for (auto i = 0; i < offsetCount; ++i) {
+		dynamicOffsets[i] = m_bindingDynamicOffset[i];
+	}
+
+	m_vkCommandBuffer->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *m_renderPassPtr->m_vkPipelineLayout, 0, { *descriptorSet }, dynamicOffsets);
 
 	m_resourcesInUse.emplace(&backendBuffer);
 	return *this;
@@ -186,6 +249,122 @@ T& CommandRecorder<T>::setUniform(const std::string & uniformName, IBufferResour
 template<class T>
 T& CommandRecorder<T>::drawIndexed(size_t indexCount, size_t instanceCount, size_t firstIndex, size_t vertexOffset, size_t firstInstance)
 {
+	if (m_renderPassPtr == nullptr)
+	{
+		PAPAGO_ERROR("drawIndexed(...) called while not in a begin-context (begin(...) has not been called)");
+	}
+
 	m_vkCommandBuffer->drawIndexed(indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
 	return *this;
-};
+}
+
+
+template<class T>
+T & CommandRecorder<T>::clearColorBuffer(float red, float green, float blue, float alpha)
+{
+	if (m_renderPassPtr == nullptr)
+	{
+		PAPAGO_ERROR("clearColorBuffer(float red...) called while not in a begin-context (begin(...) has not been called)");
+	}
+
+	auto colorArray = std::array<float, 4>{ red, green, blue, alpha };
+	auto color = vk::ClearColorValue(colorArray);
+	clearAttachment(color, vk::ImageAspectFlagBits::eColor);
+	return *this;
+}
+template<class T>
+T & CommandRecorder<T>::clearColorBuffer(int32_t red, int32_t green, int32_t blue, int32_t alpha)
+{
+	if (m_renderPassPtr == nullptr)
+	{
+		PAPAGO_ERROR("clearColorBuffer(int32_t red...) called while not in a begin-context (begin(...) has not been called)");
+	}
+
+	auto colorArray = std::array<int32_t, 4>{ red, green, blue, alpha };
+	auto color = vk::ClearColorValue(colorArray);
+	clearAttachment(color, vk::ImageAspectFlagBits::eColor);
+	return *this;
+}
+template<class T>
+T & CommandRecorder<T>::clearColorBuffer(uint32_t red, uint32_t green, uint32_t blue, uint32_t alpha)
+{
+	if (m_renderPassPtr == nullptr)
+	{
+		PAPAGO_ERROR("clearColorBuffer(uint32_t red...) called while not in a begin-context (begin(...) has not been called)");
+	}
+
+	auto colorArray = std::array<uint32_t, 4>{ red, green, blue, alpha };
+	auto color = vk::ClearColorValue(colorArray);
+	clearAttachment(color, vk::ImageAspectFlagBits::eColor);
+	return *this;
+}
+template<class T>
+T & CommandRecorder<T>::clearDepthStencilBuffer(float depth, uint32_t stencil)
+{
+	if (m_renderPassPtr == nullptr)
+	{
+		PAPAGO_ERROR("clearDepthStencilBuffer(...) called while not in a begin-context (begin(...) has not been called)");
+	}
+
+	auto flags = m_renderPassPtr->m_depthStencilFlags;
+	if (flags != DepthStencilFlags::eNone) {
+		if (flags == (DepthStencilFlags::eDepth | DepthStencilFlags::eStencil)) {
+			auto color = vk::ClearDepthStencilValue({ depth, stencil });
+			clearAttachment(color, vk::ImageAspectFlagBits::eDepth | vk::ImageAspectFlagBits::eStencil);
+		}
+		else {
+			PAPAGO_ERROR("Tried to clear buffer which is not both depth and stencil!");
+		}
+	}
+	else {
+		PAPAGO_ERROR("Tried to clear non-existent depth/stencil buffer!");
+	}
+	return *this;
+}
+template<class T>
+T & CommandRecorder<T>::clearDepthBuffer(float value)
+{
+	if (m_renderPassPtr == nullptr)
+	{
+		PAPAGO_ERROR("clearDepthBuffer(...) called while not in a begin-context (begin(...) has not been called)");
+	}
+
+	auto flags = m_renderPassPtr->m_depthStencilFlags;
+	if (flags != DepthStencilFlags::eNone) {
+		if (flags == DepthStencilFlags::eDepth) {
+			auto color = vk::ClearDepthStencilValue(value);
+			clearAttachment(color, vk::ImageAspectFlagBits::eDepth);
+		}
+		else {
+			PAPAGO_ERROR("Tried to clear buffer which is not depth!");
+		}
+	}
+	else {
+		PAPAGO_ERROR("Tried to clear non-existent depth/stencil buffer!");
+	}
+	return *this;
+}
+template<class T>
+T & CommandRecorder<T>::clearStencilBuffer(uint32_t value)
+{
+	if (m_renderPassPtr == nullptr)
+	{
+		PAPAGO_ERROR("clearStencilBuffer(...) called while not in a begin-context (begin(...) has not been called)");
+	}
+
+	auto flags = m_renderPassPtr->m_depthStencilFlags;
+	if (flags != DepthStencilFlags::eNone) {
+		if (flags == DepthStencilFlags::eStencil) {
+			auto color = vk::ClearDepthStencilValue(0, value);
+			clearAttachment(color, vk::ImageAspectFlagBits::eStencil);
+		}
+		else {
+			PAPAGO_ERROR("Tried to clear buffer which is not stencil!");
+		}
+	}
+	else {
+		PAPAGO_ERROR("Tried to clear non-existent depth/stencil buffer!");
+	}
+	return *this;
+}
+;

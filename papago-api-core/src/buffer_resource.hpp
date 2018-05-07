@@ -24,10 +24,6 @@ public:
 	// Inherited via Resource
 	bool inUse() override;
 	const BufferResourceElementType m_elementType;
-protected:
-	void internalUpload(const std::vector<char>& data) override;
-	std::vector<char> internalDownload() override;
-private:
 	vk::UniqueBuffer m_vkBuffer;
 	vk::DescriptorBufferInfo m_vkInfo;
 
@@ -43,4 +39,5 @@ protected:
 	void internalUpload(const std::vector<char>& data) override;
 	std::vector<char> internalDownload() override;
 private:
+
 };

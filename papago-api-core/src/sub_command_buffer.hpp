@@ -20,7 +20,7 @@ public:
 	explicit operator vk::CommandBuffer&();
 	
 	// Inherited via ISubCommandBuffer
-	void record(IRenderPass &, ISwapchain &, size_t frameIndex, std::function<void(IRecordingSubCommandBuffer&)>) override;
+	void record(IRenderPass &, ISwapchain &, std::function<void(IRecordingSubCommandBuffer&)>) override;
 	void record(IRenderPass &, IImageResource &, std::function<void(IRecordingSubCommandBuffer&)>) override;
 
 	/*

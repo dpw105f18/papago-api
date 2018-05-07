@@ -68,10 +68,10 @@ void SubCommandBuffer::end()
 }
 
 
-void SubCommandBuffer::record(IRenderPass &renderPass, ISwapchain &swapChain, size_t frameIndex, std::function<void(IRecordingSubCommandBuffer&)> func)
+void SubCommandBuffer::record(IRenderPass &renderPass, ISwapchain &swapChain, std::function<void(IRecordingSubCommandBuffer&)> func)
 {
 	auto& internalSwapChain = *dynamic_cast<SwapChain*>(&swapChain);
-	m_vkFramebuffer = *internalSwapChain.m_vkFramebuffers[frameIndex];
+	m_vkFramebuffer = *internalSwapChain.m_vkFramebuffers[internalSwapChain.m_currentFramebufferIndex];
 	m_renderPassPtr = reinterpret_cast<RenderPass*>(&renderPass);
 	begin();
 	func(*this);

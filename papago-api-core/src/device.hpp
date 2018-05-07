@@ -37,6 +37,7 @@ public:
 	std::unique_ptr<IBufferResource> createUniformBuffer(size_t size) override;
 	std::unique_ptr<IGraphicsQueue> createGraphicsQueue(ISwapchain&) override;
 
+	std::unique_ptr<DynamicBuffer, std::default_delete<DynamicBuffer>> createDynamicUniformBuffer(size_t object_size, int object_count);
 
 	vk::UniqueRenderPass createVkRenderpass(vk::Format colorFormat) const;
 	vk::UniqueRenderPass createVkRenderpass(vk::Format colorFormat, vk::Format depthStencilFormat) const;
@@ -97,7 +98,5 @@ private:
 	vk::SwapchainCreateInfoKHR createSwapChainCreateInfo(Surface&, const size_t& framebufferCount, const vk::SurfaceFormatKHR&, const vk::Extent2D&, const vk::SurfaceCapabilitiesKHR&, const vk::PresentModeKHR&) const;
 
 	static bool isPhysicalDeviceSuitable(const vk::PhysicalDevice& physicalDevice, Surface&, const std::vector<const char*> &);
-	static bool areExtensionsSupported(const vk::PhysicalDevice& physicalDevice, const std::vector<const char*> &extensions);
-
-	vk::UniqueRenderPass createVkRenderpass(vk::Format, bool withDepthBuffer = true) const;
+	static bool areExtensionsSupported(const vk::PhysicalDevice& physicalDevice, const std::vector<const char*> &extensions);	
 };

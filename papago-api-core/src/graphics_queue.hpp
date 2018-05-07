@@ -7,8 +7,8 @@
 class Device;
 class CommandBuffer;
 class SwapChain;
-class ImageResource;
 class ICommandBuffer;
+class ImageResource;
 
 class GraphicsQueue : public IGraphicsQueue
 {
@@ -34,24 +34,3 @@ private:
 
 	std::set<Resource*> m_submittedResources;
 };
-
-template<vk::ImageLayout from, vk::ImageLayout to>
-inline void GraphicsQueue::transitionImageResources(const CommandBuffer& commandBuffer, const vk::Queue& queue, std::set<ImageResource*> resources) {
-	auto commandBeginInfo = vk::CommandBufferBeginInfo().setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);
-	commandBuffer->begin(commandBeginInfo);
-	//Transition submitted ImageResources to ePresentSrcKHR:
-	for (auto& resource : resources) {
-		resource->transition<from, to>(commandBuffer);
-	}
-
-	commandBuffer->end();
-
-	vk::SubmitInfo submitInfo = {};
-	submitInfo.setCommandBufferCount(1)
-		.setPCommandBuffers(&*commandBuffer);
-	queue.submit(submitInfo, vk::Fence());
-
-	queue.waitIdle();
-
-	commandBuffer->reset(vk::CommandBufferResetFlagBits::eReleaseResources);
-}
