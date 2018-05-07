@@ -11,8 +11,9 @@ public:
 	CommandBuffer(const vk::UniqueDevice& device, int queueFamilyIndex, Usage);
 	CommandBuffer(CommandBuffer&&);
 
-	void record(IRenderPass&, ISwapchain&, size_t frameIndex, std::function<void(IRecordingCommandBuffer&)>) override;
+	void record(IRenderPass&, ISwapchain&, std::function<void(IRecordingCommandBuffer&)>) override;
 	void record(IRenderPass&, IImageResource&, std::function<void(IRecordingCommandBuffer&)>) override;
+	void record(IRenderPass &, IImageResource & color, IImageResource & depth, std::function<void(IRecordingCommandBuffer&)>) override;
 	std::unique_ptr<ISubCommandBuffer> createSubCommandBuffer() override;
 
 	IRecordingCommandBuffer& execute(std::vector<std::unique_ptr<ISubCommandBuffer>>&) override;
@@ -37,4 +38,5 @@ public:
 private:
 	Usage m_usage; //TODO: <-- use this! -AM
 	uint32_t m_queueFamilyIndex;
+	vk::Extent2D m_vkCurrentRenderTargetExtent;
 };

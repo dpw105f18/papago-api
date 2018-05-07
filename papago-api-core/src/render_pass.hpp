@@ -13,7 +13,7 @@ class RenderPass : public IRenderPass
 {
 public:
 	explicit operator vk::RenderPass&();
-	RenderPass(const vk::UniqueDevice&, vk::UniqueRenderPass&, const ShaderProgram&, const vk::Extent2D&);
+	RenderPass(const vk::UniqueDevice&, vk::UniqueRenderPass&, const ShaderProgram&, const vk::Extent2D&, DepthStencilFlags);
 
 	vk::UniqueRenderPass m_vkRenderPass;
 	vk::UniquePipeline m_vkGraphicsPipeline;
@@ -23,8 +23,9 @@ public:
 	vk::UniqueDescriptorSetLayout m_vkDescriptorSetLayout;
 	const ShaderProgram& m_shaderProgram;
 	const vk::UniqueDevice& m_vkDevice;
+	const ShaderProgram& m_shaderProgram;
+	DepthStencilFlags m_depthStencilFlags;
 
-private:
 
 	void setupDescriptorSet(const vk::UniqueDevice&, const VertexShader& vertexShader, const FragmentShader& fragmentShader);
 	vk::VertexInputBindingDescription getBindingDescription();

@@ -16,12 +16,10 @@ public:
 	GraphicsQueue(const Device&, int graphicsQueueIndex, int presentQueueIndex, SwapChain&);
 	
 	void present() override;
-	size_t getNextFrameIndex() override;
-	void wait() override;
-	void submitCommands(const std::vector<std::reference_wrapper<ICommandBuffer>>&);
-	ImageResource& getLastRenderedImage();
+	void submitCommands(const std::vector<std::reference_wrapper<ICommandBuffer>>&) override;
+	IImageResource& getLastRenderedImage();
+	IImageResource& getLastRenderedDepthBuffer() override;
 private:
-	uint32_t getCurrentFrameIndex();
 	void createSemaphores(const vk::UniqueDevice&);
 
 	template<vk::ImageLayout from, vk::ImageLayout to>
@@ -33,7 +31,6 @@ private:
 	vk::UniqueSemaphore m_vkRenderFinishSemaphore;
 	vk::UniqueSemaphore m_vkImageAvailableSemaphore;
 	const Device& m_device;
-	uint32_t m_currentFrameIndex = 0; // ASSUMPTION: Start index is always 0
 
 	std::set<Resource*> m_submittedResources;
 };
@@ -42,7 +39,6 @@ template<vk::ImageLayout from, vk::ImageLayout to>
 inline void GraphicsQueue::transitionImageResources(const CommandBuffer& commandBuffer, const vk::Queue& queue, std::set<ImageResource*> resources) {
 	auto commandBeginInfo = vk::CommandBufferBeginInfo().setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);
 	commandBuffer->begin(commandBeginInfo);
-
 	//Transition submitted ImageResources to ePresentSrcKHR:
 	for (auto& resource : resources) {
 		resource->transition<from, to>(commandBuffer);

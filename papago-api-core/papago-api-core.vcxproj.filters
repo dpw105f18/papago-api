@@ -155,6 +155,9 @@
     <ClCompile Include="src\shader_program.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+	<ClCompile Include="src\api_enums.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="src\sub_command_buffer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

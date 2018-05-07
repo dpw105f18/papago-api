@@ -14,8 +14,9 @@ class DynamicBuffer;
 class ICommandBuffer {
 public:
 	virtual ~ICommandBuffer() = default;
-	virtual void record(IRenderPass&, ISwapchain&, size_t frameIndex, std::function<void(IRecordingCommandBuffer&)>) = 0;
+	virtual void record(IRenderPass&, ISwapchain&, std::function<void(IRecordingCommandBuffer&)>) = 0;
 	virtual void record(IRenderPass&, IImageResource&, std::function<void(IRecordingCommandBuffer&)>) = 0;
+	virtual void record(IRenderPass&, IImageResource& color, IImageResource& depth, std::function<void(IRecordingCommandBuffer&)>) = 0;
 	virtual std::unique_ptr<ISubCommandBuffer> createSubCommandBuffer() = 0; //TODO: handle sub-cmd usage
 };
 

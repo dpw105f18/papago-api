@@ -205,6 +205,7 @@
     <ClInclude Include="src\vertex_shader.hpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\api_enums.cpp" />
     <ClCompile Include="src\buffer_resource.cpp" />
     <ClCompile Include="src\command_buffer.cpp" />
     <ClCompile Include="src\device.cpp" />

@@ -263,6 +263,8 @@ __pycache__/
 *.spv
 papago-api-core/lastFrame.png
 papago-api-core/passOneTarget.png
+*.rdc
 papago-api-client/renderDocThingie.cap
 papago-api-client/passOneTarget.png
 papago-api-client/passOneColourTarget.png
+papago-api-client/passOneDepthTarget.png

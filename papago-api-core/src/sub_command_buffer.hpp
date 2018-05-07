@@ -6,7 +6,9 @@
 
 class IImageResource;
 class ImageResource;
-class RenderPass;
+class BufferResource;
+class Resource;
+class Sampler;
 class SwapChain;
 class Device;
 

@@ -23,11 +23,11 @@ void GraphicsQueue::submitCommands(const std::vector<std::reference_wrapper<ICom
 		.setPWaitSemaphores(waitSemaphores.data())
 		.setPWaitDstStageMask(waitStages.data())
 		.setCommandBufferCount(vkCommandBuffers.size())
-		.setPCommandBuffers(vkCommandBuffers.data())	//TODO: find out how to cast a vector<CommandBuffer> to vector<vk::CommandBuffer> -AM
+		.setPCommandBuffers(vkCommandBuffers.data())
 		.setSignalSemaphoreCount(semaphores.size())
 		.setPSignalSemaphores(semaphores.data());
 
-	auto& fence = m_swapChain.m_vkFences[m_currentFrameIndex];
+	auto& fence = m_swapChain.m_vkFences[m_swapChain.m_currentFramebufferIndex];
 	m_device.m_vkDevice->resetFences({*fence});
 
 	//TODO: Test if this works with several command buffers using the same resources. - Brandborg
@@ -47,26 +47,28 @@ void GraphicsQueue::submitCommands(const std::vector<std::reference_wrapper<ICom
 	}
 
 	m_vkGraphicsQueue.submit(submitInfo, *fence);
-
 }
 
-ImageResource & GraphicsQueue::getLastRenderedImage()
+IImageResource & GraphicsQueue::getLastRenderedImage()
 {
-	return m_swapChain.m_colorResources[m_currentFrameIndex];
+	return m_swapChain.m_colorResources[m_swapChain.m_currentFramebufferIndex];
+}
+
+IImageResource & GraphicsQueue::getLastRenderedDepthBuffer()
+{
+	auto& colorRes = m_swapChain.m_colorResources;
+	return m_swapChain.m_depthResources[(m_swapChain.m_currentFramebufferIndex + colorRes.size() - 1) % colorRes.size()];
 }
 
 void GraphicsQueue::present()
 {
 	m_vkPresentQueue.waitIdle();
-
-	auto imageIndex = getCurrentFrameIndex();
 	
 	std::set<ImageResource*> imageResources;
-	imageResources.emplace(&m_swapChain.m_colorResources[imageIndex]);
+	imageResources.emplace(&m_swapChain.m_colorResources[m_swapChain.m_currentFramebufferIndex]);
 
 	// Find image resources from the submitted resources 
 	for (auto& resource : m_submittedResources) {
-		//TODO: separate the resourcesInUse on CommandBuffer into Buffer and Image iso this check? -AM
 		if (typeid(*resource) == typeid(ImageResource)) {
 			auto imageResource = reinterpret_cast<ImageResource*>(resource);
 			imageResources.emplace(imageResource);
@@ -87,7 +89,7 @@ void GraphicsQueue::present()
 		.setPWaitSemaphores(semaphores.data())
 		.setSwapchainCount(1)
 		.setPSwapchains(swapchains.data())
-		.setPImageIndices(&imageIndex);
+		.setPImageIndices(&m_swapChain.m_currentFramebufferIndex);
 
 	auto res = m_vkPresentQueue.presentKHR(presentInfo);
 
@@ -99,26 +101,11 @@ void GraphicsQueue::present()
 		m_device.m_vkInternalQueue,
 		imageResources
 	);
-}
 
-size_t GraphicsQueue::getNextFrameIndex() {
-	
-	//TODO: Make sure that we handle the case, where framebuffer is not ready - Brandborg
-	auto result = m_device.m_vkDevice->acquireNextImageKHR(static_cast<vk::SwapchainKHR>(m_swapChain), 0, *m_vkImageAvailableSemaphore, vk::Fence());
-	m_currentFrameIndex = result.value;
-	return m_currentFrameIndex;
-}
+	m_submittedResources.clear();
 
-//TODO: don't present this to API users. -AM
-void GraphicsQueue::wait()
-{
-	m_vkGraphicsQueue.waitIdle();
-	m_vkPresentQueue.waitIdle();
-}
-
-uint32_t GraphicsQueue::getCurrentFrameIndex()
-{
-	return m_currentFrameIndex;
+	auto nextFramebuffer = m_device.m_vkDevice->acquireNextImageKHR(static_cast<vk::SwapchainKHR>(m_swapChain), 0, *m_vkImageAvailableSemaphore, vk::Fence());
+	m_swapChain.m_currentFramebufferIndex = nextFramebuffer.value;
 }
 
 GraphicsQueue::GraphicsQueue(const Device& device, int graphicsQueueIndex, int presentQueueIndex, SwapChain& swapChain)
@@ -128,6 +115,9 @@ GraphicsQueue::GraphicsQueue(const Device& device, int graphicsQueueIndex, int p
 	m_vkPresentQueue = device.m_vkDevice->getQueue(presentQueueIndex, 0);
 
 	createSemaphores(device.m_vkDevice);
+
+	auto nextFramebuffer = m_device.m_vkDevice->acquireNextImageKHR(static_cast<vk::SwapchainKHR>(m_swapChain), 0, *m_vkImageAvailableSemaphore, vk::Fence());
+	m_swapChain.m_currentFramebufferIndex = nextFramebuffer.value;
 }
 
 void GraphicsQueue::createSemaphores(const vk::UniqueDevice &device)

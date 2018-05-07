@@ -15,8 +15,12 @@ RenderPass::RenderPass(
 	const vk::UniqueDevice& device,
 	vk::UniqueRenderPass& vkRenderPass,
 	const ShaderProgram& program,
-	const vk::Extent2D& extent)
-	: m_shaderProgram(program), m_vkDevice(device), m_vkRenderPass(std::move(vkRenderPass))
+	const vk::Extent2D& extent,
+	DepthStencilFlags depthStencilFlags)
+	: m_shaderProgram(program)
+	, m_vkDevice(device)
+	, m_vkRenderPass(std::move(vkRenderPass))
+	, m_depthStencilFlags(depthStencilFlags)
 {
 	setupDescriptorSet(device, program.m_vertexShader, program.m_fragmentShader);
 
@@ -93,11 +97,39 @@ RenderPass::RenderPass(
 	multisampleCreateInfo.setRasterizationSamples(vk::SampleCountFlagBits::e1)
 		.setMinSampleShading(1.0f);
 
-	vk::PipelineDepthStencilStateCreateInfo depthCreateInfo = {};
-	depthCreateInfo.setDepthTestEnable(true)
-		.setDepthWriteEnable(true)
-		.setDepthCompareOp(vk::CompareOp::eLess)
-		.setMaxDepthBounds(1.0f);
+	
+	vk::PipelineDepthStencilStateCreateInfo* depthCreateInfo = nullptr;
+	vk::PipelineDepthStencilStateCreateInfo emptyDepthCreateInfo = {};
+	if (depthStencilFlags != DepthStencilFlags::eNone) {
+		depthCreateInfo = &emptyDepthCreateInfo;
+
+		if ((depthStencilFlags & DepthStencilFlags::eDepth) != DepthStencilFlags::eNone) {
+			depthCreateInfo->setDepthTestEnable(true)
+			.setDepthWriteEnable(true)
+			.setDepthCompareOp(vk::CompareOp::eLess)
+			.setMaxDepthBounds(1.0f);
+		}
+
+		if ((depthStencilFlags & DepthStencilFlags::eStencil) != DepthStencilFlags::eNone) {
+			auto back = vk::StencilOpState()
+				.setFailOp(vk::StencilOp::eKeep)
+				.setPassOp(vk::StencilOp::eKeep)
+				.setCompareOp(vk::CompareOp::eAlways)
+				.setCompareMask(0xff)
+				.setWriteMask(0xff);
+
+			auto front = vk::StencilOpState()
+				.setFailOp(vk::StencilOp::eKeep)
+				.setPassOp(vk::StencilOp::eKeep)
+				.setCompareOp(vk::CompareOp::eAlways)
+				.setCompareMask(0xff)
+				.setWriteMask(0xff);
+
+			depthCreateInfo->setStencilTestEnable(true)
+				.setBack(back)
+				.setFront(front);
+		}
+	}
 
 	// Not expecting vertex buffer or depth test 
 	vk::GraphicsPipelineCreateInfo pipelineCreateInfo = {};
@@ -111,7 +143,7 @@ RenderPass::RenderPass(
 		.setRenderPass(m_vkRenderPass.get())
 		.setLayout(m_vkPipelineLayout.get())
 		.setPMultisampleState(&multisampleCreateInfo)
-		.setPDepthStencilState(&depthCreateInfo);
+		.setPDepthStencilState(depthCreateInfo);
 
 	m_vkGraphicsPipeline = device->createGraphicsPipelineUnique(vk::PipelineCache(), pipelineCreateInfo);
 }
