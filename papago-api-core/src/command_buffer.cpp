@@ -30,6 +30,7 @@ IRecordingCommandBuffer & CommandBuffer::execute(std::vector<std::unique_ptr<ISu
 	m_vkCommandBuffer->beginRenderPass(m_vkRenderPassBeginInfo, vk::SubpassContents::eSecondaryCommandBuffers);
 
 	m_vkCommandBuffer->executeCommands(secondaryCommandBuffers);
+	m_boundDescriptorBindings.clear();
 
 	m_vkCommandBuffer->endRenderPass();
 	m_vkCommandBuffer->beginRenderPass(m_vkRenderPassBeginInfo, vk::SubpassContents::eInline);
@@ -40,6 +41,9 @@ IRecordingCommandBuffer & CommandBuffer::execute(std::vector<std::unique_ptr<ISu
 CommandBuffer::CommandBuffer(const vk::UniqueDevice &device, int queueFamilyIndex, Usage usage)
 	: CommandRecorder<IRecordingCommandBuffer>(device), m_usage(usage), m_queueFamilyIndex(queueFamilyIndex)
 {
+	//CommandRecorder uses parent to access state:
+	m_state = this;
+
 	vk::CommandPoolCreateInfo poolCreateInfo = {};
 	poolCreateInfo.setQueueFamilyIndex(queueFamilyIndex)
 		.setFlags(vk::CommandPoolCreateFlagBits::eResetCommandBuffer);
@@ -65,6 +69,7 @@ void CommandBuffer::record(IRenderPass & renderPass, ISwapchain & swapchain, std
 CommandBuffer::CommandBuffer(CommandBuffer &&other)
 	: CommandRecorder<IRecordingCommandBuffer>(std::move(other))
 {
+	m_state = this;
 }
 
 
@@ -117,14 +122,8 @@ void CommandBuffer::record(IRenderPass& renderPass, IImageResource& color, IImag
 
 std::unique_ptr<ISubCommandBuffer> CommandBuffer::createSubCommandBuffer()
 {
-	return std::make_unique<SubCommandBuffer>(m_vkDevice, m_queueFamilyIndex);
+	return std::make_unique<SubCommandBuffer>(m_vkDevice, m_queueFamilyIndex, this);
 }
-
-void CommandBuffer::clearAttachment(const vk::ClearValue& clearValue, vk::ImageAspectFlags aspectFlags)
-{
-	
-}
-
 
 void CommandBuffer::begin(RenderPass& renderPass, const vk::UniqueFramebuffer& renderTarget, vk::Extent2D extent)
 {
@@ -161,12 +160,7 @@ void CommandBuffer::end()
 	m_vkCommandBuffer->end();
 }
 
-
 void CommandBuffer::drawInstanced(size_t instanceVertexCount, size_t instanceCount, size_t startVertexLocation, size_t startInstanceLocation)
 {
 	m_vkCommandBuffer->draw(instanceVertexCount, instanceCount, startVertexLocation, startInstanceLocation);
 }
-
-
-//static:
-std::vector<uint32_t> CommandBuffer::s_boundDescriptorBindings;

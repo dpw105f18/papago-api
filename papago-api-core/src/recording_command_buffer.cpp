@@ -123,14 +123,21 @@ T& CommandRecorder<T>::setUniform(const std::string& uniformName, DynamicBuffer&
 	auto binding = getBinding(uniformName);
 	auto& descriptorSet = m_renderPassPtr->m_vkDescriptorSet;
 
+	m_state->m_descriptorBindingMutex.lock();
+
 	bool bindingAlreadyBound = false;
-	for (auto boundBinding : CommandBuffer::s_boundDescriptorBindings) {
+	for (auto boundBinding : m_state->m_boundDescriptorBindings) {
 		bindingAlreadyBound = boundBinding == binding;
 
 		if (bindingAlreadyBound) break;
 	}
 
-	if (!bindingAlreadyBound) {
+	if (bindingAlreadyBound) {
+		m_state->m_descriptorBindingMutex.unlock();
+	}
+	else {
+		m_state->m_boundDescriptorBindings.push_back(binding);
+		m_state->m_descriptorBindingMutex.unlock();
 
 		vk::DescriptorBufferInfo info = innerBuffer.m_vkInfo;
 		info.setRange(buffer.m_alignment);
@@ -143,7 +150,6 @@ T& CommandRecorder<T>::setUniform(const std::string& uniformName, DynamicBuffer&
 			.setPBufferInfo(&info);
 
 		m_vkDevice->updateDescriptorSets({ writeDescriptorSet }, {});
-		CommandBuffer::s_boundDescriptorBindings.push_back(binding);
 	}
 
 	/*

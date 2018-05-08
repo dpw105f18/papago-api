@@ -10,6 +10,7 @@ class RenderPass;
 class ShaderProgram;
 class IBufferResource;
 class DynamicBuffer;
+class CommandBuffer;
 
 template<class T>
 class CommandRecorder
@@ -43,6 +44,7 @@ public:
 	T& clearDepthBuffer(float value) override;
 	T& clearStencilBuffer(uint32_t value) override;
 
+	std::map<uint32_t, uint32_t> m_bindingDynamicOffset;
 	std::set<Resource*> m_resourcesInUse;
 protected:
 	//TODO: Check that this is not null, when calling non-begin methods on the object. - Brandborg
@@ -52,9 +54,8 @@ protected:
 	vk::UniqueCommandBuffer m_vkCommandBuffer;
 	vk::RenderPassBeginInfo m_vkRenderPassBeginInfo;
 	vk::Extent2D m_vkCurrentRenderTargetExtent;
-	std::map<uint32_t, uint32_t> m_bindingDynamicOffset;
 
-
+	CommandBuffer* m_state;
 
 	const vk::UniqueDevice& m_vkDevice;
 

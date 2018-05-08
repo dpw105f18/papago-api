@@ -1,4 +1,5 @@
 #pragma once
+#include <mutex>
 #include "recording_command_buffer.hpp"
 #include "icommand_buffer.hpp"
 
@@ -31,11 +32,9 @@ public:
 		return *m_vkCommandBuffer;
 	}
 
-	//TODO: handle boundDescriptorBindings state differently? perhaps let it reside in RenderPass, and then just point to it in here? -AM
-	static std::vector<uint32_t> s_boundDescriptorBindings;
+	std::vector<uint32_t> m_boundDescriptorBindings;
+	std::mutex m_descriptorBindingMutex;
 private:
 	Usage m_usage; //TODO: <-- use this! -AM
 	uint32_t m_queueFamilyIndex;
-
-	void clearAttachment(const vk::ClearValue&, vk::ImageAspectFlags);
 };

@@ -286,6 +286,9 @@ void multithreadedTest() {
 	auto lastFrame = Clock::now();
 	long fps = 0;
 
+	size_t threadCount = 8;
+	ThreadPool threadPool = { threadCount };
+
 	while (true)
 	{
 		MSG msg;
@@ -314,25 +317,35 @@ void multithreadedTest() {
 				
 			}
 
+			std::vector<std::future<void>> futures;
 			std::vector<std::unique_ptr<ISubCommandBuffer>> subCommands;
 			std::vector<std::unique_ptr<ICommandBuffer>> commandBuffers;
 			{
 				auto commandBuffer = device->createCommandBuffer(Usage::eReset);
-
-				auto subCmd = commandBuffer->createSubCommandBuffer();
 				auto dataSize = dynamicData.size();
-				subCmd->record(*renderPass, *swapchain, [&](IRecordingSubCommandBuffer& rSubCmd) {
-					rSubCmd.setInput(*cube->vertex_buffer);
-					rSubCmd.setIndexBuffer(*cube->index_buffer);
-					rSubCmd.setUniform("view_projection_matrix", *viewProjectionMatrix);
-					
-					for (auto i = 0; i < dataSize; ++i) {
-						rSubCmd.setUniform("model_matrix", *d_buffer, i);
-						rSubCmd.drawIndexed(36);
-					}
-				});
+				for (auto i = 0; i < threadCount; ++i) {
 
-				subCommands.push_back(std::move(subCmd));
+					futures.emplace_back(threadPool.enqueue([&](size_t count, size_t offset) {
+							auto subCmd = commandBuffer->createSubCommandBuffer();
+							subCmd->record(*renderPass, *swapchain, [&](IRecordingSubCommandBuffer& rSubCmd) {
+								rSubCmd.setInput(*cube->vertex_buffer);
+								rSubCmd.setIndexBuffer(*cube->index_buffer);
+								rSubCmd.setUniform("view_projection_matrix", *viewProjectionMatrix);
+
+								for (auto i = 0; i < count; ++i) {
+									rSubCmd.setUniform("model_matrix", *d_buffer, offset + i);
+									rSubCmd.drawIndexed(36);
+								}
+							});
+
+						subCommands.push_back(std::move(subCmd));
+					}, dataSize / threadCount, (dataSize / threadCount) * i ));
+				
+				}//end for
+
+				for (auto& f : futures) {
+					f.wait();
+				}
 
 				commandBuffer->record(*renderPass, *swapchain, [&](IRecordingCommandBuffer& rCommandBuffer) {
 					//cube->use(rCommandBuffer);

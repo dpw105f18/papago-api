@@ -11,11 +11,12 @@ class Resource;
 class Sampler;
 class SwapChain;
 class Device;
+class CommandBuffer;
 
 class SubCommandBuffer : public ISubCommandBuffer, public CommandRecorder<IRecordingSubCommandBuffer>
 {
 public:
-	SubCommandBuffer(const vk::UniqueDevice&, uint32_t queueFamilyIndex);
+	SubCommandBuffer(const vk::UniqueDevice&, uint32_t queueFamilyIndex, CommandBuffer* parent);
 
 	explicit operator vk::CommandBuffer&();
 	
