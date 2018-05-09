@@ -24,6 +24,14 @@ public:
 
 	void drawInstanced(size_t instanceVertexCount, size_t instanceCount, size_t startVertexLocation, size_t startInstanceLocation);
 
+	IRecordingCommandBuffer& clearColorBuffer(float red, float green, float blue, float alpha) override;
+	IRecordingCommandBuffer& clearColorBuffer(int32_t red, int32_t green, int32_t blue, int32_t alpha) override;
+	IRecordingCommandBuffer& clearColorBuffer(uint32_t red, uint32_t green, uint32_t blue, uint32_t alpha) override;
+	IRecordingCommandBuffer& clearDepthStencilBuffer(float depth, uint32_t stencil) override;
+	IRecordingCommandBuffer& clearDepthBuffer(float value) override;
+	IRecordingCommandBuffer& clearStencilBuffer(uint32_t value) override;
+	
+	
 	explicit operator vk::CommandBuffer&();
 	const vk::CommandBuffer* operator ->() const {
 		return &*m_vkCommandBuffer;
@@ -35,4 +43,5 @@ public:
 	std::vector<uint32_t> m_boundDescriptorBindings; 
 private:
 	uint32_t m_queueFamilyIndex;
+	void clearAttachment(const vk::ClearValue &, vk::ImageAspectFlags);
 };

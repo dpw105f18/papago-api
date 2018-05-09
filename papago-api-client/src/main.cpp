@@ -309,10 +309,9 @@ void multithreadedTest() {
 		for (auto i = 0; i < threadCount; ++i) {
 			futures.emplace_back(threadPool.enqueue([&](size_t count, size_t offset, size_t cmdIndex) {
 				auto& cmd = subCommands[cmdIndex];
-				cmd->record(*renderPass, *swapchain, [&](IRecordingSubCommandBuffer& rSubCmd) {
+				cmd->record(*renderPass, [&](IRecordingSubCommandBuffer& rSubCmd) {
 					rSubCmd.setInput(*cube->vertex_buffer);
 					rSubCmd.setIndexBuffer(*cube->index_buffer);
-
 					for (auto j = 0; j < count; ++j) {
 						rSubCmd.setDynamicIndex("model_matrix", offset + j);
 						rSubCmd.drawIndexed(36);
@@ -361,8 +360,8 @@ void multithreadedTest() {
 
 			commandBuffer->record(*renderPass, *swapchain, [&](IRecordingCommandBuffer& rCommandBuffer) {
 				//cube->use(rCommandBuffer);
-				rCommandBuffer.clearColorBuffer(1.0f, 0.0f, 0.0f, 1.0f);
 				rCommandBuffer.execute(subCommands);
+				rCommandBuffer.clearColorBuffer(1.0f, 0.0f, 0.0f, 1.0f);
 			});
 
 			std::vector<std::reference_wrapper<ICommandBuffer>> submissions;

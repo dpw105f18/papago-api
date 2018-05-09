@@ -69,21 +69,9 @@ void SubCommandBuffer::end()
 }
 
 
-void SubCommandBuffer::record(IRenderPass &renderPass, ISwapchain &swapChain, std::function<void(IRecordingSubCommandBuffer&)> func)
-{
-	auto& internalSwapChain = *dynamic_cast<SwapChain*>(&swapChain);
-	m_vkFramebuffer = *internalSwapChain.m_vkFramebuffers[internalSwapChain.m_currentFramebufferIndex];
-	m_renderPassPtr = reinterpret_cast<RenderPass*>(&renderPass);
-	begin();
-	func(*this);
-	end();
-}
-
-void SubCommandBuffer::record(IRenderPass& renderPass, IImageResource& renderTarget, std::function<void(IRecordingSubCommandBuffer&)> func)
+void SubCommandBuffer::record(IRenderPass &renderPass, std::function<void(IRecordingSubCommandBuffer&)> func)
 {
 	m_renderPassPtr = reinterpret_cast<RenderPass*>(&renderPass);
-	auto& internalImage = *dynamic_cast<ImageResource*>(&renderTarget);
-	m_vkFramebuffer = *internalImage.m_vkFramebuffer;	//TODO: should we create new framebuffer for image here? -AM
 	begin();
 	func(*this);
 	end();

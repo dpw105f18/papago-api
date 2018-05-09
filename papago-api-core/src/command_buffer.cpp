@@ -181,3 +181,128 @@ void CommandBuffer::drawInstanced(size_t instanceVertexCount, size_t instanceCou
 {
 	m_vkCommandBuffer->draw(instanceVertexCount, instanceCount, startVertexLocation, startInstanceLocation);
 }
+
+
+// From here and down. Clearing methods.
+IRecordingCommandBuffer& CommandBuffer::clearColorBuffer(float red, float green, float blue, float alpha)
+{
+	if (m_renderPassPtr == nullptr)
+	{
+		PAPAGO_ERROR("clearColorBuffer(float red...) called while not in a begin-context (begin(...) has not been called)");
+	}
+
+	auto colorArray = std::array<float, 4>{ red, green, blue, alpha };
+	auto color = vk::ClearColorValue(colorArray);
+	clearAttachment(color, vk::ImageAspectFlagBits::eColor);
+	return *this;
+}
+
+IRecordingCommandBuffer& CommandBuffer::clearColorBuffer(int32_t red, int32_t green, int32_t blue, int32_t alpha)
+{
+	if (m_renderPassPtr == nullptr)
+	{
+		PAPAGO_ERROR("clearColorBuffer(int32_t red...) called while not in a begin-context (begin(...) has not been called)");
+	}
+
+	auto colorArray = std::array<int32_t, 4>{ red, green, blue, alpha };
+	auto color = vk::ClearColorValue(colorArray);
+	clearAttachment(color, vk::ImageAspectFlagBits::eColor);
+	return *this;
+}
+
+IRecordingCommandBuffer& CommandBuffer::clearColorBuffer(uint32_t red, uint32_t green, uint32_t blue, uint32_t alpha)
+{
+	if (m_renderPassPtr == nullptr)
+	{
+		PAPAGO_ERROR("clearColorBuffer(uint32_t red...) called while not in a begin-context (begin(...) has not been called)");
+	}
+
+	auto colorArray = std::array<uint32_t, 4>{ red, green, blue, alpha };
+	auto color = vk::ClearColorValue(colorArray);
+	clearAttachment(color, vk::ImageAspectFlagBits::eColor);
+	return *this;
+}
+
+IRecordingCommandBuffer& CommandBuffer::clearDepthStencilBuffer(float depth, uint32_t stencil)
+{
+	if (m_renderPassPtr == nullptr)
+	{
+		PAPAGO_ERROR("clearDepthStencilBuffer(...) called while not in a begin-context (begin(...) has not been called)");
+	}
+
+	auto flags = m_renderPassPtr->m_depthStencilFlags;
+	if (flags != DepthStencilFlags::eNone) {
+		if (flags == (DepthStencilFlags::eDepth | DepthStencilFlags::eStencil)) {
+			auto color = vk::ClearDepthStencilValue({ depth, stencil });
+			clearAttachment(color, vk::ImageAspectFlagBits::eDepth | vk::ImageAspectFlagBits::eStencil);
+		}
+		else {
+			PAPAGO_ERROR("Tried to clear buffer which is not both depth and stencil!");
+		}
+	}
+	else {
+		PAPAGO_ERROR("Tried to clear non-existent depth/stencil buffer!");
+	}
+	return *this;
+}
+
+IRecordingCommandBuffer& CommandBuffer::clearDepthBuffer(float value)
+{
+	if (m_renderPassPtr == nullptr)
+	{
+		PAPAGO_ERROR("clearDepthBuffer(...) called while not in a begin-context (begin(...) has not been called)");
+	}
+
+	auto flags = m_renderPassPtr->m_depthStencilFlags;
+	if (flags != DepthStencilFlags::eNone) {
+		if (flags == DepthStencilFlags::eDepth) {
+			auto color = vk::ClearDepthStencilValue(value);
+			clearAttachment(color, vk::ImageAspectFlagBits::eDepth);
+		}
+		else {
+			PAPAGO_ERROR("Tried to clear buffer which is not depth!");
+		}
+	}
+	else {
+		PAPAGO_ERROR("Tried to clear non-existent depth/stencil buffer!");
+	}
+	return *this;
+}
+
+IRecordingCommandBuffer& CommandBuffer::clearStencilBuffer(uint32_t value)
+{
+	if (m_renderPassPtr == nullptr)
+	{
+		PAPAGO_ERROR("clearStencilBuffer(...) called while not in a begin-context (begin(...) has not been called)");
+	}
+
+	auto flags = m_renderPassPtr->m_depthStencilFlags;
+	if (flags != DepthStencilFlags::eNone) {
+		if (flags == DepthStencilFlags::eStencil) {
+			auto color = vk::ClearDepthStencilValue(0, value);
+			clearAttachment(color, vk::ImageAspectFlagBits::eStencil);
+		}
+		else {
+			PAPAGO_ERROR("Tried to clear buffer which is not stencil!");
+		}
+	}
+	else {
+		PAPAGO_ERROR("Tried to clear non-existent depth/stencil buffer!");
+	}
+	return *this;
+}
+;
+
+
+void CommandBuffer::clearAttachment(const vk::ClearValue & clearValue, vk::ImageAspectFlags aspectFlags)
+{
+	vk::ClearAttachment clearInfo = {};
+	clearInfo.setAspectMask(aspectFlags)
+		.setColorAttachment(0) // As we only have a single color attatchment, it will always be at 0. Ignored if depth/stencil.
+		.setClearValue(clearValue);
+
+	vk::ClearRect clearRect = {};
+	vk::Rect2D rect = { { 0, 0 },{ m_vkCurrentRenderTargetExtent.width, m_vkCurrentRenderTargetExtent.height } };
+	clearRect.setRect(rect).setBaseArrayLayer(0).setLayerCount(1);
+	m_vkCommandBuffer->clearAttachments(clearInfo, { clearRect });
+}

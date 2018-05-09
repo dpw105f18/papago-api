@@ -36,13 +36,6 @@ public:
 	T& drawIndexed(size_t indexCount, size_t instanceCount = 1, size_t firstIndex = 0, size_t vertexOffset = 0, size_t firstInstance = 0) override;
 	T& draw(size_t vertexCount, size_t instanceCount = 1, size_t firstVertex = 0, size_t firstInstance = 0) override;
 
-	T& clearColorBuffer(float red, float green, float blue, float alpha) override;
-	T& clearColorBuffer(int32_t red, int32_t green, int32_t blue, int32_t alpha) override;
-	T& clearColorBuffer(uint32_t red, uint32_t green, uint32_t blue, uint32_t alpha) override;
-	T& clearDepthStencilBuffer(float depth, uint32_t stencil) override;
-	T& clearDepthBuffer(float value) override;
-	T& clearStencilBuffer(uint32_t value) override;
-
 	std::map<uint32_t, uint32_t> m_bindingDynamicOffset;
 	std::set<Resource*> m_resourcesInUse;
 protected:
@@ -54,13 +47,11 @@ protected:
 	vk::RenderPassBeginInfo m_vkRenderPassBeginInfo;
 	vk::Extent2D m_vkCurrentRenderTargetExtent;
 
-	CommandBuffer* m_state; // Waaaa?
+	CommandBuffer* m_state; 
 
 	const vk::UniqueDevice& m_vkDevice;
 
 private:
-
-	void clearAttachment(const vk::ClearValue& clearValue, vk::ImageAspectFlags aspectFlags);
 };
 
 //NOTE: method implementations given in .cpp file
