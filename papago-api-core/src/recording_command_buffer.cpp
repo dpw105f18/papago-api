@@ -26,25 +26,6 @@ void CommandRecorder<T>::clearAttachment(const vk::ClearValue & clearValue, vk::
 	m_vkCommandBuffer->clearAttachments(clearInfo, { clearRect });
 }
 
-template<class T>
-long CommandRecorder<T>::getBinding(const std::string& name)
-{
-	long binding = -1;
-	auto& shaderProgram = m_renderPassPtr->m_shaderProgram;
-
-	if (shaderProgram.m_vertexShader.bindingExists(name)) {
-		binding = shaderProgram.m_vertexShader.m_bindings[name].binding;
-	}
-	else if (shaderProgram.m_fragmentShader.bindingExists(name)) {
-		binding = shaderProgram.m_fragmentShader.m_bindings[name].binding;
-	}
-	else {
-		PAPAGO_ERROR("Invalid uniform name!");
-	}
-
-	return binding;
-};
-
 
 template<class T>
 T& CommandRecorder<T>::setUniform(const std::string& uniformName, IImageResource& image, ISampler& sampler)
@@ -56,7 +37,7 @@ T& CommandRecorder<T>::setUniform(const std::string& uniformName, IImageResource
 
 	auto& backendImage = static_cast<ImageResource&>(image);
 	auto& backendSampler = static_cast<Sampler&>(sampler);
-	auto binding = getBinding(uniformName);
+	auto binding = m_renderPassPtr->getBinding(uniformName);
 
 	vk::DescriptorImageInfo info = {};
 	info.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
@@ -120,7 +101,7 @@ T& CommandRecorder<T>::setUniform(const std::string& uniformName, DynamicBuffer&
 
 	auto& innerBuffer = dynamic_cast<BufferResource&>(buffer.innerBuffer());
 
-	auto binding = getBinding(uniformName);
+	auto binding = m_renderPassPtr->getBinding(uniformName);
 	auto& descriptorSet = m_renderPassPtr->m_vkDescriptorSet;
 
 	m_state->m_descriptorBindingMutex.lock();
@@ -199,7 +180,7 @@ T& CommandRecorder<T>::setUniform(const std::string& uniformName, DynamicBuffer&
 
 
 
-//TODO: check if setUnifor(..., IBufferResource) is equal to setUniform(..., DynamicUniform)
+//TODO: check if setUniform(..., IBufferResource) is equal to setUniform(..., DynamicUniform)
 template<class T>
 T& CommandRecorder<T>::setUniform(const std::string & uniformName, IBufferResource & buffer)
 {
@@ -209,7 +190,7 @@ T& CommandRecorder<T>::setUniform(const std::string & uniformName, IBufferResour
 	}
 
 	auto& backendBuffer = static_cast<BufferResource&>(buffer);
-	auto binding = getBinding(uniformName);
+	auto binding = m_renderPassPtr->getBinding(uniformName);
 	auto& descriptorSet = m_renderPassPtr->m_vkDescriptorSet;
 
 	auto writeDescriptorSet = vk::WriteDescriptorSet()

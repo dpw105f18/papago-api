@@ -320,8 +320,16 @@ void multithreadedTest() {
 			std::vector<std::future<void>> futures;
 			std::vector<std::unique_ptr<ISubCommandBuffer>> subCommands;
 			std::vector<std::unique_ptr<ICommandBuffer>> commandBuffers;
+
+
 			{
 				auto commandBuffer = device->createCommandBuffer(Usage::eReset);
+				commandBuffer->record(*renderPass, *swapchain, [&](IRecordingCommandBuffer& rCommandBuffer) {
+					//cube->use(rCommandBuffer);
+					rCommandBuffer.setUniform("view_projection_matrix", *viewProjectionMatrix);
+					rCommandBuffer.setUniform("model_matrix", *d_buffer, 0);
+				});
+
 				auto dataSize = dynamicData.size();
 				for (auto i = 0; i < threadCount; ++i) {
 

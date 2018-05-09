@@ -62,7 +62,6 @@ protected:
 private:
 
 	void clearAttachment(const vk::ClearValue& clearValue, vk::ImageAspectFlags aspectFlags);
-	long getBinding(const std::string& name);
 };
 
 //NOTE: method implementations given in .cpp file

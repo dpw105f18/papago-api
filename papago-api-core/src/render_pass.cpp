@@ -4,7 +4,8 @@
 #include "fragment_shader.hpp"
 #include "shader_program.hpp"
 #include "sampler.hpp"
-#include "ibuffer_resource.hpp"
+#include "buffer_resource.hpp"
+#include "image_resource.hpp"
 
 RenderPass::operator vk::RenderPass&()
 {
@@ -249,3 +250,79 @@ std::vector<vk::VertexInputAttributeDescription> RenderPass::getAttributeDescrip
 
 	return attributeDescriptions;
 }
+
+void RenderPass::bindResource(const std::string & name, IBufferResource &buffer)
+{
+	auto& innerBuffer = dynamic_cast<BufferResource&>(buffer);
+
+	auto binding = getBinding(name);
+	auto& descriptorSet = m_vkDescriptorSet;
+
+	vk::DescriptorBufferInfo info = innerBuffer.m_vkInfo;
+
+	auto writeDescriptorSet = vk::WriteDescriptorSet()
+		.setDstSet(*descriptorSet)
+		.setDstBinding(binding)
+		.setDescriptorType(vk::DescriptorType::eUniformBuffer)
+		.setDescriptorCount(1)
+		.setPBufferInfo(&info);
+
+	m_vkDevice->updateDescriptorSets({ writeDescriptorSet }, {});
+}
+
+void RenderPass::bindResource(const std::string& name, DynamicBuffer& buffer)
+{
+	auto& innerBuffer = dynamic_cast<BufferResource&>(buffer.innerBuffer());
+
+	auto binding = getBinding(name);
+	auto& descriptorSet = m_vkDescriptorSet;
+
+	vk::DescriptorBufferInfo info = innerBuffer.m_vkInfo;
+	info.setRange(buffer.m_alignment);
+
+	auto writeDescriptorSet = vk::WriteDescriptorSet()
+		.setDstSet(*descriptorSet)
+		.setDstBinding(binding)
+		.setDescriptorType(vk::DescriptorType::eUniformBufferDynamic)
+		.setDescriptorCount(1)
+		.setPBufferInfo(&info);
+
+	m_vkDevice->updateDescriptorSets({ writeDescriptorSet }, {});
+}
+
+void RenderPass::bindResource(const std::string & name, IImageResource &image, ISampler &sampler)
+{
+	auto& backendImage = dynamic_cast<ImageResource&>(image);
+	auto& backendSampler = static_cast<Sampler&>(sampler);
+	auto binding = getBinding(name);
+
+	vk::DescriptorImageInfo info = {};
+	info.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
+		.setImageView(*backendImage.m_vkImageView)
+		.setSampler(static_cast<vk::Sampler>(backendSampler));
+
+	auto writeDescriptorSet = vk::WriteDescriptorSet(*m_vkDescriptorSet, binding)
+		.setDescriptorCount(1)
+		.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
+		.setPImageInfo(&info);
+
+	m_vkDevice->updateDescriptorSets({ writeDescriptorSet }, {});
+}
+
+long RenderPass::getBinding(const std::string& name)
+{
+	//TODO: use method from renderpass
+	long binding = -1;
+
+	if (m_shaderProgram.m_vertexShader.bindingExists(name)) {
+		binding = m_shaderProgram.m_vertexShader.m_bindings[name].binding;
+	}
+	else if (m_shaderProgram.m_fragmentShader.bindingExists(name)) {
+		binding = m_shaderProgram.m_fragmentShader.m_bindings[name].binding;
+	}
+	else {
+		PAPAGO_ERROR("Invalid uniform name!");
+	}
+
+	return binding;
+};
