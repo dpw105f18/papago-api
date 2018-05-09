@@ -32,7 +32,7 @@ public:
 	std::unique_ptr<ISampler> createTextureSampler3D(Filter magFil, Filter minFil, TextureWrapMode modeU, TextureWrapMode modeV, TextureWrapMode modeW) override;
 	std::unique_ptr<IImageResource> createTexture2D(size_t width, size_t height, Format) override;
 	std::unique_ptr<IImageResource> createDepthTexture2D(uint32_t width, uint32_t height, Format) override;
-	std::unique_ptr<ICommandBuffer> createCommandBuffer(Usage) override;
+	std::unique_ptr<ICommandBuffer> createCommandBuffer() override;
 	std::unique_ptr<IShaderProgram> createShaderProgram(IVertexShader&, IFragmentShader&) override;
 	std::unique_ptr<IBufferResource> createUniformBuffer(size_t size) override;
 	std::unique_ptr<IGraphicsQueue> createGraphicsQueue(ISwapchain&) override;

@@ -38,8 +38,8 @@ IRecordingCommandBuffer & CommandBuffer::execute(std::vector<std::unique_ptr<ISu
 	return *this;
 }
 
-CommandBuffer::CommandBuffer(const vk::UniqueDevice &device, int queueFamilyIndex, Usage usage)
-	: CommandRecorder<IRecordingCommandBuffer>(device), m_usage(usage), m_queueFamilyIndex(queueFamilyIndex)
+CommandBuffer::CommandBuffer(const vk::UniqueDevice &device, int queueFamilyIndex)
+	: CommandRecorder<IRecordingCommandBuffer>(device), m_queueFamilyIndex(queueFamilyIndex)
 {
 	//CommandRecorder uses parent to access state:
 	m_state = this;

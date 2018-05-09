@@ -459,13 +459,12 @@ std::unique_ptr<IGraphicsQueue> Device::createGraphicsQueue(ISwapchain& swapChai
 		(SwapChain&)swapChain );
 }
 
-std::unique_ptr<ICommandBuffer> Device::createCommandBuffer(Usage usage)
+std::unique_ptr<ICommandBuffer> Device::createCommandBuffer()
 {
 	auto queueFamilyIndices = findQueueFamilies(m_vkPhysicalDevice, m_surface);
 	return std::make_unique<CommandBuffer>(
 		m_vkDevice, 
-		queueFamilyIndices.graphicsFamily, 
-		usage);
+		queueFamilyIndices.graphicsFamily);
 }
 
 std::unique_ptr<DynamicBuffer> Device::createDynamicUniformBuffer(size_t objectSize, int objectCount)
@@ -660,7 +659,7 @@ Device::Device(vk::PhysicalDevice physicalDevice, vk::UniqueDevice &device, Surf
 	: m_vkPhysicalDevice(physicalDevice)
 	, m_vkDevice(std::move(device))
 	, m_surface(surface)
-	, m_internalCommandBuffer(CommandBuffer{ m_vkDevice, findQueueFamilies(physicalDevice, surface).graphicsFamily, Usage::eReset })
+	, m_internalCommandBuffer(CommandBuffer{ m_vkDevice, findQueueFamilies(physicalDevice, surface).graphicsFamily})
 {
 	m_vkInternalQueue = m_vkDevice->getQueue(findQueueFamilies(physicalDevice, surface).graphicsFamily, 0);
 }

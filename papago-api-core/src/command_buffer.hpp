@@ -9,7 +9,7 @@ class ImageResource;
 class CommandBuffer : public CommandRecorder<IRecordingCommandBuffer>, public ICommandBuffer
 {
 public:
-	CommandBuffer(const vk::UniqueDevice& device, int queueFamilyIndex, Usage);
+	CommandBuffer(const vk::UniqueDevice& device, int queueFamilyIndex);
 	CommandBuffer(CommandBuffer&&);
 
 	void record(IRenderPass&, ISwapchain&, std::function<void(IRecordingCommandBuffer&)>) override;
@@ -32,9 +32,7 @@ public:
 		return *m_vkCommandBuffer;
 	}
 
-	std::vector<uint32_t> m_boundDescriptorBindings;
-	std::mutex m_descriptorBindingMutex;
+	std::vector<uint32_t> m_boundDescriptorBindings; 
 private:
-	Usage m_usage; //TODO: <-- use this! -AM
 	uint32_t m_queueFamilyIndex;
 };

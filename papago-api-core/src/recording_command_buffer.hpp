@@ -54,7 +54,7 @@ protected:
 	vk::RenderPassBeginInfo m_vkRenderPassBeginInfo;
 	vk::Extent2D m_vkCurrentRenderTargetExtent;
 
-	CommandBuffer* m_state;
+	CommandBuffer* m_state; // Waaaa?
 
 	const vk::UniqueDevice& m_vkDevice;
 

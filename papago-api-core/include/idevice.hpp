@@ -51,7 +51,7 @@ public:
 		TextureWrapMode modeW) = 0;
 	virtual std::unique_ptr<IImageResource> createTexture2D(size_t width, size_t height, Format) = 0;
 	virtual std::unique_ptr<IImageResource> createDepthTexture2D(uint32_t width, uint32_t height, Format) = 0;
-	virtual std::unique_ptr<ICommandBuffer> createCommandBuffer(Usage) = 0;
+	virtual std::unique_ptr<ICommandBuffer> createCommandBuffer() = 0;
 	virtual std::unique_ptr<IShaderProgram> createShaderProgram(IVertexShader& vertexShader, IFragmentShader& fragmentShader) = 0;
 	virtual std::unique_ptr<IRenderPass> createRenderPass(IShaderProgram&, uint32_t width, uint32_t height, Format colorFormat) = 0;
 	virtual std::unique_ptr<IRenderPass> createRenderPass(IShaderProgram&, uint32_t width, uint32_t height, Format colorFormat, Format depthStencilFormat) = 0;

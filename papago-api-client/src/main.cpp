@@ -286,11 +286,50 @@ void multithreadedTest() {
 	auto lastFrame = Clock::now();
 	long fps = 0;
 
-	size_t threadCount = 16;
+	size_t threadCount = 32;
 	ThreadPool threadPool = { threadCount };
 
 	renderPass->bindResource("view_projection_matrix", *viewProjectionMatrix);
 	renderPass->bindResource("model_matrix", *d_buffer);
+
+	std::vector<std::future<void>> futures;
+	std::vector<std::unique_ptr<ISubCommandBuffer>> subCommands;
+	subCommands.reserve(threadCount);
+	std::vector<std::unique_ptr<ICommandBuffer>> commandBuffers;
+	commandBuffers.push_back(device->createCommandBuffer());
+	auto& commandBuffer = commandBuffers[0];
+
+	for (auto i = 0; i < threadCount; ++i) {
+		subCommands.push_back(std::move(commandBuffer->createSubCommandBuffer()));
+	}
+
+
+	{
+		auto dataSize = dynamicData.size();
+		for (auto i = 0; i < threadCount; ++i) {
+			futures.emplace_back(threadPool.enqueue([&](size_t count, size_t offset, size_t cmdIndex) {
+				auto& cmd = subCommands[cmdIndex];
+				cmd->record(*renderPass, *swapchain, [&](IRecordingSubCommandBuffer& rSubCmd) {
+					rSubCmd.setInput(*cube->vertex_buffer);
+					rSubCmd.setIndexBuffer(*cube->index_buffer);
+
+					for (auto j = 0; j < count; ++j) {
+						rSubCmd.setDynamicIndex("model_matrix", offset + j);
+						rSubCmd.drawIndexed(36);
+					}
+				});
+
+			}, dataSize / threadCount, (dataSize / threadCount) * i, i));
+
+		}//end for
+
+		for (auto& f : futures) {
+			f.wait();
+		}
+		futures.clear();
+
+	
+	}
 
 	while (true)
 	{
@@ -320,48 +359,12 @@ void multithreadedTest() {
 				
 			}
 
-			std::vector<std::future<void>> futures;
-			std::vector<std::unique_ptr<ISubCommandBuffer>> subCommands;
-			subCommands.reserve(threadCount);
-			std::vector<std::unique_ptr<ICommandBuffer>> commandBuffers;
+			commandBuffer->record(*renderPass, *swapchain, [&](IRecordingCommandBuffer& rCommandBuffer) {
+				//cube->use(rCommandBuffer);
+				rCommandBuffer.clearColorBuffer(1.0f, 0.0f, 0.0f, 1.0f);
+				rCommandBuffer.execute(subCommands);
+			});
 
-
-			{
-			
-				auto commandBuffer = device->createCommandBuffer(Usage::eReset);
-
-				auto dataSize = dynamicData.size();
-				for (auto i = 0; i < threadCount; ++i) {
-
-					auto subCmd = commandBuffer->createSubCommandBuffer();
-					subCommands.push_back(std::move(subCmd));
-					futures.emplace_back(threadPool.enqueue([&](size_t count, size_t offset, size_t cmdIndex) {
-							auto& cmd = subCommands[cmdIndex];
-							cmd->record(*renderPass, *swapchain, [&](IRecordingSubCommandBuffer& rSubCmd) {
-								rSubCmd.setInput(*cube->vertex_buffer);
-								rSubCmd.setIndexBuffer(*cube->index_buffer);
-
-								for (auto j = 0; j < count; ++j) {
-									rSubCmd.setDynamicIndex("model_matrix", offset + j);
-									rSubCmd.drawIndexed(36);
-								}
-							});
-
-					}, dataSize / threadCount, (dataSize / threadCount) * i, i));
-				
-				}//end for
-
-				for (auto& f : futures) {
-					f.wait();
-				}
-
-				commandBuffer->record(*renderPass, *swapchain, [&](IRecordingCommandBuffer& rCommandBuffer) {
-					//cube->use(rCommandBuffer);
-					
-					rCommandBuffer.execute(subCommands);
-				});
-				commandBuffers.push_back(std::move(commandBuffer));
-			}
 			std::vector<std::reference_wrapper<ICommandBuffer>> submissions;
 			for(auto& commandBuffer : commandBuffers)
 			{
