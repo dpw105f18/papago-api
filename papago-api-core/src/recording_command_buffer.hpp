@@ -31,11 +31,10 @@ public:
 
 	// Inherited via IRecordingCommandBuffer
 	T& setInput(IBufferResource &) override;
-	T& setUniform(const std::string & uniformName, IImageResource &, ISampler &) override;
-	T& setUniform(const std::string & uniformName, IBufferResource &) override;
-	T& setUniform(const std::string & uniformName, DynamicBuffer &, size_t) override;
+	T& setDynamicIndex(const std::string& uniformName, size_t) override;
 	T& setIndexBuffer(IBufferResource &) override;
 	T& drawIndexed(size_t indexCount, size_t instanceCount = 1, size_t firstIndex = 0, size_t vertexOffset = 0, size_t firstInstance = 0) override;
+	T& draw(size_t vertexCount, size_t instanceCount = 1, size_t firstVertex = 0, size_t firstInstance = 0) override;
 
 	T& clearColorBuffer(float red, float green, float blue, float alpha) override;
 	T& clearColorBuffer(int32_t red, int32_t green, int32_t blue, int32_t alpha) override;

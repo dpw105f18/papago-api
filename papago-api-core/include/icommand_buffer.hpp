@@ -37,11 +37,10 @@ public:
 	virtual ~IRecorder() = default;
 
 	virtual T& setInput(IBufferResource&) = 0;
-	virtual T& setUniform(const std::string& uniformName, IImageResource&, ISampler&) = 0;
-	virtual T& setUniform(const std::string& uniformName, IBufferResource&) = 0;
-	virtual T& setUniform(const std::string& uniformName, DynamicBuffer&, size_t) = 0;
+	virtual T& setDynamicIndex(const std::string& uniformName, size_t) = 0;
 	virtual T& setIndexBuffer(IBufferResource&) = 0;
 	virtual T& drawIndexed(size_t indexCount, size_t instanceCount = 1, size_t firstIndex = 0, size_t vertexOffset = 0, size_t firstInstance = 0) = 0;
+	virtual T& draw(size_t indexCount, size_t instanceCount = 1, size_t firstIndex = 0, size_t firstInstance = 0) = 0;
 
 	virtual T& clearColorBuffer(float red, float green, float blue, float alpha) = 0;
 	virtual T& clearColorBuffer(int32_t red, int32_t green, int32_t blue, int32_t alpha) = 0;

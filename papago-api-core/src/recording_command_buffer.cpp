@@ -26,36 +26,6 @@ void CommandRecorder<T>::clearAttachment(const vk::ClearValue & clearValue, vk::
 	m_vkCommandBuffer->clearAttachments(clearInfo, { clearRect });
 }
 
-
-template<class T>
-T& CommandRecorder<T>::setUniform(const std::string& uniformName, IImageResource& image, ISampler& sampler)
-{
-	if (m_renderPassPtr == nullptr)
-	{
-		PAPAGO_ERROR("setUniform(name, image, sampler) called while not in a begin-context (begin(...) has not been called)");
-	}
-
-	auto& backendImage = static_cast<ImageResource&>(image);
-	auto& backendSampler = static_cast<Sampler&>(sampler);
-	auto binding = m_renderPassPtr->getBinding(uniformName);
-
-	vk::DescriptorImageInfo info = {};
-	info.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
-		.setImageView(*backendImage.m_vkImageView)
-		.setSampler(static_cast<vk::Sampler>(backendSampler));
-
-	auto writeDescriptorSet = vk::WriteDescriptorSet(*m_renderPassPtr->m_vkDescriptorSet, binding)
-		.setDescriptorCount(1)
-		.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
-		.setPImageInfo(&info);
-
-	m_vkDevice->updateDescriptorSets({ writeDescriptorSet }, {});
-	m_vkCommandBuffer->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *m_renderPassPtr->m_vkPipelineLayout, 0, { *m_renderPassPtr->m_vkDescriptorSet }, {});
-
-	m_resourcesInUse.emplace(&backendImage);
-	return *this;
-}
-
 template<class T>
 T& CommandRecorder<T>::setInput(IBufferResource& buffer)
 {
@@ -70,7 +40,38 @@ T& CommandRecorder<T>::setInput(IBufferResource& buffer)
 		{ *(static_cast<BufferResource&>(buffer)).m_vkBuffer },
 		{ 0 });
 	return *this;
-};
+}
+template<class T>
+T & CommandRecorder<T>::setDynamicIndex(const std::string & uniformName, size_t index)
+{
+	//IMPROVEMENT: cache this so we don't need to loop over bindings every time we set an index. -AM
+	std::set<uint32_t> uniqueBindings;
+
+	auto& vBindings = m_renderPassPtr->m_shaderProgram.m_vertexShader.getBindings();
+	auto& fBindings = m_renderPassPtr->m_shaderProgram.m_fragmentShader.getBindings();
+
+	for (auto& vb : vBindings) {
+		uniqueBindings.insert(vb.binding);
+	}
+
+	for (auto& fb : fBindings) {
+		uniqueBindings.insert(fb.binding);
+	}
+
+	auto offsetCount = uniqueBindings.size();
+	auto dynamicOffsets = std::vector<uint32_t>(offsetCount);
+
+	auto binding = m_renderPassPtr->getBinding(uniformName);
+	m_bindingDynamicOffset[binding] = m_renderPassPtr->m_bindingAlignment[binding] * index;
+
+	for (auto i = 0; i < offsetCount; ++i) {
+		dynamicOffsets[i] = m_bindingDynamicOffset[i];
+	}
+
+	m_vkCommandBuffer->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *m_renderPassPtr->m_vkPipelineLayout, 0, { *m_renderPassPtr->m_vkDescriptorSet }, dynamicOffsets);
+	return *this;
+}
+;
 
 
 template<class T>
@@ -92,148 +93,6 @@ T& CommandRecorder<T>::setIndexBuffer(IBufferResource &indexBuffer)
 };
 
 template<class T>
-T& CommandRecorder<T>::setUniform(const std::string& uniformName, DynamicBuffer& buffer, size_t	index)
-{
-	if (m_renderPassPtr == nullptr)
-	{
-		PAPAGO_ERROR("setUniform(uniformName, buffer) called while not in a begin-context (begin(...) has not been called)");
-	}
-
-	auto& innerBuffer = dynamic_cast<BufferResource&>(buffer.innerBuffer());
-
-	auto binding = m_renderPassPtr->getBinding(uniformName);
-	auto& descriptorSet = m_renderPassPtr->m_vkDescriptorSet;
-
-	m_state->m_descriptorBindingMutex.lock();
-
-	bool bindingAlreadyBound = false;
-	for (auto boundBinding : m_state->m_boundDescriptorBindings) {
-		bindingAlreadyBound = boundBinding == binding;
-
-		if (bindingAlreadyBound) break;
-	}
-
-	if (bindingAlreadyBound) {
-		m_state->m_descriptorBindingMutex.unlock();
-	}
-	else {
-		m_state->m_boundDescriptorBindings.push_back(binding);
-		m_state->m_descriptorBindingMutex.unlock();
-
-		vk::DescriptorBufferInfo info = innerBuffer.m_vkInfo;
-		info.setRange(buffer.m_alignment);
-
-		auto writeDescriptorSet = vk::WriteDescriptorSet()
-			.setDstSet(*descriptorSet)
-			.setDstBinding(binding)
-			.setDescriptorType(vk::DescriptorType::eUniformBufferDynamic)
-			.setDescriptorCount(1)
-			.setPBufferInfo(&info);
-
-		m_vkDevice->updateDescriptorSets({ writeDescriptorSet }, {});
-	}
-
-	/*
-	"If any of the sets being bound include dynamic uniform or storage buffers,
-	then pDynamicOffsets includes one element for each array element in each
-	dynamic descriptor type binding in each set.
-
-	Values are taken from pDynamicOffsets in an order such that:
-	1) all entries for set N come before set N+1;
-	2) within a set, entries are ordered by the binding numbers in the descriptor set layouts;
-	3) and within a binding array, elements are in order.
-
-	dynamicOffsetCount must equal the total number of dynamic descriptors in the sets being bound."
-
-	From Vulkan Specification (edited format for clarity)
-	https://www.khronos.org/registry/vulkan/specs/1.1-extensions/man/html/vkCmdBindDescriptorSets.html#descriptorsets-binding-dynamicoffsets
-	*/
-
-
-	std::set<uint32_t> uniqueBindings;
-	auto& vertexBindings = m_renderPassPtr->m_shaderProgram.m_vertexShader.m_bindings;
-	auto& fragmentBindings = m_renderPassPtr->m_shaderProgram.m_fragmentShader.m_bindings;
-
-	for (auto& binding : vertexBindings)
-	{
-		uniqueBindings.insert(binding.second.binding);
-	}
-
-	for (auto& binding : fragmentBindings)
-	{
-		uniqueBindings.insert(binding.second.binding);
-	}
-
-	auto offsetCount = uniqueBindings.size();
-	auto dynamicOffsets = std::vector<uint32_t>(offsetCount);
-
-	m_bindingDynamicOffset[binding] = buffer.m_alignment * index;
-
-	for (auto i = 0; i < offsetCount; ++i) {
-		dynamicOffsets[i] = m_bindingDynamicOffset[i];
-	}
-
-	m_vkCommandBuffer->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *m_renderPassPtr->m_vkPipelineLayout, 0, { *descriptorSet }, dynamicOffsets);
-
-	return *this;
-};
-
-
-
-//TODO: check if setUniform(..., IBufferResource) is equal to setUniform(..., DynamicUniform)
-template<class T>
-T& CommandRecorder<T>::setUniform(const std::string & uniformName, IBufferResource & buffer)
-{
-	if (m_renderPassPtr == nullptr)
-	{
-		PAPAGO_ERROR("setUniform(uniformName, buffer) called while not in a begin-context (begin(...) has not been called)");
-	}
-
-	auto& backendBuffer = static_cast<BufferResource&>(buffer);
-	auto binding = m_renderPassPtr->getBinding(uniformName);
-	auto& descriptorSet = m_renderPassPtr->m_vkDescriptorSet;
-
-	auto writeDescriptorSet = vk::WriteDescriptorSet()
-		.setDstSet(*descriptorSet)
-		.setDstBinding(binding)
-		.setDescriptorType(vk::DescriptorType::eUniformBufferDynamic)
-		.setDescriptorCount(1)
-		.setPBufferInfo(&backendBuffer.m_vkInfo);
-
-	m_vkDevice->updateDescriptorSets({ writeDescriptorSet }, {});
-
-	std::set<uint32_t> uniqueBindings;
-	auto& vertexBindings = m_renderPassPtr->m_shaderProgram.m_vertexShader.m_bindings;
-	auto& fragmentBindings = m_renderPassPtr->m_shaderProgram.m_fragmentShader.m_bindings;
-
-	for (auto& binding : vertexBindings)
-	{
-		uniqueBindings.insert(binding.second.binding);
-	}
-
-	for (auto& binding : fragmentBindings)
-	{
-		uniqueBindings.insert(binding.second.binding);
-	}
-
-	auto offsetCount = uniqueBindings.size();
-	auto dynamicOffsets = std::vector<uint32_t>(offsetCount);
-
-	m_bindingDynamicOffset[binding] = 0;
-
-	for (auto i = 0; i < offsetCount; ++i) {
-		dynamicOffsets[i] = m_bindingDynamicOffset[i];
-	}
-
-	m_vkCommandBuffer->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *m_renderPassPtr->m_vkPipelineLayout, 0, { *descriptorSet }, dynamicOffsets);
-
-	m_resourcesInUse.emplace(&backendBuffer);
-	return *this;
-};
-
-
-
-template<class T>
 T& CommandRecorder<T>::drawIndexed(size_t indexCount, size_t instanceCount, size_t firstIndex, size_t vertexOffset, size_t firstInstance)
 {
 	if (m_renderPassPtr == nullptr)
@@ -243,6 +102,17 @@ T& CommandRecorder<T>::drawIndexed(size_t indexCount, size_t instanceCount, size
 
 	m_vkCommandBuffer->drawIndexed(indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
 	return *this;
+}
+
+template<class T>
+T & CommandRecorder<T>::draw(size_t vertexCount, size_t instanceCount, size_t firstVertex, size_t firstInstance)
+{
+	if (m_renderPassPtr == nullptr)
+	{
+		PAPAGO_ERROR("drawIndexed(...) called while not in a begin-context (begin(...) has not been called)");
+	}
+
+	m_vkCommandBuffer->draw(vertexCount, instanceCount, firstVertex, firstInstance);
 }
 
 

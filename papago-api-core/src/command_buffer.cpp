@@ -149,6 +149,23 @@ void CommandBuffer::begin(RenderPass& renderPass, const vk::UniqueFramebuffer& r
 
 	//TODO: can we assume a graphics bindpoint and pipeline? -AM
 	m_vkCommandBuffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *renderPass.m_vkGraphicsPipeline);
+
+	//set default bindings:
+	std::set<uint32_t> uniqueBindings;
+
+	auto& vBindings = m_renderPassPtr->m_shaderProgram.m_vertexShader.getBindings();
+	auto& fBindings = m_renderPassPtr->m_shaderProgram.m_fragmentShader.getBindings();
+
+	for (auto& vb : vBindings) {
+		uniqueBindings.insert(vb.binding);
+	}
+
+	for (auto& fb : fBindings) {
+		uniqueBindings.insert(fb.binding);
+	}
+	auto defaultDynamicOffsets = std::vector<uint32_t>(uniqueBindings.size(), 0);
+
+	m_vkCommandBuffer->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *m_renderPassPtr->m_vkPipelineLayout, 0, { *m_renderPassPtr->m_vkDescriptorSet }, defaultDynamicOffsets);
 }
 
 void CommandBuffer::end()

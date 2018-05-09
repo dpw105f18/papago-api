@@ -1,4 +1,6 @@
 #pragma once
+#include <map>
+
 #include "vulkan\vulkan.hpp"
 #include "api_enums.hpp"
 #include "shader_program.hpp"
@@ -35,6 +37,7 @@ public:
 	const vk::UniqueDevice& m_vkDevice;
 	DepthStencilFlags m_depthStencilFlags;
 
+	std::map<uint32_t, uint32_t> m_bindingAlignment;
 
 	void setupDescriptorSet(const vk::UniqueDevice&, const VertexShader& vertexShader, const FragmentShader& fragmentShader);
 	long RenderPass::getBinding(const std::string& name);

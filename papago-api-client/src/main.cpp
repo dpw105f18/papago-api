@@ -239,7 +239,7 @@ void multithreadedTest() {
 	auto graphicsQueue = device->createGraphicsQueue(*swapchain);
 	auto viewProjectionMatrix = device->createUniformBuffer(sizeof(glm::mat4));
 
-	glm::vec3 grid = { 2, 2, 2 };
+	glm::vec3 grid = { 20, 20, 20 };
 	glm::vec3 padding = {2.0f, 2.0f, 2.0f};
 	glm::vec3 dim = 0.5f * grid;
 	std::vector<UniformData> dynamicData;
@@ -286,8 +286,11 @@ void multithreadedTest() {
 	auto lastFrame = Clock::now();
 	long fps = 0;
 
-	size_t threadCount = 8;
+	size_t threadCount = 16;
 	ThreadPool threadPool = { threadCount };
+
+	renderPass->bindResource("view_projection_matrix", *viewProjectionMatrix);
+	renderPass->bindResource("model_matrix", *d_buffer);
 
 	while (true)
 	{
@@ -323,31 +326,27 @@ void multithreadedTest() {
 
 
 			{
+			
 				auto commandBuffer = device->createCommandBuffer(Usage::eReset);
-				commandBuffer->record(*renderPass, *swapchain, [&](IRecordingCommandBuffer& rCommandBuffer) {
-					//cube->use(rCommandBuffer);
-					rCommandBuffer.setUniform("view_projection_matrix", *viewProjectionMatrix);
-					rCommandBuffer.setUniform("model_matrix", *d_buffer, 0);
-				});
 
 				auto dataSize = dynamicData.size();
 				for (auto i = 0; i < threadCount; ++i) {
 
-					futures.emplace_back(threadPool.enqueue([&](size_t count, size_t offset) {
-							auto subCmd = commandBuffer->createSubCommandBuffer();
-							subCmd->record(*renderPass, *swapchain, [&](IRecordingSubCommandBuffer& rSubCmd) {
+					auto subCmd = commandBuffer->createSubCommandBuffer();
+					subCommands.push_back(std::move(subCmd));
+					futures.emplace_back(threadPool.enqueue([&](size_t count, size_t offset, size_t cmdIndex) {
+							auto& cmd = subCommands[cmdIndex];
+							cmd->record(*renderPass, *swapchain, [&](IRecordingSubCommandBuffer& rSubCmd) {
 								rSubCmd.setInput(*cube->vertex_buffer);
 								rSubCmd.setIndexBuffer(*cube->index_buffer);
-								rSubCmd.setUniform("view_projection_matrix", *viewProjectionMatrix);
 
-								for (auto i = 0; i < count; ++i) {
-									rSubCmd.setUniform("model_matrix", *d_buffer, offset + i);
+								for (auto j = 0; j < count; ++j) {
+									rSubCmd.setDynamicIndex("model_matrix", offset + j);
 									rSubCmd.drawIndexed(36);
 								}
 							});
 
-						subCommands.push_back(std::move(subCmd));
-					}, dataSize / threadCount, (dataSize / threadCount) * i ));
+					}, dataSize / threadCount, (dataSize / threadCount) * i, i));
 				
 				}//end for
 
