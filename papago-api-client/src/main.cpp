@@ -239,7 +239,7 @@ void multithreadedTest() {
 	auto graphicsQueue = device->createGraphicsQueue(*swapchain);
 	auto viewProjectionMatrix = device->createUniformBuffer(sizeof(glm::mat4));
 
-	glm::vec3 grid = { 20, 20, 20 };
+	glm::vec3 grid = { 30, 30, 30 };
 	glm::vec3 padding = {2.0f, 2.0f, 2.0f};
 	glm::vec3 dim = 0.5f * grid;
 	std::vector<UniformData> dynamicData;
@@ -322,6 +322,7 @@ void multithreadedTest() {
 
 			std::vector<std::future<void>> futures;
 			std::vector<std::unique_ptr<ISubCommandBuffer>> subCommands;
+			subCommands.reserve(threadCount);
 			std::vector<std::unique_ptr<ICommandBuffer>> commandBuffers;
 
 
