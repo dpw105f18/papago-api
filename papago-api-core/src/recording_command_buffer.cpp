@@ -37,11 +37,15 @@ T & CommandRecorder<T>::setDynamicIndex(const std::string & uniformName, size_t 
 	auto& fBindings = m_renderPassPtr->m_shaderProgram.m_fragmentShader.getBindings();
 
 	for (auto& vb : vBindings) {
-		uniqueBindings.insert(vb.binding);
+		if (vb.type == vk::DescriptorType::eUniformBufferDynamic) {
+			uniqueBindings.insert(vb.binding);
+		}
 	}
 
 	for (auto& fb : fBindings) {
-		uniqueBindings.insert(fb.binding);
+		if (fb.type == vk::DescriptorType::eUniformBufferDynamic) {
+			uniqueBindings.insert(fb.binding);
+		}
 	}
 
 	auto offsetCount = uniqueBindings.size();

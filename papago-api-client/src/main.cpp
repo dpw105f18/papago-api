@@ -33,24 +33,6 @@
 
 #include "thread_pool.h"
 
-struct vec2
-{
-	float x, y;
-};
-
-union vec3
-{
-	struct { float x, y, z; }; // Positions
-	struct { float r, g, b; }; // Colors
-	struct { float u, v, w; }; // Texture Maps
-};
-
-struct Vertex
-{
-	vec3 m_position;
-	vec2 m_textureCoordinate;
-};
-
 
 LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
@@ -166,19 +148,26 @@ std::string readFile(const std::string& file_path) {
 	return result;
 }
 
+
+struct Vertex
+{
+	glm::vec3 pos;
+	glm::vec2 uv;
+};
+
 struct Mesh
 {
 	static Mesh Cube(IDevice& device)
 	{
-		auto vertex_buffer = device.createVertexBuffer(std::vector<glm::vec3>{
-			{ -0.5f, -0.5f,  0.5f },
-			{ -0.5f,  0.5f,  0.5f },
-			{  0.5f,  0.5f,  0.5f },
-			{  0.5f, -0.5f,  0.5f },
-			{ -0.5f, -0.5f, -0.5f },
-			{ -0.5f,  0.5f, -0.5f },
-			{  0.5f,  0.5f, -0.5f },
-			{  0.5f, -0.5f, -0.5f }
+		auto vertex_buffer = device.createVertexBuffer(std::vector<Vertex>{
+			{ { -0.5f, -0.5f, 0.5f }, {0.0f, 0.0f}},
+			{{ -0.5f,  0.5f,  0.5f }, {0.0f, 1.0f}},
+			{{  0.5f,  0.5f,  0.5f }, {1.0f, 1.0f}},
+			{{  0.5f, -0.5f,  0.5f }, {1.0f, 0.0f}},
+			{{ -0.5f, -0.5f, -0.5f }, {0.0f, 0.0f}},
+			{{ -0.5f,  0.5f, -0.5f }, {0.0f, 1.0f}},
+			{{  0.5f,  0.5f, -0.5f }, {1.0f, 1.0f}},
+			{{  0.5f, -0.5f, -0.5f }, {1.0f, 0.0f}}
 		});
 
 		auto index_buffer = device.createIndexBuffer(std::vector<uint16_t>{
@@ -239,7 +228,7 @@ void multithreadedTest() {
 	auto graphicsQueue = device->createGraphicsQueue(*swapchain);
 	auto viewProjectionMatrix = device->createUniformBuffer(sizeof(glm::mat4));
 
-	glm::vec3 grid = { 30, 30, 30 };
+	glm::vec3 grid = { 4, 4, 4 };
 	glm::vec3 padding = {2.0f, 2.0f, 2.0f};
 	glm::vec3 dim = 0.5f * grid;
 	std::vector<UniformData> dynamicData;
@@ -276,8 +265,8 @@ void multithreadedTest() {
 		});
 	}
 
-	auto vertexShader = parser.compileVertexShader(readFile("shader/mvpShader.vert"), "main");
-	auto fragmentShader = parser.compileFragmentShader(readFile("shader/colorFrag.frag"), "main");
+	auto vertexShader = parser.compileVertexShader(readFile("shader/mvpTexShader.vert"), "main");
+	auto fragmentShader = parser.compileFragmentShader(readFile("shader/mvpTexShader.frag"), "main");
 	auto program = device->createShaderProgram(*vertexShader, *fragmentShader);
 	auto renderPass = device->createRenderPass(*program, 800, 600, swapchain->getFormat());
 
@@ -289,8 +278,19 @@ void multithreadedTest() {
 	size_t threadCount = 32;
 	ThreadPool threadPool = { threadCount };
 
+	int width, height, comp;
+	auto pixels = stbi_load("textures/eldorado.jpg", &width, &height, &comp, 4);
+
+	auto imageData = std::vector<char>(width * height * 4);	
+	memcpy(imageData.data(), pixels, width* height * 4);
+	auto image = device->createTexture2D(width, height, Format::eR8G8B8A8Unorm);
+	image->upload(imageData);
+
+	auto sam = device->createTextureSampler2D(Filter::eLinear, Filter::eLinear, TextureWrapMode::eMirroredRepeat, TextureWrapMode::eMirroredRepeat);
+
 	renderPass->bindResource("view_projection_matrix", *viewProjectionMatrix);
 	renderPass->bindResource("model_matrix", *d_buffer);
+	renderPass->bindResource("sam", *image, *sam);
 
 	std::vector<std::future<void>> futures;
 	std::vector<std::unique_ptr<ISubCommandBuffer>> subCommands;
@@ -326,9 +326,11 @@ void multithreadedTest() {
 			f.wait();
 		}
 		futures.clear();
-
-	
 	}
+
+	bool keyPressed = false;
+	glm::mat4 rotateMat = glm::mat4(1.0f);
+	float rotateFudgeVal = 0.005f;
 
 	while (true)
 	{
@@ -337,6 +339,59 @@ void multithreadedTest() {
 		{
 			if (msg.message == WM_QUIT) {
 				break;
+			}
+			else if (msg.message == WM_KEYDOWN) {
+				switch (msg.wParam)
+				{
+				case 87:
+					if (!keyPressed)
+					{
+						rotateMat = glm::rotate(rotateMat, rotateFudgeVal * 2.0f, glm::vec3(1.0f, 0.0f, 0.0f));
+						keyPressed = true;
+					}
+					break;
+				case 65:
+					if (!keyPressed) {
+						rotateMat = glm::rotate(rotateMat, rotateFudgeVal *2.0f, glm::vec3(0.0f, 0.0f, 1.0f));
+						keyPressed = true;
+					}
+					break;
+				case 83:
+					if (!keyPressed) {
+						rotateMat = glm::rotate(rotateMat, rotateFudgeVal * -2.0f, glm::vec3(1.0f, 0.0f, 0.0f));
+						keyPressed = true;
+					}
+					break;
+				case 68:
+					if (!keyPressed) {
+						rotateMat = glm::rotate(rotateMat, rotateFudgeVal * -2.0f, glm::vec3(0.0f, 0.0f, 1.0f));
+						keyPressed = true;
+					}
+					break;
+				}
+
+				if (msg.wParam == 82) {
+					/*
+					auto& rc = TestConfiguration::GetInstance().rotateCubes;
+					rc = !rc;
+					*/
+				}
+			}
+			else if (msg.message == WM_KEYUP) {
+				switch (msg.wParam) {
+				case 87:
+					keyPressed = false;
+					break;
+				case 65:
+					keyPressed = false;
+					break;
+				case 83:
+					keyPressed = false;
+					break;
+				case 68:
+					keyPressed = false;
+					break;
+				}
 			}
 			TranslateMessage(&msg);
 			DispatchMessage(&msg);
@@ -354,14 +409,21 @@ void multithreadedTest() {
 					<< " --- Avg. Frame Time: " << 1000.0 / fps << "ms"
 					<< " --- Last Frame Time: " << std::chrono::duration_cast<std::chrono::duration<double, std::milli>>(frameTime).count() << "ms";
 				SetWindowName(hwnd, ss.str());
-				fps = 0;
-				
+				fps = 0;	
+			}
+
+			//Make dem cubes dance!
+			if (keyPressed) {
+				for (auto& modelMat : dynamicData) {
+					modelMat.model_matrix *= rotateMat;
+				}
+				d_buffer->upload(dynamicData);
 			}
 
 			commandBuffer->record(*renderPass, *swapchain, [&](IRecordingCommandBuffer& rCommandBuffer) {
 				//cube->use(rCommandBuffer);
-				rCommandBuffer.execute(subCommands);
 				rCommandBuffer.clearColorBuffer(1.0f, 0.0f, 0.0f, 1.0f);
+				rCommandBuffer.execute(subCommands);
 			});
 
 			std::vector<std::reference_wrapper<ICommandBuffer>> submissions;

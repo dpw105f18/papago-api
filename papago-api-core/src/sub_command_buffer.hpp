@@ -35,8 +35,6 @@ public:
 
 private:
 
-	vk::Framebuffer m_vkFramebuffer;
-
 	void begin();
 	void end();
 };

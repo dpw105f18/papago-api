@@ -32,23 +32,7 @@ SubCommandBuffer::operator vk::CommandBuffer&()
 void SubCommandBuffer::begin()
 {
 	vk::CommandBufferInheritanceInfo inheritInfo = {};
-	//inheritInfo.framebuffer = m_vkFramebuffer;
 	inheritInfo.occlusionQueryEnable = VK_FALSE;
-	
-	/* //Unsupported ATM
-	inheritInfo.pipelineStatistics =
-		vk::QueryPipelineStatisticFlagBits::eClippingInvocations |
-		vk::QueryPipelineStatisticFlagBits::eClippingPrimitives |
-		vk::QueryPipelineStatisticFlagBits::eComputeShaderInvocations |
-		vk::QueryPipelineStatisticFlagBits::eFragmentShaderInvocations |
-		vk::QueryPipelineStatisticFlagBits::eGeometryShaderInvocations |
-		vk::QueryPipelineStatisticFlagBits::eGeometryShaderPrimitives |
-		vk::QueryPipelineStatisticFlagBits::eInputAssemblyPrimitives |
-		vk::QueryPipelineStatisticFlagBits::eInputAssemblyVertices |
-		vk::QueryPipelineStatisticFlagBits::eTessellationControlShaderPatches |
-		vk::QueryPipelineStatisticFlagBits::eTessellationEvaluationShaderInvocations |
-		vk::QueryPipelineStatisticFlagBits::eVertexShaderInvocations;
-	*/
 
 	inheritInfo.renderPass = *m_renderPassPtr->m_vkRenderPass;
 

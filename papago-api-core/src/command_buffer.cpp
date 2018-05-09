@@ -157,11 +157,15 @@ void CommandBuffer::begin(RenderPass& renderPass, const vk::UniqueFramebuffer& r
 	auto& fBindings = m_renderPassPtr->m_shaderProgram.m_fragmentShader.getBindings();
 
 	for (auto& vb : vBindings) {
-		uniqueBindings.insert(vb.binding);
+		if (vb.type == vk::DescriptorType::eUniformBufferDynamic) {
+			uniqueBindings.insert(vb.binding);
+		}
 	}
 
 	for (auto& fb : fBindings) {
-		uniqueBindings.insert(fb.binding);
+		if (fb.type == vk::DescriptorType::eUniformBufferDynamic) {
+			uniqueBindings.insert(fb.binding);
+		}
 	}
 	auto defaultDynamicOffsets = std::vector<uint32_t>(uniqueBindings.size(), 0);
 
