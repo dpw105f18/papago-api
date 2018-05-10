@@ -66,3 +66,13 @@ BufferResource::BufferResource(
 		.setRange(range); 
 	device->bindBufferMemory(*m_vkBuffer, *m_vkMemory, 0);
 }
+
+void DynamicBuffer::internalUpload(const std::vector<char>& data)
+{
+	return m_buffer->upload(data);
+}
+
+std::vector<char> DynamicBuffer::internalDownload()
+{
+	return m_buffer->download();
+}

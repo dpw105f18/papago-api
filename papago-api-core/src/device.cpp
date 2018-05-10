@@ -467,7 +467,7 @@ std::unique_ptr<ICommandBuffer> Device::createCommandBuffer()
 		queueFamilyIndices.graphicsFamily);
 }
 
-std::unique_ptr<DynamicBuffer> Device::createDynamicUniformBuffer(size_t objectSize, int objectCount)
+std::unique_ptr<IDynamicBuffer> Device::createDynamicUniformBuffer(size_t objectSize, int objectCount)
 {
 	auto dynamic_alligment = objectSize;
 	const auto properties = m_vkPhysicalDevice.getProperties();

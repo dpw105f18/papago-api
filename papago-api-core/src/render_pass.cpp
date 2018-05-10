@@ -263,7 +263,7 @@ void RenderPass::bindResource(const std::string & name, IBufferResource &buffer)
 	auto writeDescriptorSet = vk::WriteDescriptorSet()
 		.setDstSet(*descriptorSet)
 		.setDstBinding(binding)
-		.setDescriptorType(vk::DescriptorType::eUniformBufferDynamic)	//TODO: fix diz <----
+		.setDescriptorType(vk::DescriptorType::eUniformBuffer)	//TODO: fix diz <----
 		.setDescriptorCount(1)
 		.setPBufferInfo(&info);
 
@@ -272,15 +272,16 @@ void RenderPass::bindResource(const std::string & name, IBufferResource &buffer)
 	m_bindingAlignment[binding] = 0;
 }
 
-void RenderPass::bindResource(const std::string& name, DynamicBuffer& buffer)
+void RenderPass::bindResource(const std::string& name, IDynamicBuffer& buffer)
 {
-	auto& innerBuffer = dynamic_cast<BufferResource&>(buffer.innerBuffer());
+	auto& dBuffer = dynamic_cast<DynamicBuffer&>(buffer);
+	auto& innerBuffer = dynamic_cast<BufferResource&>(*dBuffer.m_buffer);
 
 	auto binding = getBinding(name);
 	auto& descriptorSet = m_vkDescriptorSet;
 
 	vk::DescriptorBufferInfo info = innerBuffer.m_vkInfo;
-	info.setRange(buffer.m_alignment);
+	info.setRange(dBuffer.m_alignment);
 
 	auto writeDescriptorSet = vk::WriteDescriptorSet()
 		.setDstSet(*descriptorSet)
@@ -290,7 +291,7 @@ void RenderPass::bindResource(const std::string& name, DynamicBuffer& buffer)
 		.setPBufferInfo(&info);
 
 	m_vkDevice->updateDescriptorSets({ writeDescriptorSet }, {});
-	m_bindingAlignment[binding] = buffer.m_alignment;
+	m_bindingAlignment[binding] = dBuffer.m_alignment;
 }
 
 void RenderPass::bindResource(const std::string & name, IImageResource &image, ISampler &sampler)

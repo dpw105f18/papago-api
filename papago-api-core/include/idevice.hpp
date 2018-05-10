@@ -6,7 +6,7 @@ class ISurface;
 enum class Format;
 class ISwapchain;
 class IBufferResource;
-class DynamicBuffer;
+class IDynamicBuffer;
 class IImageResource;
 class ISampler;
 class IShaderProgram;
@@ -56,7 +56,7 @@ public:
 	virtual std::unique_ptr<IRenderPass> createRenderPass(IShaderProgram&, uint32_t width, uint32_t height, Format colorFormat) = 0;
 	virtual std::unique_ptr<IRenderPass> createRenderPass(IShaderProgram&, uint32_t width, uint32_t height, Format colorFormat, Format depthStencilFormat) = 0;
 	virtual void waitIdle() = 0;
-	virtual std::unique_ptr<DynamicBuffer> createDynamicUniformBuffer(size_t object_size, int object_count) = 0;
+	virtual std::unique_ptr<IDynamicBuffer> createDynamicUniformBuffer(size_t object_size, int object_count) = 0;
 
 	virtual std::unique_ptr<IGraphicsQueue> createGraphicsQueue(ISwapchain&) = 0;
 

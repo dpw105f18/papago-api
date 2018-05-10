@@ -24,7 +24,7 @@ public:
 
 	//Inherited from IRenderPass
 	void bindResource(const std::string& name, IBufferResource&) override;
-	void bindResource(const std::string& name, DynamicBuffer&) override;
+	void bindResource(const std::string& name, IDynamicBuffer&) override;
 	void bindResource(const std::string& name, IImageResource&, ISampler&) override;
 
 	vk::UniqueRenderPass m_vkRenderPass;
