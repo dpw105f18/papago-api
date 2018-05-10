@@ -216,7 +216,7 @@ void Parser::setShaderUniforms(Shader & shader, const std::string & source)
 			vk::DescriptorType descriptorType;
 			auto typeByteSize = 0u;
 
-			descriptorType = vk::DescriptorType::eUniformBufferDynamic;
+			descriptorType = vk::DescriptorType::eUniformBuffer;
 			typeByteSize = string_type_to_size(type);
 			
 

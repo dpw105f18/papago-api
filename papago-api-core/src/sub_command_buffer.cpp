@@ -43,7 +43,7 @@ void SubCommandBuffer::begin()
 	m_vkCommandBuffer->reset(vk::CommandBufferResetFlagBits::eReleaseResources);	//TODO: have usage and reset (or not) accordingly. -AM
 	m_vkCommandBuffer->begin(beginInfo);
 
-	m_vkCommandBuffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *m_renderPassPtr->m_vkGraphicsPipeline);
+	m_vkCommandBuffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *m_renderPassPtr->m_vkGraphicsPipelines[m_renderPassPtr->m_descriptorSetKeyMask]);
 }
 
 

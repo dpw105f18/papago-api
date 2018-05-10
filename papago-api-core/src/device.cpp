@@ -585,6 +585,8 @@ std::unique_ptr<IRenderPass> Device::createRenderPass(IShaderProgram & program, 
 
 std::unique_ptr<IRenderPass> Device::createRenderPass(IShaderProgram & program, uint32_t width, uint32_t height, Format colorFormat, Format depthStencilFormat)
 {
+	auto& innerProgram = dynamic_cast<ShaderProgram&>(program);
+	auto renderPasses = std::vector<vk::UniqueRenderPass>();
 	auto vkPass = createVkRenderpass(to_vulkan_format(colorFormat), to_vulkan_format(depthStencilFormat));
 	return std::make_unique<RenderPass>(
 		m_vkDevice,

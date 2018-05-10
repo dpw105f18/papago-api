@@ -1,4 +1,5 @@
 #pragma once
+#include <set>
 #include "ishader_program.hpp"
 
 class VertexShader;
@@ -13,6 +14,7 @@ public:
 	vk::UniqueShaderModule m_vkFragmentModule;
 	vk::PipelineShaderStageCreateInfo m_vkVertexStageCreateInfo;
 	vk::PipelineShaderStageCreateInfo m_vkFragmentStageCreateInfo;
+	std::set<uint32_t> getUniqueUniformBindings() const;
 
 	VertexShader& m_vertexShader;
 	FragmentShader& m_fragmentShader;

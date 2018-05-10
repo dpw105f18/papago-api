@@ -30,9 +30,17 @@ T& CommandRecorder<T>::setInput(IBufferResource& buffer)
 template<class T>
 T & CommandRecorder<T>::setDynamicIndex(const std::string & uniformName, size_t index)
 {
-	//IMPROVEMENT: cache this so we don't need to loop over bindings every time we set an index. -AM
-	std::set<uint32_t> uniqueBindings;
+	auto dynamicBufferMask = m_renderPassPtr->m_descriptorSetKeyMask;
+	auto bindingCount = m_renderPassPtr->m_shaderProgram.getUniqueUniformBindings().size();
 
+	uint64_t longOne = 0x01;
+	std::vector<uint32_t> dynamicBindings;
+	for (auto i = 0; i < 64; ++i) {
+		if (dynamicBufferMask & (longOne << i)) {
+			dynamicBindings.push_back(i);
+		}
+	}
+	/*
 	auto& vBindings = m_renderPassPtr->m_shaderProgram.m_vertexShader.getBindings();
 	auto& fBindings = m_renderPassPtr->m_shaderProgram.m_fragmentShader.getBindings();
 
@@ -49,16 +57,26 @@ T & CommandRecorder<T>::setDynamicIndex(const std::string & uniformName, size_t 
 	}
 
 	auto offsetCount = uniqueBindings.size();
-	auto dynamicOffsets = std::vector<uint32_t>(offsetCount);
+	*/
+	auto dynamicOffsets = std::vector<uint32_t>();
 
 	auto binding = m_renderPassPtr->getBinding(uniformName);
 	m_bindingDynamicOffset[binding] = m_renderPassPtr->m_bindingAlignment[binding] * index;
 
-	for (auto i = 0; i < offsetCount; ++i) {
-		dynamicOffsets[i] = m_bindingDynamicOffset[i];
+	std::vector<uint32_t> bindings;
+
+	for (auto& dynamicBindingOffset : m_bindingDynamicOffset)
+	{
+		bindings.push_back(dynamicBindingOffset.first);
 	}
 
-	m_vkCommandBuffer->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *m_renderPassPtr->m_vkPipelineLayout, 0, { *m_renderPassPtr->m_vkDescriptorSet }, dynamicOffsets);
+	std::sort(bindings.begin(), bindings.end());
+
+	for (auto b : bindings) {
+		dynamicOffsets.push_back(m_bindingDynamicOffset[b]);
+	}
+
+	m_vkCommandBuffer->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *m_renderPassPtr->m_vkPipelineLayouts[m_renderPassPtr->m_descriptorSetKeyMask], 0, { *m_renderPassPtr->m_vkDescriptorSets[m_renderPassPtr->m_descriptorSetKeyMask] }, dynamicOffsets);
 	return *this;
 }
 ;

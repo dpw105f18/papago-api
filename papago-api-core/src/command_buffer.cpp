@@ -148,28 +148,20 @@ void CommandBuffer::begin(RenderPass& renderPass, const vk::UniqueFramebuffer& r
 	m_vkCommandBuffer->beginRenderPass(m_vkRenderPassBeginInfo, vk::SubpassContents::eInline);
 
 	//TODO: can we assume a graphics bindpoint and pipeline? -AM
-	m_vkCommandBuffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *renderPass.m_vkGraphicsPipeline);
+	m_vkCommandBuffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *renderPass.m_vkGraphicsPipelines[renderPass.m_descriptorSetKeyMask]);
 
 	//set default bindings:
-	std::set<uint32_t> uniqueBindings;
-
-	auto& vBindings = m_renderPassPtr->m_shaderProgram.m_vertexShader.getBindings();
-	auto& fBindings = m_renderPassPtr->m_shaderProgram.m_fragmentShader.getBindings();
-
-	for (auto& vb : vBindings) {
-		if (vb.type == vk::DescriptorType::eUniformBufferDynamic) {
-			uniqueBindings.insert(vb.binding);
+	auto dynamicBufferMask = m_renderPassPtr->m_descriptorSetKeyMask;
+	auto offsetCount = 0;
+	uint64_t longOne = 0x01;
+	for (auto i = 0; i < 64; ++i) {
+		if (dynamicBufferMask & (longOne << i)) {
+			++offsetCount;
 		}
 	}
+	auto defaultDynamicOffsets = std::vector<uint32_t>(offsetCount, 0);
 
-	for (auto& fb : fBindings) {
-		if (fb.type == vk::DescriptorType::eUniformBufferDynamic) {
-			uniqueBindings.insert(fb.binding);
-		}
-	}
-	auto defaultDynamicOffsets = std::vector<uint32_t>(uniqueBindings.size(), 0);
-
-	m_vkCommandBuffer->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *m_renderPassPtr->m_vkPipelineLayout, 0, { *m_renderPassPtr->m_vkDescriptorSet }, defaultDynamicOffsets);
+	m_vkCommandBuffer->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *m_renderPassPtr->m_vkPipelineLayouts[renderPass.m_descriptorSetKeyMask], 0, { *m_renderPassPtr->m_vkDescriptorSets[renderPass.m_descriptorSetKeyMask] }, defaultDynamicOffsets);
 }
 
 void CommandBuffer::end()
