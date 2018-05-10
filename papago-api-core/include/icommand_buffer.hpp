@@ -37,8 +37,7 @@ public:
 	virtual T& setInput(IBufferResource&) = 0;
 	virtual T& setDynamicIndex(const std::string& uniformName, size_t) = 0;
 	virtual T& setIndexBuffer(IBufferResource&) = 0;
-	virtual T& drawIndexed(size_t indexCount, size_t instanceCount = 1, size_t firstIndex = 0, size_t vertexOffset = 0, size_t firstInstance = 0) = 0;
-	virtual T& draw(size_t indexCount, size_t instanceCount = 1, size_t firstIndex = 0, size_t firstInstance = 0) = 0;
+
 
 };
 
@@ -63,4 +62,7 @@ class IRecordingSubCommandBuffer
 {
 public:
 	virtual ~IRecordingSubCommandBuffer() = default;
+
+	virtual IRecordingSubCommandBuffer& drawIndexed(size_t indexCount, size_t instanceCount = 1, size_t firstIndex = 0, size_t vertexOffset = 0, size_t firstInstance = 0) = 0;
+	virtual IRecordingSubCommandBuffer& draw(size_t indexCount, size_t instanceCount = 1, size_t firstIndex = 0, size_t firstInstance = 0) = 0;
 };

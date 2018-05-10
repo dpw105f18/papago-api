@@ -21,6 +21,8 @@ public:
 	BufferResource(const BufferResource&) = delete;
 	BufferResource(BufferResource&& other) noexcept;
 
+	void upload(const std::vector<char>& data, size_t offset = 0);
+
 	// Inherited via Resource
 	bool inUse() override;
 	const BufferResourceElementType m_elementType;
@@ -58,8 +60,9 @@ public:
 	IBufferResource& innerBuffer() { return *m_buffer; }
 
 	// Inherited via IDynamicBuffer
-	void internalUpload(const std::vector<char>& data) override;
 	std::vector<char> internalDownload() override;
+	void internalUpload(const std::vector<char>&, size_t offset=0) override;
+	size_t getAlignment() override;
 };
 
 //TODO: move to buffer_resource.cpp?

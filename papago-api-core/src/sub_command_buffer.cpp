@@ -9,7 +9,6 @@
 SubCommandBuffer::SubCommandBuffer(const vk::UniqueDevice& device, uint32_t queueFamilyIndex, CommandBuffer* parent)
 	: CommandRecorder<IRecordingSubCommandBuffer>(device)
 {
-	m_state = parent;
 	vk::CommandPoolCreateInfo poolCreateInfo = {};
 	poolCreateInfo.setQueueFamilyIndex(queueFamilyIndex)
 		.setFlags(vk::CommandPoolCreateFlagBits::eResetCommandBuffer);

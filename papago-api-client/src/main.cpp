@@ -228,7 +228,7 @@ void multithreadedTest() {
 	auto graphicsQueue = device->createGraphicsQueue(*swapchain);
 	auto viewProjectionMatrix = device->createUniformBuffer(sizeof(glm::mat4));
 
-	glm::vec3 grid = { 4, 4, 4 };
+	glm::vec3 grid = { 2, 2, 2 };
 	glm::vec3 padding = {2.0f, 2.0f, 2.0f};
 	glm::vec3 dim = 0.5f * grid;
 	std::vector<UniformData> dynamicData;
@@ -244,6 +244,8 @@ void multithreadedTest() {
 	auto d_buffer = device->createDynamicUniformBuffer(sizeof(UniformData), dynamicData.size());
 
 	d_buffer->upload<UniformData>(dynamicData);
+
+	auto dbug = d_buffer->download<glm::mat4>();
 
 	auto cube = std::make_shared<Mesh>(Mesh::Cube(*device));
 	
@@ -275,7 +277,7 @@ void multithreadedTest() {
 	auto lastFrame = Clock::now();
 	long fps = 0;
 
-	size_t threadCount = 32;
+	size_t threadCount = 1;
 	ThreadPool threadPool = { threadCount };
 
 	int width, height, comp;

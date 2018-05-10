@@ -33,8 +33,8 @@ public:
 	T& setInput(IBufferResource &) override;
 	T& setDynamicIndex(const std::string& uniformName, size_t) override;
 	T& setIndexBuffer(IBufferResource &) override;
-	T& drawIndexed(size_t indexCount, size_t instanceCount = 1, size_t firstIndex = 0, size_t vertexOffset = 0, size_t firstInstance = 0) override;
-	T& draw(size_t vertexCount, size_t instanceCount = 1, size_t firstVertex = 0, size_t firstInstance = 0) override;
+	T& drawIndexed(size_t indexCount, size_t instanceCount = 1, size_t firstIndex = 0, size_t vertexOffset = 0, size_t firstInstance = 0);
+	T& draw(size_t vertexCount, size_t instanceCount = 1, size_t firstVertex = 0, size_t firstInstance = 0);
 
 	std::map<uint32_t, uint32_t> m_bindingDynamicOffset;
 	std::set<Resource*> m_resourcesInUse;
@@ -47,7 +47,7 @@ protected:
 	vk::RenderPassBeginInfo m_vkRenderPassBeginInfo;
 	vk::Extent2D m_vkCurrentRenderTargetExtent;
 
-	CommandBuffer* m_state; 
+
 
 	const vk::UniqueDevice& m_vkDevice;
 

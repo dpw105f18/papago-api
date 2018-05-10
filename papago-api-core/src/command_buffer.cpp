@@ -41,9 +41,6 @@ IRecordingCommandBuffer & CommandBuffer::execute(std::vector<std::unique_ptr<ISu
 CommandBuffer::CommandBuffer(const vk::UniqueDevice &device, int queueFamilyIndex)
 	: CommandRecorder<IRecordingCommandBuffer>(device), m_queueFamilyIndex(queueFamilyIndex)
 {
-	//CommandRecorder uses parent to access state:
-	m_state = this;
-
 	vk::CommandPoolCreateInfo poolCreateInfo = {};
 	poolCreateInfo.setQueueFamilyIndex(queueFamilyIndex)
 		.setFlags(vk::CommandPoolCreateFlagBits::eResetCommandBuffer);
@@ -69,7 +66,6 @@ void CommandBuffer::record(IRenderPass & renderPass, ISwapchain & swapchain, std
 CommandBuffer::CommandBuffer(CommandBuffer &&other)
 	: CommandRecorder<IRecordingCommandBuffer>(std::move(other))
 {
-	m_state = this;
 }
 
 

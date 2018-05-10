@@ -8,6 +8,13 @@ BufferResource::BufferResource(BufferResource&& other) noexcept
 {
 }
 
+void BufferResource::upload(const std::vector<char>& data, size_t offset)
+{
+	auto mappedMemory = m_vkDevice->mapMemory(*m_vkMemory, offset, data.size());
+	memcpy(mappedMemory, data.data(), data.size());
+	m_vkDevice->unmapMemory(*m_vkMemory);
+}
+
 inline bool BufferResource::inUse()
 {
 	return m_vkFence
@@ -67,12 +74,19 @@ BufferResource::BufferResource(
 	device->bindBufferMemory(*m_vkBuffer, *m_vkMemory, 0);
 }
 
-void DynamicBuffer::internalUpload(const std::vector<char>& data)
-{
-	return m_buffer->upload(data);
-}
 
 std::vector<char> DynamicBuffer::internalDownload()
 {
 	return m_buffer->download();
+}
+
+void DynamicBuffer::internalUpload(const std::vector<char>& data, size_t offset)
+{
+	auto& internalBuffer = dynamic_cast<BufferResource&>(*m_buffer);
+	internalBuffer.upload(data, offset);
+}
+
+size_t DynamicBuffer::getAlignment()
+{
+	return m_alignment;
 }
