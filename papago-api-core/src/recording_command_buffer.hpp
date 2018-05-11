@@ -31,8 +31,6 @@ public:
 
 	// Inherited via IRecordingCommandBuffer
 	T& setDynamicIndex(const std::string& uniformName, size_t) override;
-	T& drawIndexed(size_t indexCount, size_t instanceCount = 1, size_t firstIndex = 0, size_t vertexOffset = 0, size_t firstInstance = 0);
-	T& draw(size_t vertexCount, size_t instanceCount = 1, size_t firstVertex = 0, size_t firstInstance = 0);
 
 	std::map<uint32_t, uint32_t> m_bindingDynamicOffset;
 	std::set<Resource*> m_resourcesInUse;

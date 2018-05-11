@@ -23,6 +23,8 @@ public:
 	// Inherited via ISubCommandBuffer
 	void record(IRenderPass &, std::function<void(IRecordingSubCommandBuffer&)>) override;
 
+	IRecordingSubCommandBuffer& drawIndexed(size_t indexCount, size_t instanceCount = 1, size_t firstIndex = 0, size_t vertexOffset = 0, size_t firstInstance = 0) override;
+	IRecordingSubCommandBuffer& draw(size_t vertexCount, size_t instanceCount = 1, size_t firstVertex = 0, size_t firstInstance = 0) override;
 	IRecordingSubCommandBuffer& setVertexBuffer(IBufferResource &) override;
 	IRecordingSubCommandBuffer& setIndexBuffer(IBufferResource &) override;
 

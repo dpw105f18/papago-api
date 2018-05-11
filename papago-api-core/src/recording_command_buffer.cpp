@@ -49,27 +49,5 @@ T & CommandRecorder<T>::setDynamicIndex(const std::string & uniformName, size_t 
 }
 ;
 
-template<class T>
-T& CommandRecorder<T>::drawIndexed(size_t indexCount, size_t instanceCount, size_t firstIndex, size_t vertexOffset, size_t firstInstance)
-{
-	if (m_renderPassPtr == nullptr)
-	{
-		PAPAGO_ERROR("drawIndexed(...) called while not in a begin-context (begin(...) has not been called)");
-	}
-
-	m_vkCommandBuffer->drawIndexed(indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
-	return *this;
-}
-
-template<class T>
-T & CommandRecorder<T>::draw(size_t vertexCount, size_t instanceCount, size_t firstVertex, size_t firstInstance)
-{
-	if (m_renderPassPtr == nullptr)
-	{
-		PAPAGO_ERROR("drawIndexed(...) called while not in a begin-context (begin(...) has not been called)");
-	}
-
-	m_vkCommandBuffer->draw(vertexCount, instanceCount, firstVertex, firstInstance);
-}
 
 

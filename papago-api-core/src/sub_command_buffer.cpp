@@ -60,6 +60,27 @@ void SubCommandBuffer::record(IRenderPass &renderPass, std::function<void(IRecor
 	end();
 }
 
+IRecordingSubCommandBuffer & SubCommandBuffer::drawIndexed(size_t indexCount, size_t instanceCount, size_t firstIndex, size_t vertexOffset, size_t firstInstance)
+{
+	if (m_renderPassPtr == nullptr)
+	{
+		PAPAGO_ERROR("drawIndexed(...) called while not in a begin-context (begin(...) has not been called)");
+	}
+
+	m_vkCommandBuffer->drawIndexed(indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
+	return *this;
+}
+
+IRecordingSubCommandBuffer & SubCommandBuffer::draw(size_t vertexCount, size_t instanceCount, size_t firstVertex, size_t firstInstance)
+{
+	if (m_renderPassPtr == nullptr)
+	{
+		PAPAGO_ERROR("drawIndexed(...) called while not in a begin-context (begin(...) has not been called)");
+	}
+
+	m_vkCommandBuffer->draw(vertexCount, instanceCount, firstVertex, firstInstance);
+}
+
 IRecordingSubCommandBuffer & SubCommandBuffer::setVertexBuffer(IBufferResource &buffer)
 {
 	if (m_renderPassPtr == nullptr)
