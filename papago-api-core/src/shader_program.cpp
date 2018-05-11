@@ -1,5 +1,5 @@
 #include "standard_header.hpp"
-#include "shader_program.h"
+#include "shader_program.hpp"
 #include "vertex_shader.hpp"
 #include "fragment_shader.hpp"
 #include "command_buffer.hpp"
@@ -32,4 +32,27 @@ ShaderProgram::ShaderProgram(const vk::UniqueDevice& device, VertexShader& verte
 		.setStage(vk::ShaderStageFlagBits::eFragment)
 		.setPName(fragmentShader.m_entryPoint.c_str());
 
+}
+
+std::set<uint32_t> ShaderProgram::getUniqueUniformBindings() const
+{
+
+	std::set<uint32_t> uniqueBindings;
+
+	auto& vBindings = m_vertexShader.getBindings();
+	auto& fBindings = m_fragmentShader.getBindings();
+
+	for (auto& vb : vBindings) {
+		if (vb.type == vk::DescriptorType::eUniformBuffer) {
+			uniqueBindings.insert(vb.binding);
+		}
+	}
+
+	for (auto& fb : fBindings) {
+		if (fb.type == vk::DescriptorType::eUniformBuffer) {
+			uniqueBindings.insert(fb.binding);
+		}
+	}
+
+	return uniqueBindings;
 }

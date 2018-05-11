@@ -1,6 +1,7 @@
 #include "standard_header.hpp"
 #include "swap_chain.hpp"
 #include "image_resource.hpp"
+#include "ibuffer_resource.hpp"
 
 SwapChain::operator vk::SwapchainKHR&()
 {

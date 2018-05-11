@@ -60,9 +60,6 @@
     <ClInclude Include="src\sampler.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\shader_program.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="include\ishader.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -103,6 +100,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\irender_pass.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\recording_command_buffer.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\shader_program.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -155,6 +158,12 @@
     <ClCompile Include="src\api_enums.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\sub_command_buffer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\recording_command_buffer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="shader\shader.frag">
@@ -190,5 +199,6 @@
     <None Include="shader\colorFrag.frag">
       <Filter>Resource Files</Filter>
     </None>
+    <None Include="src\image_resource.impl" />
   </ItemGroup>
 </Project>

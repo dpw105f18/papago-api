@@ -11,8 +11,6 @@ struct Binding
 
 class Shader {
 public:
-
-protected:
 	Shader(const std::vector<char>& bytecode, const std::string entryPoint);
 	const std::string m_entryPoint;
 	std::vector<char> m_code;
@@ -21,6 +19,5 @@ protected:
 	std::vector<Binding> getBindings() const;
 	bool bindingExists(const std::string& name);
 private:
-	friend class CommandBuffer;
-	friend class Parser;
+
 };

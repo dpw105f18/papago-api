@@ -1,4 +1,7 @@
 #include "standard_header.hpp"
+#include <set>
+#include "command_buffer.hpp"
+#include "sub_command_buffer.hpp"
 #include "surface.hpp"
 #include "device.hpp"
 #include "swap_chain.hpp"
@@ -8,8 +11,8 @@
 #include "render_pass.hpp"
 #include "sampler.hpp"
 #include "graphics_queue.hpp"
-#include "shader_program.h"
-#include <set>
+#include "shader_program.hpp"
+#include "buffer_resource.hpp"
 
 std::vector<std::unique_ptr<IDevice>> IDevice::enumerateDevices(ISurface & surface, const Features & features, const Extensions & extensions)
 {
@@ -186,6 +189,7 @@ bool Device::areExtensionsSupported(const vk::PhysicalDevice & physicalDevice, c
 	}
 	return requiredExtensions.empty();
 }
+
 
 vk::UniqueRenderPass Device::createVkRenderpass(vk::Format colorFormat, vk::Format depthStencilFormat) const
 {
@@ -456,14 +460,63 @@ std::unique_ptr<IGraphicsQueue> Device::createGraphicsQueue(ISwapchain& swapChai
 		(SwapChain&)swapChain );
 }
 
-std::unique_ptr<ICommandBuffer> Device::createCommandBuffer(Usage usage)
+std::unique_ptr<ICommandBuffer> Device::createCommandBuffer()
 {
 	auto queueFamilyIndices = findQueueFamilies(m_vkPhysicalDevice, m_surface);
 	return std::make_unique<CommandBuffer>(
 		m_vkDevice, 
-		queueFamilyIndices.graphicsFamily, 
-		usage);
+		queueFamilyIndices.graphicsFamily);
 }
+
+std::unique_ptr<ISubCommandBuffer> Device::createSubCommandBuffer()
+{
+	auto queueFamilyIndex = findQueueFamilies(m_vkPhysicalDevice, m_surface).graphicsFamily;
+	return std::make_unique<SubCommandBuffer>(m_vkDevice, queueFamilyIndex);
+}
+
+std::unique_ptr<IDynamicBufferResource> Device::createDynamicUniformBuffer(size_t objectSize, int objectCount)
+{
+	auto dynamic_alligment = objectSize;
+	const auto properties = m_vkPhysicalDevice.getProperties();
+	const auto allignment = properties.limits.minUniformBufferOffsetAlignment;
+
+	if(allignment > 0)
+	{
+		dynamic_alligment = (dynamic_alligment + allignment - 1) & ~(allignment - 1);
+	}
+
+	const auto buffer_size = dynamic_alligment * objectCount;
+	auto buffer = BufferResource::createBufferResource(
+		m_vkPhysicalDevice, 
+		m_vkDevice, 
+		buffer_size, 
+		vk::BufferUsageFlagBits::eUniformBuffer, 
+		vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+	return std::make_unique<DynamicBufferResource>(std::move(buffer), dynamic_alligment, objectCount);
+}
+
+/* //TODO: delete if not used!
+//TODO: remove 2D from method name and let dimension be determined by the (number of) arguments? -AM
+ImageResource Device::createTexture2D(uint32_t width, uint32_t height, vk::Format format )
+{
+	vk::Extent3D extent = { width, height, 1 };
+	vk::ImageCreateInfo info;
+	info.setImageType(vk::ImageType::e2D)
+		.setExtent(extent)
+		.setFormat(format)
+		.setInitialLayout(vk::ImageLayout::eUndefined)
+		.setMipLevels(1)
+		.setArrayLayers(1)
+		.setUsage(vk::ImageUsageFlagBits::eTransferDst 
+			| vk::ImageUsageFlagBits::eSampled 
+			| vk::ImageUsageFlagBits::eColorAttachment
+			| vk::ImageUsageFlagBits::eTransferSrc);
+
+	auto image = m_vkDevice->createImage(info);
+	auto memoryRequirements = m_vkDevice->getImageMemoryRequirements(image);
+	return ImageResource(image, *this, vk::ImageAspectFlagBits::eColor, format, extent, memoryRequirements);
+}
+*/
 
 std::unique_ptr<IShaderProgram> Device::createShaderProgram(IVertexShader &vertexShader, IFragmentShader &fragmentShader)
 {
@@ -539,6 +592,8 @@ std::unique_ptr<IRenderPass> Device::createRenderPass(IShaderProgram & program, 
 
 std::unique_ptr<IRenderPass> Device::createRenderPass(IShaderProgram & program, uint32_t width, uint32_t height, Format colorFormat, Format depthStencilFormat)
 {
+	auto& innerProgram = dynamic_cast<ShaderProgram&>(program);
+	auto renderPasses = std::vector<vk::UniqueRenderPass>();
 	auto vkPass = createVkRenderpass(to_vulkan_format(colorFormat), to_vulkan_format(depthStencilFormat));
 	return std::make_unique<RenderPass>(
 		m_vkDevice,
@@ -613,7 +668,7 @@ Device::Device(vk::PhysicalDevice physicalDevice, vk::UniqueDevice &device, Surf
 	: m_vkPhysicalDevice(physicalDevice)
 	, m_vkDevice(std::move(device))
 	, m_surface(surface)
-	, m_internalCommandBuffer(CommandBuffer{ m_vkDevice, findQueueFamilies(physicalDevice, surface).graphicsFamily, Usage::eReset })
+	, m_internalCommandBuffer(CommandBuffer{ m_vkDevice, findQueueFamilies(physicalDevice, surface).graphicsFamily})
 {
 	m_vkInternalQueue = m_vkDevice->getQueue(findQueueFamilies(physicalDevice, surface).graphicsFamily, 0);
 }

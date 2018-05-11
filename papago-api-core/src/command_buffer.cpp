@@ -5,14 +5,41 @@
 #include "sampler.hpp"
 #include "vertex_shader.hpp"
 #include "fragment_shader.hpp"
+#include "sub_command_buffer.hpp"
+#include "ibuffer_resource.hpp"
+#include "recording_command_buffer.cpp" //<-- resolves linker issues. -AM -- see: https://www.codeproject.com/Articles/48575/How-to-define-a-template-class-in-a-h-file-and-imp 
 
 CommandBuffer::operator vk::CommandBuffer&()
 {
 	return *m_vkCommandBuffer;
 }
 
-CommandBuffer::CommandBuffer(const vk::UniqueDevice &device, int queueFamilyIndex, Usage usage)
-	: m_usage(usage), m_vkDevice(device)
+IRecordingCommandBuffer & CommandBuffer::execute(std::vector<std::unique_ptr<ISubCommandBuffer>>& subCommands)
+{
+	//TODO: check subCommands to see if they are ready to be executed? -AM
+
+	auto secondaryCommandBuffers = std::vector<vk::CommandBuffer>();
+	secondaryCommandBuffers.reserve(subCommands.size());
+
+	for (auto& isub : subCommands) {
+		auto& internalSub = dynamic_cast<SubCommandBuffer&>(*isub);
+		secondaryCommandBuffers.push_back(static_cast<vk::CommandBuffer>(internalSub));
+	}
+	
+	m_vkCommandBuffer->endRenderPass();
+	m_vkCommandBuffer->beginRenderPass(m_vkRenderPassBeginInfo, vk::SubpassContents::eSecondaryCommandBuffers);
+
+	m_vkCommandBuffer->executeCommands(secondaryCommandBuffers);
+	m_boundDescriptorBindings.clear();
+
+	m_vkCommandBuffer->endRenderPass();
+	m_vkCommandBuffer->beginRenderPass(m_vkRenderPassBeginInfo, vk::SubpassContents::eInline);
+
+	return *this;
+}
+
+CommandBuffer::CommandBuffer(const vk::UniqueDevice &device, int queueFamilyIndex)
+	: CommandRecorder<IRecordingCommandBuffer>(device), m_queueFamilyIndex(queueFamilyIndex)
 {
 	vk::CommandPoolCreateInfo poolCreateInfo = {};
 	poolCreateInfo.setQueueFamilyIndex(queueFamilyIndex)
@@ -35,6 +62,12 @@ void CommandBuffer::record(IRenderPass & renderPass, ISwapchain & swapchain, std
 	func(*this);
 	end();
 }
+
+CommandBuffer::CommandBuffer(CommandBuffer &&other)
+	: CommandRecorder<IRecordingCommandBuffer>(std::move(other))
+{
+}
+
 
 void CommandBuffer::record(IRenderPass & renderPass, IImageResource & target, std::function<void(IRecordingCommandBuffer&)> func)
 {
@@ -83,38 +116,75 @@ void CommandBuffer::record(IRenderPass& renderPass, IImageResource& color, IImag
 	end();
 }
 
-long CommandBuffer::getBinding(const std::string& name)
+void CommandBuffer::begin(RenderPass& renderPass, const vk::UniqueFramebuffer& renderTarget, vk::Extent2D extent)
 {
-	long binding = -1;
-	auto& shaderProgram = m_renderPassPtr->m_shaderProgram;
+	m_renderPassPtr = &renderPass;
+	m_vkCurrentRenderTargetExtent = extent;
 
-	if (shaderProgram.m_vertexShader.bindingExists(name)) {
-		binding = shaderProgram.m_vertexShader.m_bindings[name].binding;
-	}
-	else if (shaderProgram.m_fragmentShader.bindingExists(name)) {
-		binding = shaderProgram.m_fragmentShader.m_bindings[name].binding;
-	}
-	else {
-		PAPAGO_ERROR("Invalid uniform name!");
-	}
+	vk::Rect2D renderArea = {};
+	renderArea.setOffset({ 0,0 })
+		.setExtent(extent);
 
-	return binding;
+	m_vkRenderPassBeginInfo = {};
+	m_vkRenderPassBeginInfo.setRenderPass(static_cast<vk::RenderPass>(renderPass))
+		.setFramebuffer(*renderTarget)
+		.setRenderArea(renderArea)
+		.setClearValueCount(0)
+		.setPClearValues(nullptr);
+
+	vk::CommandBufferBeginInfo beginInfo = {};
+	beginInfo.setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);	//TODO: read from Usage in constructor? -AM
+
+	m_vkCommandBuffer->begin(beginInfo);
+	m_vkCommandBuffer->beginRenderPass(m_vkRenderPassBeginInfo, vk::SubpassContents::eInline);
+
+	//TODO: can we assume a graphics bindpoint and pipeline? -AM
+	m_vkCommandBuffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *renderPass.m_vkGraphicsPipelines[renderPass.m_descriptorSetKeyMask]);
+
+	//set default bindings:
+	auto dynamicBufferMask = m_renderPassPtr->m_descriptorSetKeyMask;
+	auto offsetCount = 0;
+	uint64_t longOne = 0x01;
+	for (auto i = 0; i < 64; ++i) {
+		if (dynamicBufferMask & (longOne << i)) {
+			++offsetCount;
+		}
+	}
+	auto defaultDynamicOffsets = std::vector<uint32_t>(offsetCount, 0);
+
+	m_vkCommandBuffer->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *m_renderPassPtr->m_vkPipelineLayouts[renderPass.m_descriptorSetKeyMask], 0, { *m_renderPassPtr->m_vkDescriptorSets[renderPass.m_descriptorSetKeyMask] }, defaultDynamicOffsets);
 }
 
-IRecordingCommandBuffer & CommandBuffer::clearColorBuffer(float red, float green, float blue, float alpha)
+void CommandBuffer::end()
+{
+	m_renderPassPtr = nullptr;
+	m_vkRenderPassBeginInfo = {};
+	m_vkCurrentRenderTargetExtent = vk::Extent2D();
+	m_vkCommandBuffer->endRenderPass();
+	m_vkCommandBuffer->end();
+}
+
+void CommandBuffer::drawInstanced(size_t instanceVertexCount, size_t instanceCount, size_t startVertexLocation, size_t startInstanceLocation)
+{
+	m_vkCommandBuffer->draw(instanceVertexCount, instanceCount, startVertexLocation, startInstanceLocation);
+}
+
+
+// From here and down. Clearing methods.
+IRecordingCommandBuffer& CommandBuffer::clearColorBuffer(float red, float green, float blue, float alpha)
 {
 	if (m_renderPassPtr == nullptr)
 	{
 		PAPAGO_ERROR("clearColorBuffer(float red...) called while not in a begin-context (begin(...) has not been called)");
 	}
 
-	auto colorArray = std::array<float, 4>{ red,green,blue,alpha };
+	auto colorArray = std::array<float, 4>{ red, green, blue, alpha };
 	auto color = vk::ClearColorValue(colorArray);
-	clearAttatchment(color, vk::ImageAspectFlagBits::eColor);
+	clearAttachment(color, vk::ImageAspectFlagBits::eColor);
 	return *this;
 }
 
-IRecordingCommandBuffer & CommandBuffer::clearColorBuffer(int32_t red, int32_t green, int32_t blue, int32_t alpha)
+IRecordingCommandBuffer& CommandBuffer::clearColorBuffer(int32_t red, int32_t green, int32_t blue, int32_t alpha)
 {
 	if (m_renderPassPtr == nullptr)
 	{
@@ -123,11 +193,11 @@ IRecordingCommandBuffer & CommandBuffer::clearColorBuffer(int32_t red, int32_t g
 
 	auto colorArray = std::array<int32_t, 4>{ red, green, blue, alpha };
 	auto color = vk::ClearColorValue(colorArray);
-	clearAttatchment(color, vk::ImageAspectFlagBits::eColor);
+	clearAttachment(color, vk::ImageAspectFlagBits::eColor);
 	return *this;
 }
 
-IRecordingCommandBuffer & CommandBuffer::clearColorBuffer(uint32_t red, uint32_t green, uint32_t blue, uint32_t alpha)
+IRecordingCommandBuffer& CommandBuffer::clearColorBuffer(uint32_t red, uint32_t green, uint32_t blue, uint32_t alpha)
 {
 	if (m_renderPassPtr == nullptr)
 	{
@@ -136,11 +206,11 @@ IRecordingCommandBuffer & CommandBuffer::clearColorBuffer(uint32_t red, uint32_t
 
 	auto colorArray = std::array<uint32_t, 4>{ red, green, blue, alpha };
 	auto color = vk::ClearColorValue(colorArray);
-	clearAttatchment(color, vk::ImageAspectFlagBits::eColor);
+	clearAttachment(color, vk::ImageAspectFlagBits::eColor);
 	return *this;
 }
 
-IRecordingCommandBuffer & CommandBuffer::clearDepthStencilBuffer(float depth, uint32_t stencil)
+IRecordingCommandBuffer& CommandBuffer::clearDepthStencilBuffer(float depth, uint32_t stencil)
 {
 	if (m_renderPassPtr == nullptr)
 	{
@@ -151,7 +221,7 @@ IRecordingCommandBuffer & CommandBuffer::clearDepthStencilBuffer(float depth, ui
 	if (flags != DepthStencilFlags::eNone) {
 		if (flags == (DepthStencilFlags::eDepth | DepthStencilFlags::eStencil)) {
 			auto color = vk::ClearDepthStencilValue({ depth, stencil });
-			clearAttatchment(color, vk::ImageAspectFlagBits::eDepth | vk::ImageAspectFlagBits::eStencil);
+			clearAttachment(color, vk::ImageAspectFlagBits::eDepth | vk::ImageAspectFlagBits::eStencil);
 		}
 		else {
 			PAPAGO_ERROR("Tried to clear buffer which is not both depth and stencil!");
@@ -174,7 +244,7 @@ IRecordingCommandBuffer& CommandBuffer::clearDepthBuffer(float value)
 	if (flags != DepthStencilFlags::eNone) {
 		if (flags == DepthStencilFlags::eDepth) {
 			auto color = vk::ClearDepthStencilValue(value);
-			clearAttatchment(color, vk::ImageAspectFlagBits::eDepth);
+			clearAttachment(color, vk::ImageAspectFlagBits::eDepth);
 		}
 		else {
 			PAPAGO_ERROR("Tried to clear buffer which is not depth!");
@@ -197,7 +267,7 @@ IRecordingCommandBuffer& CommandBuffer::clearStencilBuffer(uint32_t value)
 	if (flags != DepthStencilFlags::eNone) {
 		if (flags == DepthStencilFlags::eStencil) {
 			auto color = vk::ClearDepthStencilValue(0, value);
-			clearAttatchment(color, vk::ImageAspectFlagBits::eStencil);
+			clearAttachment(color, vk::ImageAspectFlagBits::eStencil);
 		}
 		else {
 			PAPAGO_ERROR("Tried to clear buffer which is not stencil!");
@@ -209,7 +279,7 @@ IRecordingCommandBuffer& CommandBuffer::clearStencilBuffer(uint32_t value)
 	return *this;
 }
 
-void CommandBuffer::clearAttatchment(const vk::ClearValue& clearValue, vk::ImageAspectFlags aspectFlags)
+void CommandBuffer::clearAttachment(const vk::ClearValue & clearValue, vk::ImageAspectFlags aspectFlags)
 {
 	vk::ClearAttachment clearInfo = {};
 	clearInfo.setAspectMask(aspectFlags)
@@ -220,140 +290,4 @@ void CommandBuffer::clearAttatchment(const vk::ClearValue& clearValue, vk::Image
 	vk::Rect2D rect = { { 0, 0 },{ m_vkCurrentRenderTargetExtent.width, m_vkCurrentRenderTargetExtent.height } };
 	clearRect.setRect(rect).setBaseArrayLayer(0).setLayerCount(1);
 	m_vkCommandBuffer->clearAttachments(clearInfo, { clearRect });
-}
-
-IRecordingCommandBuffer& CommandBuffer::setUniform(const std::string & name, IImageResource & image, ISampler & sampler)
-{
-	if (m_renderPassPtr == nullptr)
-	{
-		PAPAGO_ERROR("setUniform(name, image, sampler) called while not in a begin-context (begin(...) has not been called)");
-	}
-
-	auto& backendImage = static_cast<ImageResource&>(image);
-	auto& backendSampler = static_cast<Sampler&>(sampler);
-	auto binding = getBinding(name);
-
-	vk::DescriptorImageInfo info = {};
-	info.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
-		.setImageView(*backendImage.m_vkImageView)
-		.setSampler(static_cast<vk::Sampler>(backendSampler));
-
-	auto writeDescriptorSet = vk::WriteDescriptorSet(*m_renderPassPtr->m_vkDescriptorSet, binding)
-		.setDescriptorCount(1)
-		.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
-		.setPImageInfo(&info);
-
-	m_vkDevice->updateDescriptorSets({ writeDescriptorSet }, {});
-	m_vkCommandBuffer->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *m_renderPassPtr->m_vkPipelineLayout, 0, { *m_renderPassPtr->m_vkDescriptorSet }, { });
-
-	m_resourcesInUse.emplace(&backendImage);
-	return *this;
-}
-
-IRecordingCommandBuffer& CommandBuffer::setInput(IBufferResource& buffer)
-{
-	if (m_renderPassPtr == nullptr)
-	{
-		PAPAGO_ERROR("setInput(buffer) called while not in a begin-context (begin(...) has not been called)");
-	}
-
-	//TODO: find a more general way to fix offsets
-	m_vkCommandBuffer->bindVertexBuffers(
-		0, 
-		{ *(static_cast<BufferResource&>(buffer)).m_vkBuffer }, 
-		{ 0 });
-	return *this;
-}
-
-void CommandBuffer::begin(RenderPass& renderPass, const vk::UniqueFramebuffer& renderTarget, vk::Extent2D extent)
-{
-	m_renderPassPtr = &renderPass;
-	m_vkCurrentRenderTargetExtent = extent;
-
-	vk::Rect2D renderArea = {};
-	renderArea.setOffset({ 0,0 })
-		.setExtent(extent);
-
-	vk::RenderPassBeginInfo renderPassBeginInfo = {};
-	renderPassBeginInfo.setRenderPass(static_cast<vk::RenderPass>(renderPass))
-		.setFramebuffer(*renderTarget)
-		.setRenderArea(renderArea)
-		.setClearValueCount(0)
-		.setPClearValues(nullptr);
-
-	vk::CommandBufferBeginInfo beginInfo = {};
-	beginInfo.setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);	//TODO: read from Usage in constructor? -AM
-
-	m_vkCommandBuffer->begin(beginInfo);
-	m_vkCommandBuffer->beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
-
-	//TODO: can we assume a graphics bindpoint and pipeline? -AM
-	m_vkCommandBuffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *renderPass.m_vkGraphicsPipeline);
-}
-
-void CommandBuffer::end()
-{
-	m_renderPassPtr = nullptr;
-	m_vkCurrentRenderTargetExtent = vk::Extent2D();
-	m_vkCommandBuffer->endRenderPass();
-	m_vkCommandBuffer->end();
-}
-
-IRecordingCommandBuffer& CommandBuffer::setIndexBuffer(IBufferResource &indexBuffer)
-{
-	if (m_renderPassPtr == nullptr)
-	{
-		PAPAGO_ERROR("setIndexBuffer(indexBuffer) called while not in a begin-context (begin(...) has not been called)");
-	}
-
-	auto& internalIndexBuffer = static_cast<BufferResource&>(indexBuffer);
-	auto indexType = internalIndexBuffer.m_elementType == BufferResourceElementType::eUint32 ? vk::IndexType::eUint32 : vk::IndexType::eUint16;
-
-	m_vkCommandBuffer->bindIndexBuffer(
-		*internalIndexBuffer.m_vkBuffer, 
-		0, 
-		indexType);
-	return *this;
-}
-
-void CommandBuffer::drawInstanced(size_t instanceVertexCount, size_t instanceCount, size_t startVertexLocation, size_t startInstanceLocation)
-{
-	m_vkCommandBuffer->draw(instanceVertexCount, instanceCount, startVertexLocation, startInstanceLocation);
-}
-
-IRecordingCommandBuffer& CommandBuffer::setUniform(const std::string & uniformName, IBufferResource & buffer)
-{
-	if (m_renderPassPtr == nullptr)
-	{
-		PAPAGO_ERROR("setUniform(uniformName, buffer) called while not in a begin-context (begin(...) has not been called)");
-	}
-
-	auto& backendBuffer = static_cast<BufferResource&>(buffer);
-	auto binding = getBinding(uniformName);
-	auto& descriptorSet = m_renderPassPtr->m_vkDescriptorSet;
-
-	auto writeDescriptorSet = vk::WriteDescriptorSet()
-		.setDstSet(*descriptorSet)
-		.setDstBinding(binding)
-		.setDescriptorType(vk::DescriptorType::eUniformBuffer)
-		.setDescriptorCount(1)
-		.setPBufferInfo(&backendBuffer.m_vkInfo);
-
-	m_vkDevice->updateDescriptorSets({writeDescriptorSet}, {});
-	m_vkCommandBuffer->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *m_renderPassPtr->m_vkPipelineLayout, 0, { *descriptorSet }, {});
-
-	m_resourcesInUse.emplace(&backendBuffer);
-	return *this;
-}
-
-
-IRecordingCommandBuffer& CommandBuffer::drawIndexed(size_t indexCount, size_t instanceCount, size_t firstIndex, size_t vertexOffset, size_t firstInstance)
-{
-	if (m_renderPassPtr == nullptr)
-	{
-		PAPAGO_ERROR("drawIndexed(...) called while not in a begin-context (begin(...) has not been called)");
-	}
-
-	m_vkCommandBuffer->drawIndexed(indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
-	return *this;
 }

@@ -14,7 +14,6 @@ public:
 	uint32_t getHeight() const override;
 	Format getFormat() const override;
 
-private:
 	vk::UniqueSwapchainKHR m_vkSwapChain;
 	std::vector<ImageResource> m_colorResources;
 	std::vector<ImageResource> m_depthResources;
@@ -25,11 +24,4 @@ private:
 
 	//updated through GraphicsQueue (both present() and constructor)
 	uint32_t m_currentFramebufferIndex;
-
-	//TODO: use ImageResource when it's done?
-	friend class Device;
-
-	friend class CommandBuffer; //<-- used to get vk::Framebuffer's
-
-	friend class GraphicsQueue;
 };

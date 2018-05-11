@@ -2,9 +2,10 @@
 #include "render_pass.hpp"
 #include "vertex_shader.hpp"
 #include "fragment_shader.hpp"
-#include "shader_program.h"
-#include "image_resource.hpp"
+#include "shader_program.hpp"
 #include "sampler.hpp"
+#include "buffer_resource.hpp"
+#include "image_resource.hpp"
 
 RenderPass::operator vk::RenderPass&()
 {
@@ -21,147 +22,32 @@ RenderPass::RenderPass(
 	, m_vkDevice(device)
 	, m_vkRenderPass(std::move(vkRenderPass))
 	, m_depthStencilFlags(depthStencilFlags)
+	, m_vkExtent(extent)
 {
-	setupDescriptorSet(device, program.m_vertexShader, program.m_fragmentShader);
 
-	vk::PipelineShaderStageCreateInfo shaderStages[] = { 
-		program.m_vkVertexStageCreateInfo,
-		program.m_vkFragmentStageCreateInfo
-	};
-	
-	vk::PipelineVertexInputStateCreateInfo vertexInputInfo;
-	//do the shader require a vertex buffer?
-	auto attributeDescription = getAttributeDescriptions();
-	vk::VertexInputBindingDescription bindingDescription;
-
-	if (!m_shaderProgram.m_vertexShader.m_input.empty()) {
-
-		bindingDescription = getBindingDescription();
-
-		//TODO: how to handle vertex buffer existence and count? -AM
-		vertexInputInfo.setVertexBindingDescriptionCount(1)
-			.setPVertexBindingDescriptions(&bindingDescription)
-			.setVertexAttributeDescriptionCount(attributeDescription.size())
-			.setPVertexAttributeDescriptions(attributeDescription.data()); 
-	}
-	else {
-		vertexInputInfo.setVertexBindingDescriptionCount(0)
-			.setPVertexBindingDescriptions(nullptr)
-			.setVertexAttributeDescriptionCount(0)
-			.setPVertexAttributeDescriptions(nullptr);
-	}
-
-	vk::PipelineInputAssemblyStateCreateInfo inputAssembly;
-	inputAssembly.setTopology(vk::PrimitiveTopology::eTriangleList);	//<-- TODO: make setable
-
-	auto viewport = vk::Viewport(0.0f, 0.0f, extent.width, extent.height, 0.0f, 1.0f);
-	auto scissor = vk::Rect2D({ 0, 0 }, extent);
-
-	vk::PipelineViewportStateCreateInfo viewportState;
-	viewportState.setViewportCount(1)
-		.setPViewports(&viewport)
-		.setScissorCount(1)
-		.setPScissors(&scissor);
-
-	vk::PipelineRasterizationStateCreateInfo rasterizer;
-	rasterizer.setPolygonMode(vk::PolygonMode::eFill)
-		.setLineWidth(1.0f)
-		.setCullMode(vk::CullModeFlagBits::eFront)
-		.setFrontFace(vk::FrontFace::eClockwise)
-		.setRasterizerDiscardEnable(VK_FALSE);
-
-	vk::PipelineColorBlendAttachmentState colorBlendAttatchment;
-	colorBlendAttatchment.setColorWriteMask(
-		vk::ColorComponentFlagBits::eR
-		| vk::ColorComponentFlagBits::eG
-		| vk::ColorComponentFlagBits::eB
-		| vk::ColorComponentFlagBits::eA)
-		.setSrcColorBlendFactor(vk::BlendFactor::eOne)
-		.setSrcAlphaBlendFactor(vk::BlendFactor::eOne)
-		.setBlendEnable(1);
-
-	vk::PipelineColorBlendStateCreateInfo colorBlending;
-	colorBlending.setAttachmentCount(1)
-		.setPAttachments(&colorBlendAttatchment);
-
-	
-	vk::PipelineLayoutCreateInfo pipelineLayoutInfo;
-	if (m_vkDescriptorSetLayout) {
-		pipelineLayoutInfo.setSetLayoutCount(1)
-			.setPSetLayouts(&m_vkDescriptorSetLayout.get());
-	}
-
-	m_vkPipelineLayout = device->createPipelineLayoutUnique(pipelineLayoutInfo);
-
-	vk::PipelineMultisampleStateCreateInfo multisampleCreateInfo = {};
-	multisampleCreateInfo.setRasterizationSamples(vk::SampleCountFlagBits::e1)
-		.setMinSampleShading(1.0f);
-
-	
-	vk::PipelineDepthStencilStateCreateInfo* depthCreateInfo = nullptr;
-	vk::PipelineDepthStencilStateCreateInfo emptyDepthCreateInfo = {};
-	if (depthStencilFlags != DepthStencilFlags::eNone) {
-		depthCreateInfo = &emptyDepthCreateInfo;
-
-		if ((depthStencilFlags & DepthStencilFlags::eDepth) != DepthStencilFlags::eNone) {
-			depthCreateInfo->setDepthTestEnable(true)
-			.setDepthWriteEnable(true)
-			.setDepthCompareOp(vk::CompareOp::eLess)
-			.setMaxDepthBounds(1.0f);
-		}
-
-		if ((depthStencilFlags & DepthStencilFlags::eStencil) != DepthStencilFlags::eNone) {
-			auto back = vk::StencilOpState()
-				.setFailOp(vk::StencilOp::eKeep)
-				.setPassOp(vk::StencilOp::eKeep)
-				.setCompareOp(vk::CompareOp::eAlways)
-				.setCompareMask(0xff)
-				.setWriteMask(0xff);
-
-			auto front = vk::StencilOpState()
-				.setFailOp(vk::StencilOp::eKeep)
-				.setPassOp(vk::StencilOp::eKeep)
-				.setCompareOp(vk::CompareOp::eAlways)
-				.setCompareMask(0xff)
-				.setWriteMask(0xff);
-
-			depthCreateInfo->setStencilTestEnable(true)
-				.setBack(back)
-				.setFront(front);
-		}
-	}
-
-	// Not expecting vertex buffer or depth test 
-	vk::GraphicsPipelineCreateInfo pipelineCreateInfo = {};
-	pipelineCreateInfo.setStageCount(2)
-		.setPStages(shaderStages)
-		.setPVertexInputState(&vertexInputInfo)
-		.setPInputAssemblyState(&inputAssembly)
-		.setPViewportState(&viewportState)
-		.setPRasterizationState(&rasterizer)
-		.setPColorBlendState(&colorBlending)
-		.setRenderPass(m_vkRenderPass.get())
-		.setLayout(m_vkPipelineLayout.get())
-		.setPMultisampleState(&multisampleCreateInfo)
-		.setPDepthStencilState(depthCreateInfo);
-
-	m_vkGraphicsPipeline = device->createGraphicsPipelineUnique(vk::PipelineCache(), pipelineCreateInfo);
+	cacheNewPipeline(0x00);
 }
 
-void RenderPass::setupDescriptorSet(const vk::UniqueDevice &device, const VertexShader& vertexShader, const FragmentShader& fragmentShader)
+void RenderPass::setupDescriptorSet(const vk::UniqueDevice &device, const VertexShader& vertexShader, const FragmentShader& fragmentShader, uint64_t bindingMask)
 {
 	//Descriptor Set Layout
 	std::vector<vk::DescriptorSetLayoutBinding> vkBindings;
 	std::map<uint32_t, size_t> bindingMap;
 
 	auto vertexBindings = vertexShader.getBindings();
-	for (size_t i = 0; vertexBindings.size(); ++i) {
+	for (size_t i = 0; i < vertexBindings.size(); ++i) {
 		auto& vertexBinding = vertexBindings[i];
+		
+		vk::DescriptorType type = vertexBinding.type;
+		auto bindingValue = vertexBinding.binding;
+		if (type == vk::DescriptorType::eUniformBuffer) {
+			type = (bindingMask & (1 << bindingValue)) ? vk::DescriptorType::eUniformBufferDynamic : vk::DescriptorType::eUniformBuffer;
+		}
 
 		vk::DescriptorSetLayoutBinding binding = {};
-		binding.setBinding(vertexBinding.binding)
+		binding.setBinding(bindingValue)
 			.setDescriptorCount(1) //TODO: can we assume 1 Descriptor per binding? -AM
-			.setDescriptorType(vertexBinding.type)
+			.setDescriptorType(type)
 			.setStageFlags(vk::ShaderStageFlagBits::eVertex);
 
 		vkBindings.emplace_back(binding);
@@ -177,8 +63,14 @@ void RenderPass::setupDescriptorSet(const vk::UniqueDevice &device, const Vertex
 		}
 		else {
 			auto& fragmentBinding = fragmentBindings[i];
+			vk::DescriptorType type = fragmentBinding.type;
+			auto bindingValue = fragmentBinding.binding;
+			if (type == vk::DescriptorType::eUniformBuffer) {
+				type = (bindingMask & (1 << bindingValue)) ? vk::DescriptorType::eUniformBufferDynamic : vk::DescriptorType::eUniformBuffer;
+			}
+
 			vk::DescriptorSetLayoutBinding binding = {};
-			binding.setBinding(fragmentBinding.binding)
+			binding.setBinding(bindingValue)
 				.setDescriptorCount(1) //TODO: can we assume 1 Descriptor per binding? -AM
 				.setDescriptorType(fragmentBinding.type)
 				.setStageFlags(vk::ShaderStageFlagBits::eFragment);
@@ -192,15 +84,16 @@ void RenderPass::setupDescriptorSet(const vk::UniqueDevice &device, const Vertex
 		layoutCreateInfo.setBindingCount(vkBindings.size())
 			.setPBindings(vkBindings.data());
 
-		m_vkDescriptorSetLayout = device->createDescriptorSetLayoutUnique(layoutCreateInfo);
+		m_vkDescriptorSetLayouts[bindingMask] = std::move(device->createDescriptorSetLayoutUnique(layoutCreateInfo));
 
 
 		//Descriptor Pool:
+		// TODO: Use only one descriptor pool - Brandborg
 		auto poolSizes = std::vector<vk::DescriptorPoolSize>(vkBindings.size());
 		for (auto i = 0; i < vkBindings.size(); ++i) {
 			auto& vkBinding = vkBindings[i];
 			poolSizes[i].setDescriptorCount(1)
-				.setType(vkBinding.descriptorType);
+				.setType(vkBinding.descriptorType); 
 		}
 
 		vk::DescriptorPoolCreateInfo poolCreateInfo = {};
@@ -209,16 +102,16 @@ void RenderPass::setupDescriptorSet(const vk::UniqueDevice &device, const Vertex
 			.setMaxSets(1)	//TODO: keep this default value? -AM.
 			.setFlags(vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet);
 
-		m_vkDescriptorPool = device->createDescriptorPoolUnique(poolCreateInfo);
+		m_vkDescriptorPools[bindingMask] = std::move(device->createDescriptorPoolUnique(poolCreateInfo));
 
 
 		//Descriptor Set:
 		vk::DescriptorSetAllocateInfo allocateInfo = {};
-		allocateInfo.setDescriptorPool(*m_vkDescriptorPool)
+		allocateInfo.setDescriptorPool(*m_vkDescriptorPools[bindingMask])
 			.setDescriptorSetCount(1)
-			.setPSetLayouts(&m_vkDescriptorSetLayout.get());
+			.setPSetLayouts(&m_vkDescriptorSetLayouts[bindingMask].get());
 
-		m_vkDescriptorSet = std::move(device->allocateDescriptorSetsUnique(allocateInfo)[0]);	//TODO: do we always want exactly one descriptor set? -AM
+		m_vkDescriptorSets[bindingMask] = std::move(device->allocateDescriptorSetsUnique(allocateInfo)[0]);	//TODO: do we always want exactly one descriptor set? -AM
 	}
 }
 
@@ -249,3 +142,282 @@ std::vector<vk::VertexInputAttributeDescription> RenderPass::getAttributeDescrip
 
 	return attributeDescriptions;
 }
+
+void RenderPass::cacheNewPipeline(uint64_t bindingMask)
+{
+	auto bindings = m_shaderProgram.getUniqueUniformBindings();
+
+	setupDescriptorSet(m_vkDevice, m_shaderProgram.m_vertexShader, m_shaderProgram.m_fragmentShader, bindingMask);
+
+	vk::PipelineShaderStageCreateInfo shaderStages[] = {
+		m_shaderProgram.m_vkVertexStageCreateInfo,
+		m_shaderProgram.m_vkFragmentStageCreateInfo
+	};
+
+	vk::PipelineVertexInputStateCreateInfo vertexInputInfo;
+	//do the shader require a vertex buffer?
+	auto attributeDescription = getAttributeDescriptions();
+	vk::VertexInputBindingDescription bindingDescription;
+
+	if (!m_shaderProgram.m_vertexShader.m_input.empty()) {
+
+		bindingDescription = getBindingDescription();
+
+		//TODO: how to handle vertex buffer existence and count? -AM
+		vertexInputInfo.setVertexBindingDescriptionCount(1)
+			.setPVertexBindingDescriptions(&bindingDescription)
+			.setVertexAttributeDescriptionCount(attributeDescription.size())
+			.setPVertexAttributeDescriptions(attributeDescription.data());
+	}
+	else {
+		vertexInputInfo.setVertexBindingDescriptionCount(0)
+			.setPVertexBindingDescriptions(nullptr)
+			.setVertexAttributeDescriptionCount(0)
+			.setPVertexAttributeDescriptions(nullptr);
+	}
+
+	vk::PipelineInputAssemblyStateCreateInfo inputAssembly;
+	inputAssembly.setTopology(vk::PrimitiveTopology::eTriangleList);	//<-- TODO: make setable
+
+	auto viewport = vk::Viewport(0.0f, 0.0f, m_vkExtent.width, m_vkExtent.height, 0.0f, 1.0f);
+	auto scissor = vk::Rect2D({ 0, 0 }, m_vkExtent);
+
+	vk::PipelineViewportStateCreateInfo viewportState;
+	viewportState.setViewportCount(1)
+		.setPViewports(&viewport)
+		.setScissorCount(1)
+		.setPScissors(&scissor);
+
+	vk::PipelineRasterizationStateCreateInfo rasterizer;
+	rasterizer.setPolygonMode(vk::PolygonMode::eFill)
+		.setLineWidth(1.0f)
+		.setCullMode(vk::CullModeFlagBits::eFront)
+		.setFrontFace(vk::FrontFace::eClockwise)
+		.setRasterizerDiscardEnable(VK_FALSE);
+
+	vk::PipelineColorBlendAttachmentState colorBlendAttatchment;
+	colorBlendAttatchment.setColorWriteMask(
+		vk::ColorComponentFlagBits::eR
+		| vk::ColorComponentFlagBits::eG
+		| vk::ColorComponentFlagBits::eB
+		| vk::ColorComponentFlagBits::eA)
+		.setSrcColorBlendFactor(vk::BlendFactor::eOne)
+		.setSrcAlphaBlendFactor(vk::BlendFactor::eOne)
+		.setBlendEnable(1);
+
+	vk::PipelineColorBlendStateCreateInfo colorBlending;
+	colorBlending.setAttachmentCount(1)
+		.setPAttachments(&colorBlendAttatchment);
+
+
+	vk::PipelineLayoutCreateInfo pipelineLayoutInfo;
+	if (m_vkDescriptorSetLayouts[bindingMask]) {
+		pipelineLayoutInfo.setSetLayoutCount(1)
+			.setPSetLayouts(&m_vkDescriptorSetLayouts[bindingMask].get());
+	}
+
+	m_vkPipelineLayouts[bindingMask] = m_vkDevice->createPipelineLayoutUnique(pipelineLayoutInfo);
+
+	vk::PipelineMultisampleStateCreateInfo multisampleCreateInfo = {};
+	multisampleCreateInfo.setRasterizationSamples(vk::SampleCountFlagBits::e1)
+		.setMinSampleShading(1.0f);
+
+
+	vk::PipelineDepthStencilStateCreateInfo* depthCreateInfo = nullptr;
+	vk::PipelineDepthStencilStateCreateInfo emptyDepthCreateInfo = {};
+	if (m_depthStencilFlags != DepthStencilFlags::eNone) {
+		depthCreateInfo = &emptyDepthCreateInfo;
+
+		if ((m_depthStencilFlags & DepthStencilFlags::eDepth) != DepthStencilFlags::eNone) {
+			depthCreateInfo->setDepthTestEnable(true)
+				.setDepthWriteEnable(true)
+				.setDepthCompareOp(vk::CompareOp::eLess)
+				.setMaxDepthBounds(1.0f);
+		}
+
+		if ((m_depthStencilFlags & DepthStencilFlags::eStencil) != DepthStencilFlags::eNone) {
+			auto back = vk::StencilOpState()
+				.setFailOp(vk::StencilOp::eKeep)
+				.setPassOp(vk::StencilOp::eKeep)
+				.setCompareOp(vk::CompareOp::eAlways)
+				.setCompareMask(0xff)
+				.setWriteMask(0xff);
+
+			auto front = vk::StencilOpState()
+				.setFailOp(vk::StencilOp::eKeep)
+				.setPassOp(vk::StencilOp::eKeep)
+				.setCompareOp(vk::CompareOp::eAlways)
+				.setCompareMask(0xff)
+				.setWriteMask(0xff);
+
+			depthCreateInfo->setStencilTestEnable(true)
+				.setBack(back)
+				.setFront(front);
+		}
+	}
+
+	vk::GraphicsPipelineCreateInfo pipelineCreateInfo = {};
+	pipelineCreateInfo.setStageCount(2)
+		.setPStages(shaderStages)
+		.setPVertexInputState(&vertexInputInfo)
+		.setPInputAssemblyState(&inputAssembly)
+		.setPViewportState(&viewportState)
+		.setPRasterizationState(&rasterizer)
+		.setPColorBlendState(&colorBlending)
+		.setRenderPass(m_vkRenderPass.get())
+		.setLayout(m_vkPipelineLayouts[bindingMask].get())
+		.setPMultisampleState(&multisampleCreateInfo)
+		.setPDepthStencilState(depthCreateInfo);
+
+	m_vkGraphicsPipelines[bindingMask] = m_vkDevice->createGraphicsPipelineUnique(vk::PipelineCache(), pipelineCreateInfo);
+}
+
+void RenderPass::bindResource(const std::string & name, IBufferResource &buffer)
+{
+	auto& innerBuffer = dynamic_cast<BufferResource&>(buffer);
+
+	auto binding = getBinding(name);
+
+	auto oldMask = m_descriptorSetKeyMask;
+	//update mask so this binding bit is set to 0:
+	m_descriptorSetKeyMask &= (~0x00 & (0x0 << binding));
+
+	//if we have not cached a descriptor set
+	if (m_vkDescriptorSets.find(m_descriptorSetKeyMask) == m_vkDescriptorSets.end())
+	{
+		cacheNewPipeline(m_descriptorSetKeyMask);
+	}
+
+	auto& descriptorSet = m_vkDescriptorSets[m_descriptorSetKeyMask];
+
+	vk::DescriptorBufferInfo info = innerBuffer.m_vkInfo;
+
+	std::vector<vk::CopyDescriptorSet> descriptorSetCopys;
+
+
+	auto writeDescriptorSet = vk::WriteDescriptorSet()
+		.setDstSet(*descriptorSet)
+		.setDstBinding(binding)
+		.setDescriptorType(vk::DescriptorType::eUniformBuffer)
+		.setDescriptorCount(1)
+		.setPBufferInfo(&info);
+
+	//only copy "old" binding information (for other bindings than this) if we have just created a new descriptor set:
+	if (oldMask != m_descriptorSetKeyMask) {
+		for (auto& bindingAligment : m_bindingAlignment)
+		{
+			auto otherBinding = bindingAligment.first;
+
+			if (otherBinding != binding) {
+				auto copyDescriptorSet = vk::CopyDescriptorSet()
+					.setDescriptorCount(1)
+					.setDstBinding(otherBinding)
+					.setDstSet(*descriptorSet)
+					.setSrcBinding(otherBinding)
+					.setSrcSet(*m_vkDescriptorSets[oldMask]);
+
+				descriptorSetCopys.push_back(copyDescriptorSet);
+			}
+		}
+	}
+
+
+	m_vkDevice->updateDescriptorSets({ writeDescriptorSet }, descriptorSetCopys);
+
+	m_bindingAlignment[binding] = 0;
+}
+
+void RenderPass::bindResource(const std::string& name, IDynamicBufferResource& buffer)
+{
+	auto& dBuffer = dynamic_cast<DynamicBufferResource&>(buffer);
+	auto& innerBuffer = dynamic_cast<BufferResource&>(*dBuffer.m_buffer);
+
+	auto binding = getBinding(name);
+
+	auto oldMask = m_descriptorSetKeyMask;
+	m_descriptorSetKeyMask |= (0x01 << binding);
+
+	//if we have not cached a descriptor set
+	if (m_vkDescriptorSets.find(m_descriptorSetKeyMask) == m_vkDescriptorSets.end())
+	{
+		cacheNewPipeline(m_descriptorSetKeyMask);
+	}
+
+
+	auto& descriptorSet = m_vkDescriptorSets[m_descriptorSetKeyMask];
+
+	vk::DescriptorBufferInfo info = innerBuffer.m_vkInfo;
+	info.setRange(dBuffer.m_alignment);
+
+
+	auto writeDescriptorSet = vk::WriteDescriptorSet()
+		.setDstSet(*descriptorSet)
+		.setDstBinding(binding)
+		.setDescriptorType(vk::DescriptorType::eUniformBufferDynamic)
+		.setDescriptorCount(1)
+		.setPBufferInfo(&info);
+
+	std::vector<vk::CopyDescriptorSet> descriptorSetCopys;
+	//only copy "old" binding information (for other bindings than this) if we have just created a new descriptor set:
+	if (oldMask != m_descriptorSetKeyMask) {
+		for (auto& bindingAligment : m_bindingAlignment)
+		{
+			auto otherBinding = bindingAligment.first;
+
+			if (otherBinding != binding) {
+				auto copyDescriptorSet = vk::CopyDescriptorSet()
+					.setDescriptorCount(1)
+					.setDstBinding(otherBinding)
+					.setDstSet(*descriptorSet)
+					.setSrcBinding(otherBinding)
+					.setSrcSet(*m_vkDescriptorSets[oldMask]);
+
+				descriptorSetCopys.push_back(copyDescriptorSet);
+			}
+		}
+	}
+
+	m_vkDevice->updateDescriptorSets({ writeDescriptorSet }, descriptorSetCopys);
+	m_bindingAlignment[binding] = dBuffer.m_alignment;
+}
+
+void RenderPass::bindResource(const std::string & name, IImageResource &image, ISampler &sampler)
+{
+	auto& backendImage = dynamic_cast<ImageResource&>(image);
+	auto& backendSampler = static_cast<Sampler&>(sampler);
+	auto binding = getBinding(name);
+
+	vk::DescriptorImageInfo info = {};
+	info.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
+		.setImageView(*backendImage.m_vkImageView)
+		.setSampler(static_cast<vk::Sampler>(backendSampler));
+
+	auto& descriptorSet = m_vkDescriptorSets[m_descriptorSetKeyMask];
+	auto writeDescriptorSet = vk::WriteDescriptorSet()
+		.setDstSet(*descriptorSet)
+		.setDstBinding(binding)
+		.setDescriptorCount(1)
+		.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
+		.setPImageInfo(&info);
+
+	m_vkDevice->updateDescriptorSets({ writeDescriptorSet }, {});
+	m_bindingAlignment[binding] = 0;
+}
+
+long RenderPass::getBinding(const std::string& name)
+{
+	//TODO: use method from renderpass
+	long binding = -1;
+
+	if (m_shaderProgram.m_vertexShader.bindingExists(name)) {
+		binding = m_shaderProgram.m_vertexShader.m_bindings[name].binding;
+	}
+	else if (m_shaderProgram.m_fragmentShader.bindingExists(name)) {
+		binding = m_shaderProgram.m_fragmentShader.m_bindings[name].binding;
+	}
+	else {
+		PAPAGO_ERROR("Invalid uniform name!");
+	}
+
+	return binding;
+};

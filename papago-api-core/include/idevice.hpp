@@ -6,6 +6,7 @@ class ISurface;
 enum class Format;
 class ISwapchain;
 class IBufferResource;
+class IDynamicBufferResource;
 class IImageResource;
 class ISampler;
 class IShaderProgram;
@@ -15,6 +16,7 @@ enum class Filter;
 enum class TextureWrapMode;
 class IGraphicsQueue;
 class ICommandBuffer;
+class ISubCommandBuffer;
 class IRenderPass;
 
 class IDevice {
@@ -50,14 +52,16 @@ public:
 		TextureWrapMode modeW) = 0;
 	virtual std::unique_ptr<IImageResource> createTexture2D(size_t width, size_t height, Format) = 0;
 	virtual std::unique_ptr<IImageResource> createDepthTexture2D(uint32_t width, uint32_t height, Format) = 0;
-	virtual std::unique_ptr<ICommandBuffer> createCommandBuffer(Usage) = 0;
+	virtual std::unique_ptr<ICommandBuffer> createCommandBuffer() = 0;
+	virtual std::unique_ptr<ISubCommandBuffer> createSubCommandBuffer() = 0;
 	virtual std::unique_ptr<IShaderProgram> createShaderProgram(IVertexShader& vertexShader, IFragmentShader& fragmentShader) = 0;
 	virtual std::unique_ptr<IRenderPass> createRenderPass(IShaderProgram&, uint32_t width, uint32_t height, Format colorFormat) = 0;
 	virtual std::unique_ptr<IRenderPass> createRenderPass(IShaderProgram&, uint32_t width, uint32_t height, Format colorFormat, Format depthStencilFormat) = 0;
 	virtual void waitIdle() = 0;
+	virtual std::unique_ptr<IDynamicBufferResource> createDynamicUniformBuffer(size_t object_size, int object_count) = 0;
 
 	virtual std::unique_ptr<IGraphicsQueue> createGraphicsQueue(ISwapchain&) = 0;
-	
+
 	struct Features {
 		bool samplerAnisotropy;
 	};
@@ -92,13 +96,13 @@ inline std::unique_ptr<IBufferResource> IDevice::createIndexBuffer<uint32_t>(std
 
 template<> 
 inline std::unique_ptr<IBufferResource> IDevice::createIndexBuffer<uint16_t>(std::vector<uint16_t> index_data) {
-	size_t size = sizeof(uint16_t) * index_data.size();
+	const auto size = sizeof(uint16_t) * index_data.size();
 	std::vector<char> data(size);
 	memcpy(data.data(), index_data.data(), size);
 	return createIndexBufferInternal(data, BufferResourceElementType::eUint16);
 }
 
 template<class T>
-inline std::unique_ptr<IBufferResource> IDevice::createIndexBuffer(std::vector<T>) {
+std::unique_ptr<IBufferResource> IDevice::createIndexBuffer(std::vector<T>) {
 	throw std::runtime_error("Only the types uint16 and uint32 can be used in index buffers.");
 }

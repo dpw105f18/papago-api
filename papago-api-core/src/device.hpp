@@ -3,7 +3,6 @@
 #include "IDevice.hpp"
 #include "api_enums.hpp"
 #include "command_buffer.hpp"
-#include "buffer_resource.hpp"
 
 class IVertexShader;
 class IFragmentShader;
@@ -15,6 +14,10 @@ class ImageResource;
 class Sampler;
 class IShaderProgram;
 class IGraphicsQueue;
+class ShaderProgram;
+class RenderPass;
+class IBufferResource;
+class ISubCommandBuffer;
 
 class Device : public IDevice {
 public:
@@ -30,11 +33,13 @@ public:
 	std::unique_ptr<ISampler> createTextureSampler3D(Filter magFil, Filter minFil, TextureWrapMode modeU, TextureWrapMode modeV, TextureWrapMode modeW) override;
 	std::unique_ptr<IImageResource> createTexture2D(size_t width, size_t height, Format) override;
 	std::unique_ptr<IImageResource> createDepthTexture2D(uint32_t width, uint32_t height, Format) override;
-	std::unique_ptr<ICommandBuffer> createCommandBuffer(Usage) override;
+	std::unique_ptr<ICommandBuffer> createCommandBuffer() override;
+	std::unique_ptr<ISubCommandBuffer> createSubCommandBuffer() override;
 	std::unique_ptr<IShaderProgram> createShaderProgram(IVertexShader&, IFragmentShader&) override;
 	std::unique_ptr<IBufferResource> createUniformBuffer(size_t size) override;
 	std::unique_ptr<IGraphicsQueue> createGraphicsQueue(ISwapchain&) override;
 
+	std::unique_ptr<IDynamicBufferResource> createDynamicUniformBuffer(size_t object_size, int object_count) override;
 
 	vk::UniqueRenderPass createVkRenderpass(vk::Format colorFormat) const;
 	vk::UniqueRenderPass createVkRenderpass(vk::Format colorFormat, vk::Format depthStencilFormat) const;
@@ -46,6 +51,13 @@ public:
 	const vk::UniqueDevice& getVkDevice() const;
 	const vk::PhysicalDevice& getVkPhysicalDevice() const;
 
+	vk::PhysicalDevice m_vkPhysicalDevice;
+	vk::UniqueDevice m_vkDevice;
+
+	Surface& m_surface;
+
+	vk::Queue m_vkInternalQueue;
+	CommandBuffer m_internalCommandBuffer;
 protected:
 	std::unique_ptr<IBufferResource> createVertexBufferInternal(std::vector<char>& data) override;
 	std::unique_ptr<IBufferResource> createIndexBufferInternal(std::vector<char>& data, BufferResourceElementType) override;
@@ -88,16 +100,5 @@ private:
 	vk::SwapchainCreateInfoKHR createSwapChainCreateInfo(Surface&, const size_t& framebufferCount, const vk::SurfaceFormatKHR&, const vk::Extent2D&, const vk::SurfaceCapabilitiesKHR&, const vk::PresentModeKHR&) const;
 
 	static bool isPhysicalDeviceSuitable(const vk::PhysicalDevice& physicalDevice, Surface&, const std::vector<const char*> &);
-	static bool areExtensionsSupported(const vk::PhysicalDevice& physicalDevice, const std::vector<const char*> &extensions);
-
-	vk::PhysicalDevice m_vkPhysicalDevice;
-	vk::UniqueDevice m_vkDevice;
-
-	Surface& m_surface;
-
-	vk::Queue m_vkInternalQueue;
-	CommandBuffer m_internalCommandBuffer;
-
-	friend class ImageResource;
-	friend class GraphicsQueue;
+	static bool areExtensionsSupported(const vk::PhysicalDevice& physicalDevice, const std::vector<const char*> &extensions);	
 };

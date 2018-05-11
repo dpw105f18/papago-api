@@ -1,5 +1,8 @@
 #include "standard_header.hpp"
 #include "image_resource.hpp"
+#include "device.hpp"
+#include "ibuffer_resource.hpp"
+#include "image_resource.impl"
 
 ImageResource::ImageResource(ImageResource&& other) noexcept
 	: Resource(std::move(other))

@@ -38,7 +38,7 @@ std::unique_ptr<IFragmentShader> Parser::compileFragmentShader(const std::string
 	return result;
 }
 
-std::vector<char> Parser::compile(const std::string& source, const std::string& shaderType)
+std::vector<char> Parser::compile(const std::string& source, const std::string& shaderType) const
 {
 	auto arg = std::string(" --stdin -S ") + shaderType
 		+ std::string(" -V -o ") + std::string(".\\temp.spv");
@@ -101,10 +101,10 @@ std::vector<char> Parser::compile(const std::string& source, const std::string& 
 		PAPAGO_ERROR("Failed to get exit code from child process.");
 
 	if (exit_code != EXIT_SUCCESS) {
-		char buffer[2048];
+		char buffer[2048] = {};
 		DWORD bytes_read;
 		ReadFile(stdout_read, &buffer, 2048, &bytes_read, nullptr);
-
+		std::cout << buffer << std::endl;
 		PAPAGO_ERROR("Validator could not validate input.");
 	}
 
@@ -137,28 +137,32 @@ std::vector<char> Parser::compile(const std::string& source, const std::string& 
 	return buffer;
 }
 
-size_t format_size(vk::Format format) {
-	switch (format)
-	{
-	case vk::Format::eD32Sfloat:			return sizeof(float);
-	case vk::Format::eR32G32Sfloat:			return 2 * sizeof(float);
-	case vk::Format::eR32G32B32Sfloat:		return 3 * sizeof(float);
-	case vk::Format::eR32G32B32A32Sfloat:	return 4 * sizeof(float);
-	default:
-		break;
+size_t string_type_to_size(std::string type) {
+	static const std::map<std::string, size_t> map{
+		{ "float",     sizeof(float) },
+		{ "vec2" ,   2*sizeof(float) },
+		{ "vec3" ,   3*sizeof(float) },
+		{ "vec4" ,   4*sizeof(float) },
+		{ "mat4" , 4*4*sizeof(float) }
+	};
+	auto result = map.find(type);
+	if (result == map.end()) {
+		PAPAGO_ERROR("Failed to convert " + type + " to a size.");
 	}
+	return result->second;
 }
 
-vk::Format string_to_format(std::string input) {
+vk::Format string_type_to_format(std::string type) {
 	static const std::map<std::string, vk::Format> map{
 		{ "float", vk::Format::eD32Sfloat },
 		{ "vec2", vk::Format::eR32G32Sfloat },
 		{ "vec3", vk::Format::eR32G32B32Sfloat },
-		{ "vec4", vk::Format::eR32G32B32A32Sfloat }
+		{ "vec4", vk::Format::eR32G32B32A32Sfloat },
+		{ "mat4", vk::Format::eUndefined}
 	};
-	auto result = map.find(input);
+	auto result = map.find(type);
 	if (result == map.end()) {
-		PAPAGO_ERROR("Failed to convert " + input + " to a format.");
+		PAPAGO_ERROR("Failed to convert " + type + " to a format.");
 	}
 	return result->second;
 }
@@ -175,7 +179,7 @@ void Parser::setShaderInput(VertexShader & shader, const std::string & source)
 	for (auto i = iterator; i != std::sregex_iterator(); ++i) {
 		auto match = *i;
 		auto location = std::stoi(match[1]);
-		auto format = string_to_format(match[2].str());
+		auto format = string_type_to_format(match[2].str());
 		auto name = match[3].str();
 
 		if (shader.m_input.size() <= location) {
@@ -213,7 +217,7 @@ void Parser::setShaderUniforms(Shader & shader, const std::string & source)
 			auto typeByteSize = 0u;
 
 			descriptorType = vk::DescriptorType::eUniformBuffer;
-			typeByteSize = format_size(string_to_format(type));
+			typeByteSize = string_type_to_size(type);
 			
 
 			shader.m_bindings.insert({ name, { binding, offset, descriptorType } });

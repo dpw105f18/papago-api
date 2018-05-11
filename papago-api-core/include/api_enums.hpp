@@ -39,11 +39,6 @@ enum class Filter {
 	eLinear
 };
 
-enum class Usage {
-	eReset,
-	eReuse
-};
-
 enum class TextureWrapMode {
 	eClampToBorder,
 	eClampToEdge,
