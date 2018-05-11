@@ -16,7 +16,7 @@ class CommandBuffer;
 class SubCommandBuffer : public ISubCommandBuffer, public CommandRecorder<IRecordingSubCommandBuffer>
 {
 public:
-	SubCommandBuffer(const vk::UniqueDevice&, uint32_t queueFamilyIndex, CommandBuffer* parent);
+	SubCommandBuffer(const vk::UniqueDevice&, uint32_t queueFamilyIndex);
 
 	explicit operator vk::CommandBuffer&();
 	

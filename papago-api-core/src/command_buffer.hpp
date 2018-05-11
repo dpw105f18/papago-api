@@ -15,7 +15,6 @@ public:
 	void record(IRenderPass&, ISwapchain&, std::function<void(IRecordingCommandBuffer&)>) override;
 	void record(IRenderPass&, IImageResource&, std::function<void(IRecordingCommandBuffer&)>) override;
 	void record(IRenderPass &, IImageResource & color, IImageResource & depth, std::function<void(IRecordingCommandBuffer&)>) override;
-	std::unique_ptr<ISubCommandBuffer> createSubCommandBuffer() override;
 
 	IRecordingCommandBuffer& execute(std::vector<std::unique_ptr<ISubCommandBuffer>>&) override;
 

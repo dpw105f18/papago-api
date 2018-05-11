@@ -1,6 +1,7 @@
 #include "standard_header.hpp"
 #include <set>
 #include "command_buffer.hpp"
+#include "sub_command_buffer.hpp"
 #include "surface.hpp"
 #include "device.hpp"
 #include "swap_chain.hpp"
@@ -465,6 +466,12 @@ std::unique_ptr<ICommandBuffer> Device::createCommandBuffer()
 	return std::make_unique<CommandBuffer>(
 		m_vkDevice, 
 		queueFamilyIndices.graphicsFamily);
+}
+
+std::unique_ptr<ISubCommandBuffer> Device::createSubCommandBuffer()
+{
+	auto queueFamilyIndex = findQueueFamilies(m_vkPhysicalDevice, m_surface).graphicsFamily;
+	return std::make_unique<SubCommandBuffer>(m_vkDevice, queueFamilyIndex);
 }
 
 std::unique_ptr<IDynamicBufferResource> Device::createDynamicUniformBuffer(size_t objectSize, int objectCount)

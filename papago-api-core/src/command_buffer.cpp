@@ -116,11 +116,6 @@ void CommandBuffer::record(IRenderPass& renderPass, IImageResource& color, IImag
 	end();
 }
 
-std::unique_ptr<ISubCommandBuffer> CommandBuffer::createSubCommandBuffer()
-{
-	return std::make_unique<SubCommandBuffer>(m_vkDevice, m_queueFamilyIndex, this);
-}
-
 void CommandBuffer::begin(RenderPass& renderPass, const vk::UniqueFramebuffer& renderTarget, vk::Extent2D extent)
 {
 	m_renderPassPtr = &renderPass;

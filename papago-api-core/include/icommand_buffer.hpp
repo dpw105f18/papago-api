@@ -17,7 +17,6 @@ public:
 	virtual void record(IRenderPass&, ISwapchain&, std::function<void(IRecordingCommandBuffer&)>) = 0;
 	virtual void record(IRenderPass&, IImageResource&, std::function<void(IRecordingCommandBuffer&)>) = 0;
 	virtual void record(IRenderPass&, IImageResource& color, IImageResource& depth, std::function<void(IRecordingCommandBuffer&)>) = 0;
-	virtual std::unique_ptr<ISubCommandBuffer> createSubCommandBuffer() = 0; //TODO: handle sub-cmd usage
 };
 
 class ISubCommandBuffer
@@ -37,8 +36,6 @@ public:
 	virtual T& setInput(IBufferResource&) = 0;
 	virtual T& setDynamicIndex(const std::string& uniformName, size_t) = 0;
 	virtual T& setIndexBuffer(IBufferResource&) = 0;
-
-
 };
 
 class IRecordingCommandBuffer 

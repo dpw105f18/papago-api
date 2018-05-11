@@ -6,7 +6,7 @@
 #include "ibuffer_resource.hpp"
 #include "recording_command_buffer.cpp" //<-- resolves linker issues. -AM
 
-SubCommandBuffer::SubCommandBuffer(const vk::UniqueDevice& device, uint32_t queueFamilyIndex, CommandBuffer* parent)
+SubCommandBuffer::SubCommandBuffer(const vk::UniqueDevice& device, uint32_t queueFamilyIndex)
 	: CommandRecorder<IRecordingSubCommandBuffer>(device)
 {
 	vk::CommandPoolCreateInfo poolCreateInfo = {};

@@ -302,7 +302,7 @@ void multithreadedTest() {
 	auto& commandBuffer = commandBuffers[0];
 
 	for (auto i = 0; i < threadCount; ++i) {
-		subCommands.push_back(std::move(commandBuffer->createSubCommandBuffer()));
+		subCommands.push_back(std::move(device->createSubCommandBuffer()));
 	}
 
 
@@ -468,8 +468,8 @@ void uploadTest()
 int main()
 {
 	try {
-		uploadTest();
-		//multithreadedTest();
+		//uploadTest();
+		multithreadedTest();
 	}
 	catch (std::exception e) {
 		std::cout << "ERROR: " << e.what() << std::endl;

@@ -17,6 +17,7 @@ class IGraphicsQueue;
 class ShaderProgram;
 class RenderPass;
 class IBufferResource;
+class ISubCommandBuffer;
 
 class Device : public IDevice {
 public:
@@ -33,6 +34,7 @@ public:
 	std::unique_ptr<IImageResource> createTexture2D(size_t width, size_t height, Format) override;
 	std::unique_ptr<IImageResource> createDepthTexture2D(uint32_t width, uint32_t height, Format) override;
 	std::unique_ptr<ICommandBuffer> createCommandBuffer() override;
+	std::unique_ptr<ISubCommandBuffer> createSubCommandBuffer() override;
 	std::unique_ptr<IShaderProgram> createShaderProgram(IVertexShader&, IFragmentShader&) override;
 	std::unique_ptr<IBufferResource> createUniformBuffer(size_t size) override;
 	std::unique_ptr<IGraphicsQueue> createGraphicsQueue(ISwapchain&) override;
