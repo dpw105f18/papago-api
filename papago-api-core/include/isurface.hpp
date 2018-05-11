@@ -8,7 +8,7 @@ public:
 	size_t getWidth() const { return m_width; }
 	size_t getHeight() const { return m_height; }
 
-	PAPAGO_API static std::unique_ptr<ISurface> createWin32Surface(size_t, size_t, HWND);
+	PAPAGO_API static std::unique_ptr<ISurface> createWin32Surface(size_t width, size_t height, HWND);
 
 protected:
 	ISurface(size_t width, size_t height) : m_width(width), m_height(height) { }
