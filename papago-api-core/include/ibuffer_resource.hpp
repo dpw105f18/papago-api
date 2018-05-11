@@ -6,14 +6,18 @@ class IDynamicBufferResource
 {
 public:
 	virtual ~IDynamicBufferResource() = default;
+
 	template<typename T>
 	void upload(const std::vector<T>& data);
 
 	template<typename T>
 	void upload(const std::vector<T>& data, size_t index);
 
-	template<typename T = char>
+	template<typename T>
 	std::vector<T> download();
+
+	template<typename T>
+	T download(size_t index);
 
 private:
 	virtual std::vector<char> internalDownload() = 0;
@@ -97,10 +101,6 @@ inline void IDynamicBufferResource::upload(const std::vector<T>& data, size_t in
 	internalUpload(result, offset);
 }
 
-
-
-
-
 template<typename T>
 inline std::vector<T> IDynamicBufferResource::download()
 {
@@ -111,5 +111,17 @@ inline std::vector<T> IDynamicBufferResource::download()
 	{
 		memcpy(&result[index], &data[offset], sizeof(T));
 	}
+	return result;
+}
+
+template<typename T>
+inline T IDynamicBufferResource::download(size_t index)
+{
+	auto data = internalDownload();
+	auto alignment = getAlignment();
+	T result;
+
+	memcpy(&result, &data[index * alignment], sizeof(T));
+	
 	return result;
 }

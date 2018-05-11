@@ -460,6 +460,8 @@ void uploadTest()
 
 	dl = dynRes->download<float>();
 
+	auto dl6 = dynRes->download<float>(6);
+
 	auto d = "bug";
 }
 
