@@ -443,10 +443,31 @@ void multithreadedTest() {
 	device->waitIdle();
 }
 
+void uploadTest()
+{
+	auto hwnd = StartWindow(100, 100);
+	auto surface = ISurface::createWin32Surface(100, 100, hwnd);
+	auto devices = IDevice::enumerateDevices(*surface, {}, {});
+	auto& device = devices[0];
+
+	auto dynRes = device->createDynamicUniformBuffer(sizeof(float), 10);
+	dynRes->upload<float>({ 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
+					1.0f, 1.0f, 1.0f, 1.0f, 1.0f });
+
+	auto dl = dynRes->download<float>();
+
+	dynRes->upload<float>({ 5.0f, 5.0f, 5.0f }, 4);
+
+	dl = dynRes->download<float>();
+
+	auto d = "bug";
+}
+
 int main()
 {
 	try {
-		multithreadedTest();
+		uploadTest();
+		//multithreadedTest();
 	}
 	catch (std::exception e) {
 		std::cout << "ERROR: " << e.what() << std::endl;

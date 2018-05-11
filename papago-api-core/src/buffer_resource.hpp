@@ -44,15 +44,15 @@ private:
 
 };
 
-class DynamicBuffer 
-	: public IDynamicBuffer 
+class DynamicBufferResource 
+	: public IDynamicBufferResource 
 {
 public:
 	std::unique_ptr<IBufferResource> m_buffer;
 	size_t m_alignment;
 	size_t m_objectCount;
 
-	DynamicBuffer(
+	DynamicBufferResource(
 		std::unique_ptr<IBufferResource>&&	buffer,
 		size_t								alignment,
 		size_t								objectCount);
@@ -66,7 +66,7 @@ public:
 };
 
 //TODO: move to buffer_resource.cpp?
-inline DynamicBuffer::DynamicBuffer(
+inline DynamicBufferResource::DynamicBufferResource(
 	std::unique_ptr<IBufferResource>&& buffer,
 	const size_t                       alignment,
 	const size_t						objectCount)

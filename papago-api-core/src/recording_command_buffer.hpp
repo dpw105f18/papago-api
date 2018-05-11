@@ -9,7 +9,7 @@ class Resource;
 class RenderPass;
 class ShaderProgram;
 class IBufferResource;
-class DynamicBuffer;
+class DynamicBufferResource;
 class CommandBuffer;
 
 template<class T>

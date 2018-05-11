@@ -2,10 +2,10 @@
 #include <vector>
 #include <memory>
 
-class IDynamicBuffer
+class IDynamicBufferResource
 {
 public:
-	virtual ~IDynamicBuffer() = default;
+	virtual ~IDynamicBufferResource() = default;
 	template<typename T>
 	void upload(const std::vector<T>& data);
 
@@ -69,7 +69,7 @@ std::vector<T> IBufferResource::download()
 }
 
 template<typename T>
-inline void IDynamicBuffer::upload(const std::vector<T>& data)
+inline void IDynamicBufferResource::upload(const std::vector<T>& data)
 {
 	auto alignment = getAlignment();
 	std::vector<char> result(data.size() * alignment);
@@ -82,14 +82,18 @@ inline void IDynamicBuffer::upload(const std::vector<T>& data)
 }
 
 template<typename T>
-inline void IDynamicBuffer::upload(const std::vector<T>& data, size_t index)
+inline void IDynamicBufferResource::upload(const std::vector<T>& data, size_t index)
 {
 	auto alignment = getAlignment();
 	std::vector<char> result(data.size() * alignment);
 	auto size = sizeof(T);
 
+	for (auto i = 0, o = 0; i < data.size(); ++i, o += alignment) {
+		memcpy(&result[o], &data[i], sizeof(T));
+	}
+
 	auto offset = alignment * index;
-	memcpy(&result[offset], &data[index], sizeof(T));
+	
 	internalUpload(result, offset);
 }
 
@@ -98,11 +102,11 @@ inline void IDynamicBuffer::upload(const std::vector<T>& data, size_t index)
 
 
 template<typename T>
-inline std::vector<T> IDynamicBuffer::download()
+inline std::vector<T> IDynamicBufferResource::download()
 {
 	auto data = internalDownload();
-	std::vector<T> result(data.size() / sizeof(T));
 	auto alignment = getAlignment();
+	std::vector<T> result(data.size() / alignment);
 	for (auto index = 0, offset = 0; offset < data.size(); ++index, offset += alignment)
 	{
 		memcpy(&result[index], &data[offset], sizeof(T));

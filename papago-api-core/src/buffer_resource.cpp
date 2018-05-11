@@ -75,18 +75,18 @@ BufferResource::BufferResource(
 }
 
 
-std::vector<char> DynamicBuffer::internalDownload()
+std::vector<char> DynamicBufferResource::internalDownload()
 {
 	return m_buffer->download();
 }
 
-void DynamicBuffer::internalUpload(const std::vector<char>& data, size_t offset)
+void DynamicBufferResource::internalUpload(const std::vector<char>& data, size_t offset)
 {
 	auto& internalBuffer = dynamic_cast<BufferResource&>(*m_buffer);
 	internalBuffer.upload(data, offset);
 }
 
-size_t DynamicBuffer::getAlignment()
+size_t DynamicBufferResource::getAlignment()
 {
 	return m_alignment;
 }

@@ -37,7 +37,7 @@ public:
 	std::unique_ptr<IBufferResource> createUniformBuffer(size_t size) override;
 	std::unique_ptr<IGraphicsQueue> createGraphicsQueue(ISwapchain&) override;
 
-	std::unique_ptr<IDynamicBuffer> createDynamicUniformBuffer(size_t object_size, int object_count) override;
+	std::unique_ptr<IDynamicBufferResource> createDynamicUniformBuffer(size_t object_size, int object_count) override;
 
 	vk::UniqueRenderPass createVkRenderpass(vk::Format colorFormat) const;
 	vk::UniqueRenderPass createVkRenderpass(vk::Format colorFormat, vk::Format depthStencilFormat) const;

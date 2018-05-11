@@ -7,7 +7,7 @@
 #include "irender_pass.hpp"
 
 class IBufferResource;
-class DynamicBuffer;
+class DynamicBufferResource;
 class IImageResource;
 class ISampler;
 
@@ -24,7 +24,7 @@ public:
 
 	//Inherited from IRenderPass
 	void bindResource(const std::string& name, IBufferResource&) override;
-	void bindResource(const std::string& name, IDynamicBuffer&) override;
+	void bindResource(const std::string& name, IDynamicBufferResource&) override;
 	void bindResource(const std::string& name, IImageResource&, ISampler&) override;
 
 

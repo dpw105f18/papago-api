@@ -327,9 +327,9 @@ void RenderPass::bindResource(const std::string & name, IBufferResource &buffer)
 	m_bindingAlignment[binding] = 0;
 }
 
-void RenderPass::bindResource(const std::string& name, IDynamicBuffer& buffer)
+void RenderPass::bindResource(const std::string& name, IDynamicBufferResource& buffer)
 {
-	auto& dBuffer = dynamic_cast<DynamicBuffer&>(buffer);
+	auto& dBuffer = dynamic_cast<DynamicBufferResource&>(buffer);
 	auto& innerBuffer = dynamic_cast<BufferResource&>(*dBuffer.m_buffer);
 
 	auto binding = getBinding(name);

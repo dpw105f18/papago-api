@@ -9,7 +9,7 @@ class ISwapchain;
 class ISubCommandBuffer;
 class IImageResource;
 class IBufferResource;
-class DynamicBuffer;
+class DynamicBufferResource;
 
 class ICommandBuffer {
 public:
