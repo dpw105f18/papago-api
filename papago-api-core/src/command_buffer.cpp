@@ -278,8 +278,6 @@ IRecordingCommandBuffer& CommandBuffer::clearStencilBuffer(uint32_t value)
 	}
 	return *this;
 }
-;
-
 
 void CommandBuffer::clearAttachment(const vk::ClearValue & clearValue, vk::ImageAspectFlags aspectFlags)
 {

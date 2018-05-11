@@ -198,9 +198,9 @@ struct Mesh
 	std::unique_ptr<IBufferResource> index_buffer;
 	size_t index_count;
 
-	void use(IRecordingCommandBuffer& rCommandBuffer) const
+	void use(IRecordingSubCommandBuffer& rCommandBuffer) const
 	{
-		rCommandBuffer.setInput(*vertex_buffer);
+		rCommandBuffer.setVertexBuffer(*vertex_buffer);
 		rCommandBuffer.setIndexBuffer(*index_buffer);
 	}
 };
@@ -312,7 +312,7 @@ void multithreadedTest() {
 			futures.emplace_back(threadPool.enqueue([&](size_t count, size_t offset, size_t cmdIndex) {
 				auto& cmd = subCommands[cmdIndex];
 				cmd->record(*renderPass, [&](IRecordingSubCommandBuffer& rSubCmd) {
-					rSubCmd.setInput(*cube->vertex_buffer);
+					rSubCmd.setVertexBuffer(*cube->vertex_buffer);
 					rSubCmd.setIndexBuffer(*cube->index_buffer);
 					for (auto j = 0; j < count; ++j) {
 						rSubCmd.setDynamicIndex("model_matrix", offset + j);

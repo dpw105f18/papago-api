@@ -30,7 +30,6 @@ public:
 	IRecordingCommandBuffer& clearDepthBuffer(float value) override;
 	IRecordingCommandBuffer& clearStencilBuffer(uint32_t value) override;
 	
-	
 	explicit operator vk::CommandBuffer&();
 	const vk::CommandBuffer* operator ->() const {
 		return &*m_vkCommandBuffer;

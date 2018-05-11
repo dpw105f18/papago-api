@@ -23,6 +23,9 @@ public:
 	// Inherited via ISubCommandBuffer
 	void record(IRenderPass &, std::function<void(IRecordingSubCommandBuffer&)>) override;
 
+	IRecordingSubCommandBuffer& setVertexBuffer(IBufferResource &) override;
+	IRecordingSubCommandBuffer& setIndexBuffer(IBufferResource &) override;
+
 	/*
 	//defined in IRecordingSubCommandBuffer, implemented in CommandRecorder<IRecordingSubCommandBuffer>:
 	IRecordingSubCommandBuffer& IRecorder<IRecordingSubCommandBuffer>::setInput(IBufferResource&) override;

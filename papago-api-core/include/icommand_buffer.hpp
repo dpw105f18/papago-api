@@ -18,7 +18,6 @@ public:
 	virtual void record(IRenderPass&, IImageResource&, std::function<void(IRecordingCommandBuffer&)>) = 0;
 	virtual void record(IRenderPass&, IImageResource& color, IImageResource& depth, std::function<void(IRecordingCommandBuffer&)>) = 0;
 };
-
 class ISubCommandBuffer
 {
 public:
@@ -33,9 +32,7 @@ class IRecorder
 public:
 	virtual ~IRecorder() = default;
 
-	virtual T& setInput(IBufferResource&) = 0;
 	virtual T& setDynamicIndex(const std::string& uniformName, size_t) = 0;
-	virtual T& setIndexBuffer(IBufferResource&) = 0;
 };
 
 class IRecordingCommandBuffer 
@@ -62,4 +59,6 @@ public:
 
 	virtual IRecordingSubCommandBuffer& drawIndexed(size_t indexCount, size_t instanceCount = 1, size_t firstIndex = 0, size_t vertexOffset = 0, size_t firstInstance = 0) = 0;
 	virtual IRecordingSubCommandBuffer& draw(size_t indexCount, size_t instanceCount = 1, size_t firstIndex = 0, size_t firstInstance = 0) = 0;
+	virtual IRecordingSubCommandBuffer& setVertexBuffer(IBufferResource&) = 0;
+	virtual IRecordingSubCommandBuffer& setIndexBuffer(IBufferResource&) = 0;
 };

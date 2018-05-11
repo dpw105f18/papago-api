@@ -59,3 +59,35 @@ void SubCommandBuffer::record(IRenderPass &renderPass, std::function<void(IRecor
 	func(*this);
 	end();
 }
+
+IRecordingSubCommandBuffer & SubCommandBuffer::setVertexBuffer(IBufferResource &buffer)
+{
+	if (m_renderPassPtr == nullptr)
+	{
+		PAPAGO_ERROR("setInput(buffer) called while not in a begin-context (begin(...) has not been called)");
+	}
+
+	//TODO: find a more general way to fix offsets
+	m_vkCommandBuffer->bindVertexBuffers(
+		0,
+		{ *(static_cast<BufferResource&>(buffer)).m_vkBuffer },
+		{ 0 });
+	return *this;
+}
+
+IRecordingSubCommandBuffer & SubCommandBuffer::setIndexBuffer(IBufferResource &indexBuffer)
+{
+	if (m_renderPassPtr == nullptr)
+	{
+		PAPAGO_ERROR("setIndexBuffer(indexBuffer) called while not in a begin-context (begin(...) has not been called)");
+	}
+
+	auto& internalIndexBuffer = static_cast<BufferResource&>(indexBuffer);
+	auto indexType = internalIndexBuffer.m_elementType == BufferResourceElementType::eUint32 ? vk::IndexType::eUint32 : vk::IndexType::eUint16;
+
+	m_vkCommandBuffer->bindIndexBuffer(
+		*internalIndexBuffer.m_vkBuffer,
+		0,
+		indexType);
+	return *this;
+};
