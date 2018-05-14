@@ -153,6 +153,8 @@
     <ClInclude Include="external\papago\iswapchain.hpp" />
     <ClInclude Include="external\papago\papago.hpp" />
     <ClInclude Include="external\papago\parser.hpp" />
+    <ClInclude Include="mesh.h" />
+    <ClInclude Include="thread_pool.h" />
     <ClInclude Include="util.h" />
   </ItemGroup>
   <ItemGroup>
