@@ -20,20 +20,67 @@ using CommandBufferRefCollection = std::vector<std::reference_wrapper<ICommandBu
 struct Vertex
 {
 	glm::vec3 pos;
-	glm::vec2 uv;
+	//glm::vec2 uv;
 };
 
 
 int main()
-{
-	
+{	
 	//init
 	auto windowWidth = 800;
 	auto windowHeight = 600;
 	auto hwnd = StartWindow(windowWidth, windowHeight);
 
 	auto surface = ISurface::createWin32Surface(windowWidth, windowHeight, hwnd);
-	auto device = IDevice::enumerateDevices(*surface, {}, {});
+	IDevice::Features features;
+	features.samplerAnisotropy = true;
+
+	IDevice::Extensions extensions;
+	extensions.swapchain = true;
+	auto devices = IDevice::enumerateDevices(*surface, features, extensions);
+	auto& device = devices[0];
+
+	//TODO: make readFile visible
+	auto colorVertCode = readFile("shaders/colorVert.vert");
+	auto colorFragCode = readFile("shaders/colorFrag.frag");
+
+	auto parser = Parser(PARSER_COMPILER_PATH);
+
+	auto vertShader = parser.compileVertexShader(colorVertCode, "main");
+	auto fragShader = parser.compileFragmentShader(colorFragCode, "main");
+	auto shaderProgram = device->createShaderProgram(*vertShader, *fragShader);
+
+	auto renderPass = device->createRenderPass(*shaderProgram, windowWidth, windowHeight, Format::eB8G8R8A8Unorm);
+
+	//TODO: make eMailBox default? there is only one..
+	auto swapChain = device->createSwapChain(Format::eB8G8R8A8Unorm, 3, IDevice::PresentMode::eMailbox);
+
+	auto triangleVertices = std::vector<Vertex>{
+		{ {  0.5f, -0.5f, 0.5f } },
+		{ { -0.5f, -0.5f, 0.5f } },
+		{ {  0.0f,  0.5f, 0.5f } },
+	};
+
+	auto vertexBuffer = device->createVertexBuffer(triangleVertices);
+
+	auto scmd = device->createSubCommandBuffer();
+
+	auto scmds = std::vector<std::unique_ptr<ISubCommandBuffer>>();
+
+	scmd->record(*renderPass, [&](IRecordingSubCommandBuffer& rscmd) {
+		rscmd.setVertexBuffer(*vertexBuffer);
+
+		//TODO: rename parameters in interface:
+		rscmd.draw(3);
+	});
+
+	scmds.emplace_back(std::move(scmd));
+
+	auto cmd = device->createCommandBuffer();
+
+	CommandBufferRefCollection cmds = { *cmd};
+
+	auto graphicsQueue = device->createGraphicsQueue(*swapChain);
 
 	//Main game loop:
 	using Clock = std::chrono::high_resolution_clock;
@@ -74,6 +121,13 @@ int main()
 			}
 
 			//Handle game logic:
+			cmd->record(*renderPass, *swapChain, [&](IRecordingCommandBuffer& rcmd) {
+				rcmd.clearColorBuffer(0, 0, 0, 1);
+				rcmd.execute(scmds);
+			});
+
+			graphicsQueue->submitCommands(cmds);
+			graphicsQueue->present();
 
 			++fps;
 		}

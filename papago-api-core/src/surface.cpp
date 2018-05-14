@@ -131,7 +131,7 @@ Surface::Surface(uint32_t width, uint32_t height, HWND hwnd) : ISurface(width, h
 				| vk::DebugReportFlagBitsEXT::eWarning
 			    //| vk::DebugReportFlagBitsEXT::eInformation 
 				| vk::DebugReportFlagBitsEXT::eError
-				| vk::DebugReportFlagBitsEXT::ePerformanceWarning
+				//| vk::DebugReportFlagBitsEXT::ePerformanceWarning
 				//| vk::DebugReportFlagBitsEXT::eDebug
 			)
 			.setPfnCallback(VkDebugCallback));

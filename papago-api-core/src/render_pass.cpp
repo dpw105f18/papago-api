@@ -90,12 +90,13 @@ void RenderPass::setupDescriptorSet(const vk::UniqueDevice &device, const Vertex
 		//Descriptor Pool:
 		// TODO: Use only one descriptor pool - Brandborg
 		auto poolSizes = std::vector<vk::DescriptorPoolSize>(vkBindings.size());
+
 		for (auto i = 0; i < vkBindings.size(); ++i) {
 			auto& vkBinding = vkBindings[i];
 			poolSizes[i].setDescriptorCount(1)
-				.setType(vkBinding.descriptorType); 
+				.setType(vkBinding.descriptorType);
 		}
-
+		
 		vk::DescriptorPoolCreateInfo poolCreateInfo = {};
 		poolCreateInfo.setPoolSizeCount(poolSizes.size())
 			.setPPoolSizes(poolSizes.data())
