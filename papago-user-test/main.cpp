@@ -11,7 +11,7 @@
 #include "util.h"
 
 //API::
-#include "papago.hpp"
+#include "external/papago/papago.hpp"
 
 //convenience:
 #define PARSER_COMPILER_PATH "C:/VulkanSDK/1.0.65.0/Bin/glslangValidator.exe"
@@ -31,6 +31,9 @@ int main()
 	auto windowWidth = 800;
 	auto windowHeight = 600;
 	auto hwnd = StartWindow(windowWidth, windowHeight);
+
+	auto surface = ISurface::createWin32Surface(windowWidth, windowHeight, hwnd);
+	auto device = IDevice::enumerateDevices(*surface, {}, {});
 
 	//Main game loop:
 	using Clock = std::chrono::high_resolution_clock;
@@ -71,6 +74,8 @@ int main()
 			}
 
 			//Handle game logic:
+
+			++fps;
 		}
 	}
 }
