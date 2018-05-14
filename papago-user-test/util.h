@@ -4,6 +4,7 @@
 #include <WinUser.h>
 #include <iostream>
 #include <fstream>
+#include <vector>
 
 //STB - for image loading
 #define STB_IMAGE_IMPLEMENTATION

@@ -47,7 +47,7 @@ int main()
 			if (msg.message == WM_QUIT) {
 				run = false;
 			}
-			
+
 			//Handle input:
 
 			TranslateMessage(&msg);
@@ -72,4 +72,5 @@ int main()
 
 			//Handle game logic:
 		}
+	}
 }
