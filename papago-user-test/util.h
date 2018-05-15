@@ -18,7 +18,7 @@ static std::string readFile(const std::string& file_path) {
 static std::vector<char> readPixels()
 {
 	int texWidth, texHeight, texChannels;
-	auto pixels = stbi_load("textures/eldorado.jpg", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+	auto pixels = stbi_load("textures/BYcheckers.png", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
 	if (!pixels) {
 		throw new std::runtime_error("Failed to load texture image!");
 	}
