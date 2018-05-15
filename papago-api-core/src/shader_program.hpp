@@ -15,6 +15,7 @@ public:
 	vk::PipelineShaderStageCreateInfo m_vkVertexStageCreateInfo;
 	vk::PipelineShaderStageCreateInfo m_vkFragmentStageCreateInfo;
 	std::set<uint32_t> getUniqueUniformBindings() const;
+	uint32_t getOffset(const std::string& name) const;
 
 	VertexShader& m_vertexShader;
 	FragmentShader& m_fragmentShader;

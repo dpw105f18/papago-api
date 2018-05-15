@@ -185,6 +185,7 @@
     <ClInclude Include="include\isurface.hpp" />
     <ClInclude Include="include\iswapchain.hpp" />
     <ClInclude Include="include\api_enums.hpp" />
+    <ClInclude Include="include\papago.hpp" />
     <ClInclude Include="src\buffer_resource.hpp" />
     <ClInclude Include="src\command_buffer.hpp" />
     <ClInclude Include="src\device.hpp" />
