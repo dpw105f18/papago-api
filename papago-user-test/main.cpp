@@ -6,6 +6,7 @@
 
 //GLM - for glsl types in user code:
 #define GLM_ENABLE_EXPERIMENTAL
+#define GLM_SWIZZLE_XYZW
 #include "external/glm/glm.hpp"
 #include "external/glm/gtx/transform.hpp"
 
@@ -539,14 +540,14 @@ void shadow_mapping() {
 
 
 	auto parser = Parser("C:/VulkanSDK/1.0.65.0/Bin/glslangValidator.exe");
-	auto swapchain = device->createSwapChain(Format::eR8G8B8A8Unorm, 3, IDevice::PresentMode::eMailbox);
+	auto swapchain = device->createSwapChain(Format::eR8G8B8A8Unorm, Format::eD32Sfloat, 3, IDevice::PresentMode::eMailbox);
 	auto graphicsQueue = device->createGraphicsQueue(*swapchain);
 	auto vpMatrixLight = device->createUniformBuffer(sizeof(glm::mat4));
 	auto vpMatrixCam = device->createUniformBuffer(sizeof(glm::mat4));
 
 	std::vector<glm::mat4> dynamicData;
 	dynamicData.push_back({ glm::translate(glm::vec3{ 0, 0, 0 }) * glm::rotate(0.75f, glm::vec3(0.0f, -1.0f, 0.0f))});
-	dynamicData.push_back({ glm::scale(glm::vec3(50.0f, 1.0f, 50.0f)) * glm::translate(glm::vec3{ 0, 5.0f , 0 })});
+	dynamicData.push_back({ glm::translate(glm::vec3{ 0, 5.0f , 0 }) * glm::scale(glm::vec3(50.0f, 1.0f, 50.0f))});
 
 	auto d_buffer = device->createDynamicUniformBuffer(sizeof(glm::mat4), dynamicData.size());
 
@@ -556,20 +557,21 @@ void shadow_mapping() {
 
 	{
 		glm::mat4 view = glm::lookAt(
-			glm::vec3(5.0f, -3.0f, 0.0f),
-			glm::vec3(0.0f, 0.0f, 0.0f),
-			glm::vec3(0.0f, 1.0f, 0.0f));
+			/* eye */	glm::vec3(5.0f, -3.0f, 0.0f),
+			/* center */glm::vec3(0.0f, 0.0f, 0.0f),
+			/* up */	glm::vec3(0.0f, 1.0f, 0.0f));
 
-		glm::mat4 projection = glm::ortho(-75.0f, 75.0f, 75.0f, -75.0f, 1.0f, 10.0f);
+		glm::mat4 projection = glm::ortho(-30.0f, 30.0f, 30.0f, -30.0f, 1.0f, 10.0f);
 
 		vpMatrixLight->upload<glm::mat4>({
 			projection * view
 		});
 	}
 
+	auto camPos = glm::vec4(0.0f, -1.0f, 5.0f, 1.0f);
 	{
 		glm::mat4 view = glm::lookAt(
-			glm::vec3(0.0f, 0.0f, 5.0f),
+			glm::vec3(camPos.x, camPos.y, camPos.z),
 			glm::vec3(0.0f, 0.0f, 0.0f),
 			glm::vec3(0.0f, 1.0f, 0.0f));
 
@@ -595,7 +597,7 @@ void shadow_mapping() {
 	auto shadowFrag = parser.compileFragmentShader(readFile("shaders/shadow.frag"), "main");
 	auto shadowProgram = device->createShaderProgram(*shadowVert, *shadowFrag);
 
-	auto renderpass = device->createRenderPass(*shadowProgram, 800, 600, swapchain->getFormat());
+	auto renderpass = device->createRenderPass(*shadowProgram, 800, 600, swapchain->getFormat(), Format::eD32Sfloat);
 	
 
 	using Clock = std::chrono::high_resolution_clock;
@@ -620,9 +622,9 @@ void shadow_mapping() {
 	shadowPass->bindResource("model_matrix", *d_buffer);
 	shadowPass->bindResource("sam", *image, *sam);
 
-	std::vector<std::unique_ptr<ISubCommandBuffer>> subCommands;
-	subCommands.emplace_back(device->createSubCommandBuffer());
-	subCommands.back()->record(*shadowPass, [&](IRecordingSubCommandBuffer& rscmd) {
+	std::vector<std::unique_ptr<ISubCommandBuffer>> shadowSubCommands;
+	shadowSubCommands.emplace_back(device->createSubCommandBuffer());
+	shadowSubCommands.back()->record(*shadowPass, [&](IRecordingSubCommandBuffer& rscmd) {
 		rscmd.setVertexBuffer(*cube->vertex_buffer);
 		rscmd.setIndexBuffer(*cube->index_buffer);
 		rscmd.setDynamicIndex("model_matrix", 0);
@@ -630,21 +632,18 @@ void shadow_mapping() {
 		rscmd.setDynamicIndex("model_matrix", 1);
 		rscmd.drawIndexed(cube->index_count);
 	});
-
-	
-	auto commandBuffer = device->createCommandBuffer();
 	
 
-	commandBuffer->record(*shadowPass, *shadowCol, *shadowMap, [&](IRecordingCommandBuffer& rcmd) {
-		rcmd.clearDepthBuffer(1.0f);
-		rcmd.execute(subCommands);
-	});
+	// commandBuffer->record(*shadowPass, *shadowCol, *shadowMap, [&](IRecordingCommandBuffer& rcmd) {
+	// 	rcmd.clearDepthBuffer(1.0f);
+	// 	rcmd.execute(subCommands);
+	// });
 
-	graphicsQueue->submitCommands({ *commandBuffer });
-	graphicsQueue->present();
-	device->waitIdle();
-
-	subCommands.clear();
+	// graphicsQueue->submitCommands({ *commandBuffer });
+	// graphicsQueue->present();
+	// device->waitIdle();
+ 
+	// subCommands.clear();
 
 	renderpass->bindResource("view_projection", *vpMatrixCam);
 	renderpass->bindResource("shadow_view_projection", *vpMatrixLight);
@@ -652,21 +651,16 @@ void shadow_mapping() {
 	renderpass->bindResource("shadow_map", *shadowMap, *sam);
 	renderpass->bindResource("model", *d_buffer);
 
-	subCommands.push_back(std::move(device->createSubCommandBuffer()));	
-	try {
-		subCommands.back()->record(*renderpass, [&](IRecordingSubCommandBuffer& rSubCmd) {
-			rSubCmd.setVertexBuffer(*cube->vertex_buffer);
-			rSubCmd.setIndexBuffer(*cube->index_buffer);
-			rSubCmd.setDynamicIndex("model", 0);
-			rSubCmd.drawIndexed(36);
-			rSubCmd.setDynamicIndex("model", 1);
-			rSubCmd.drawIndexed(36);
-		});
-	}
-	catch (std::runtime_error e)
-	{
-		auto dbug = e.what();
-	}
+	std::vector<std::unique_ptr<ISubCommandBuffer>> subCommands;
+	subCommands.push_back(device->createSubCommandBuffer());	
+	subCommands.back()->record(*renderpass, [&](IRecordingSubCommandBuffer& rSubCmd) {
+		rSubCmd.setVertexBuffer(*cube->vertex_buffer);
+		rSubCmd.setIndexBuffer(*cube->index_buffer);
+		rSubCmd.setDynamicIndex("model", 0);
+		rSubCmd.drawIndexed(cube->index_count);
+		rSubCmd.setDynamicIndex("model", 1);
+		rSubCmd.drawIndexed(cube->index_count);
+	});
 	
 	while (true)
 	{
@@ -696,14 +690,48 @@ void shadow_mapping() {
 				fps = 0;
 			}
 
+			dynamicData[0] *= glm::rotate(0.01f, glm::vec3{1.0f, 0.0f, 0.0f});
+			dynamicData[0] *= glm::rotate(0.02f, glm::vec3{0.0f, 1.0f, 0.0f});
+			dynamicData[0] *= glm::rotate(0.03f, glm::vec3{0.0f, 0.0f, 1.0f});
+			d_buffer->upload(dynamicData);
+			camPos = glm::rotate(0.01f, glm::vec3{0.0f, 1.0f, 0.0f}) * camPos;
+			{
+				glm::mat4 view = glm::lookAt(
+					glm::vec3(camPos.x, camPos.y, camPos.z),
+					glm::vec3(0.0f, 0.0f, 0.0f),
+					glm::vec3(0.0f, 1.0f, 0.0f));
+
+				glm::mat4 projection = glm::perspective(
+					glm::radians(90.0f),
+					surface->getWidth() * 1.0f / surface->getHeight(),
+					1.0f,
+					2500.0f);
+
+				vpMatrixCam->upload<glm::mat4>({
+					projection * view
+				});
+			}
+
+
+			std::vector<std::reference_wrapper<ICommandBuffer>> commandBuffers;
+			auto shadowCmd = device->createCommandBuffer();
+			shadowCmd->record(*shadowPass, *shadowCol, *shadowMap, [&](IRecordingCommandBuffer& ircb)
+			{
+				ircb.clearDepthBuffer(1.0f);
+				ircb.execute(shadowSubCommands);
+			});
+			commandBuffers.push_back(*shadowCmd);
+			auto commandBuffer = device->createCommandBuffer();
 			commandBuffer->record(*renderpass, *swapchain, [&](IRecordingCommandBuffer& rCommandBuffer) {
 				//cube->use(rCommandBuffer);
+				rCommandBuffer.clearDepthBuffer(1.0f);
 				rCommandBuffer.clearColorBuffer(0.0f, 0.5f, 0.7f, 1.0f);
 				rCommandBuffer.execute(subCommands);
 			});
+			commandBuffers.push_back(*commandBuffer);
 
 
-			graphicsQueue->submitCommands({*commandBuffer});
+			graphicsQueue->submitCommands(commandBuffers);
 
 			graphicsQueue->present();
 			fps++;

@@ -10,43 +10,51 @@ struct Vertex
 	glm::vec2 uv;
 };
 
+#pragma region Mesh Data
+
+std::vector<Vertex> vertices {
+	{ { -0.5f, -0.5f, 0.5f }, { 0.0f, 0.0f }},
+	{ { -0.5f,  0.5f,  0.5f },{ 0.0f, 1.0f } },
+	{ { 0.5f,  0.5f,  0.5f },{ 1.0f, 1.0f } },
+	{ { 0.5f, -0.5f,  0.5f },{ 1.0f, 0.0f } },
+	{ { -0.5f, -0.5f, -0.5f },{ 0.0f, 0.0f } },
+	{ { -0.5f,  0.5f, -0.5f },{ 0.0f, 1.0f } },
+	{ { 0.5f,  0.5f, -0.5f },{ 1.0f, 1.0f } },
+	{ { 0.5f, -0.5f, -0.5f },{ 1.0f, 0.0f } }
+};
+
+std::vector<uint16_t> indices{
+	// Front
+	0, 1, 2,
+	0, 2, 3,
+	// Top
+	3, 7, 4,
+	3, 4, 0,
+	// Right
+	3, 2, 6,
+	3, 6, 7,
+	// Back
+	7, 6, 5,
+	7, 5, 4,
+	// Bottom
+	1, 5, 6,
+	1, 6, 2,
+	// Left
+	4, 5, 1,
+	4, 1, 0
+};
+
+#pragma endregion
+
 struct Mesh
 {
 	static Mesh Cube(IDevice& device)
 	{
-		auto vertex_buffer = device.createVertexBuffer(std::vector<Vertex>{
-			{ { -0.5f, -0.5f, 0.5f }, { 0.0f, 0.0f }},
-			{ { -0.5f,  0.5f,  0.5f },{ 0.0f, 1.0f } },
-			{ { 0.5f,  0.5f,  0.5f },{ 1.0f, 1.0f } },
-			{ { 0.5f, -0.5f,  0.5f },{ 1.0f, 0.0f } },
-			{ { -0.5f, -0.5f, -0.5f },{ 0.0f, 0.0f } },
-			{ { -0.5f,  0.5f, -0.5f },{ 0.0f, 1.0f } },
-			{ { 0.5f,  0.5f, -0.5f },{ 1.0f, 1.0f } },
-			{ { 0.5f, -0.5f, -0.5f },{ 1.0f, 0.0f } }
-		});
+		auto vertex_buffer = device.createVertexBuffer(vertices);
 
-		auto index_buffer = device.createIndexBuffer(std::vector<uint16_t>{
-			// Front
-			0, 1, 2,
-				0, 2, 3,
-				// Top
-				3, 7, 4,
-				3, 4, 0,
-				// Right
-				3, 2, 6,
-				3, 6, 7,
-				// Back
-				7, 6, 5,
-				7, 5, 4,
-				// Bottom
-				1, 5, 6,
-				1, 6, 2,
-				// Left
-				4, 5, 1,
-				4, 1, 0
-		});
+		auto index_buffer = device.createIndexBuffer(indices);
 
-		return { std::move(vertex_buffer), std::move(index_buffer), 48 };
+		return { std::move(vertex_buffer), std::move(index_buffer), indices.size() };
 	}
 
 	std::unique_ptr<IBufferResource> vertex_buffer;
