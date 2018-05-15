@@ -103,7 +103,7 @@ void test()
 
 	Test test;
 	
-	test.Init();
+	test.Init(hwnd);
 
 	//Main game loop:
 	using Clock = std::chrono::high_resolution_clock;
