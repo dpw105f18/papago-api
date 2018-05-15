@@ -56,3 +56,18 @@ std::set<uint32_t> ShaderProgram::getUniqueUniformBindings() const
 
 	return uniqueBindings;
 }
+
+uint32_t ShaderProgram::getOffset(const std::string & name) const
+{
+	bool found = false;
+
+	Binding binding;
+	if (m_vertexShader.bindingExists(name)) {
+		binding = m_vertexShader.m_bindings[name];
+	}
+	else if (m_fragmentShader.bindingExists(name)) {
+		binding = m_fragmentShader.m_bindings[name];
+	}
+
+	return binding.offset;
+}

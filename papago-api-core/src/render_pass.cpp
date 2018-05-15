@@ -292,6 +292,7 @@ void RenderPass::bindResource(const std::string & name, IBufferResource &buffer)
 	auto& descriptorSet = m_vkDescriptorSets[m_descriptorSetKeyMask];
 
 	vk::DescriptorBufferInfo info = innerBuffer.m_vkInfo;
+	info.setOffset(m_shaderProgram.getOffset(name));
 
 	std::vector<vk::CopyDescriptorSet> descriptorSetCopys;
 

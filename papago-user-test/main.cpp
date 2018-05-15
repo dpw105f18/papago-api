@@ -525,9 +525,197 @@ void example_cubes_parallel()
 	device->waitIdle();
 }
 
+void shadow_mapping() {
+	const size_t windowWidth = 800;
+	const size_t windowHeight = 600;
+	auto hwnd = StartWindow(windowWidth, windowHeight);
+	auto surface = ISurface::createWin32Surface(windowWidth, windowHeight, hwnd);
+	IDevice::Features features{};
+	features.samplerAnisotropy = true;
+	IDevice::Extensions extensions{};
+	extensions.swapchain = true;
+	auto devices = IDevice::enumerateDevices(*surface, features, extensions);
+	auto& device = devices[0];
+
+
+	auto parser = Parser("C:/VulkanSDK/1.0.65.0/Bin/glslangValidator.exe");
+	auto swapchain = device->createSwapChain(Format::eR8G8B8A8Unorm, 3, IDevice::PresentMode::eMailbox);
+	auto graphicsQueue = device->createGraphicsQueue(*swapchain);
+	auto vpMatrixLight = device->createUniformBuffer(sizeof(glm::mat4));
+	auto vpMatrixCam = device->createUniformBuffer(sizeof(glm::mat4));
+
+	std::vector<glm::mat4> dynamicData;
+	dynamicData.push_back({ glm::translate(glm::vec3{ 0, 0, 0 }) * glm::rotate(0.75f, glm::vec3(0.0f, -1.0f, 0.0f))});
+	dynamicData.push_back({ glm::scale(glm::vec3(50.0f, 1.0f, 50.0f)) * glm::translate(glm::vec3{ 0, 5.0f , 0 })});
+
+	auto d_buffer = device->createDynamicUniformBuffer(sizeof(glm::mat4), dynamicData.size());
+
+	d_buffer->upload<glm::mat4>(dynamicData);
+
+	auto cube = std::make_shared<Mesh>(Mesh::Cube(*device));
+
+	{
+		glm::mat4 view = glm::lookAt(
+			glm::vec3(5.0f, -3.0f, 0.0f),
+			glm::vec3(0.0f, 0.0f, 0.0f),
+			glm::vec3(0.0f, 1.0f, 0.0f));
+
+		glm::mat4 projection = glm::ortho(-75.0f, 75.0f, 75.0f, -75.0f, 1.0f, 10.0f);
+
+		vpMatrixLight->upload<glm::mat4>({
+			projection * view
+		});
+	}
+
+	{
+		glm::mat4 view = glm::lookAt(
+			glm::vec3(0.0f, 0.0f, 5.0f),
+			glm::vec3(0.0f, 0.0f, 0.0f),
+			glm::vec3(0.0f, 1.0f, 0.0f));
+
+		glm::mat4 projection = glm::perspective(
+			glm::radians(90.0f),
+			surface->getWidth() * 1.0f / surface->getHeight(),
+			1.0f,
+			2500.0f);
+
+		vpMatrixCam->upload<glm::mat4>({
+			projection * view
+		});
+	}
+
+	//Renderpass 1 - from lightsource
+	auto vertexShader = parser.compileVertexShader(readFile("shaders/mvpTexShader.vert"), "main");
+	auto fragmentShader = parser.compileFragmentShader(readFile("shaders/mvpTexShader.frag"), "main");
+	auto program = device->createShaderProgram(*vertexShader, *fragmentShader);
+	auto shadowPass = device->createRenderPass(*program, 1024, 1024, Format::eB8G8R8A8Unorm, Format::eD32Sfloat);
+
+	// Renderpass 2
+	auto shadowVert = parser.compileVertexShader(readFile("shaders/shadow.vert"), "main");
+	auto shadowFrag = parser.compileFragmentShader(readFile("shaders/shadow.frag"), "main");
+	auto shadowProgram = device->createShaderProgram(*shadowVert, *shadowFrag);
+
+	auto renderpass = device->createRenderPass(*shadowProgram, 800, 600, swapchain->getFormat());
+	
+
+	using Clock = std::chrono::high_resolution_clock;
+	auto lastUpdate = Clock::now();
+	auto lastFrame = Clock::now();
+	long fps = 0;
+
+	int width, height, comp;
+	auto pixels = stbi_load("textures/BYcheckers.png", &width, &height, &comp, 4);
+
+	auto imageData = std::vector<char>(width * height * 4);
+	memcpy(imageData.data(), pixels, width* height * 4);
+	auto image = device->createTexture2D(width, height, Format::eR8G8B8A8Unorm);
+	image->upload(imageData);
+
+	auto shadowMap = device->createDepthTexture2D(1024, 1024, Format::eD32Sfloat);
+	auto shadowCol = device->createTexture2D(1024, 1024, Format::eB8G8R8A8Unorm);
+
+	auto sam = device->createTextureSampler2D(Filter::eLinear, Filter::eLinear, TextureWrapMode::eMirroredRepeat, TextureWrapMode::eMirroredRepeat);
+
+	shadowPass->bindResource("view_projection_matrix", *vpMatrixLight);
+	shadowPass->bindResource("model_matrix", *d_buffer);
+	shadowPass->bindResource("sam", *image, *sam);
+
+	std::vector<std::unique_ptr<ISubCommandBuffer>> subCommands;
+	subCommands.emplace_back(device->createSubCommandBuffer());
+	subCommands.back()->record(*shadowPass, [&](IRecordingSubCommandBuffer& rscmd) {
+		rscmd.setVertexBuffer(*cube->vertex_buffer);
+		rscmd.setIndexBuffer(*cube->index_buffer);
+		rscmd.setDynamicIndex("model_matrix", 0);
+		rscmd.drawIndexed(cube->index_count);
+		rscmd.setDynamicIndex("model_matrix", 1);
+		rscmd.drawIndexed(cube->index_count);
+	});
+
+	
+	auto commandBuffer = device->createCommandBuffer();
+	
+
+	commandBuffer->record(*shadowPass, *shadowCol, *shadowMap, [&](IRecordingCommandBuffer& rcmd) {
+		rcmd.clearDepthBuffer(1.0f);
+		rcmd.execute(subCommands);
+	});
+
+	graphicsQueue->submitCommands({ *commandBuffer });
+	graphicsQueue->present();
+	device->waitIdle();
+
+	subCommands.clear();
+
+	renderpass->bindResource("view_projection", *vpMatrixCam);
+	renderpass->bindResource("shadow_view_projection", *vpMatrixLight);
+	renderpass->bindResource("tex", *image, *sam);
+	renderpass->bindResource("shadow_map", *shadowMap, *sam);
+	renderpass->bindResource("model", *d_buffer);
+
+	subCommands.push_back(std::move(device->createSubCommandBuffer()));	
+	try {
+		subCommands.back()->record(*renderpass, [&](IRecordingSubCommandBuffer& rSubCmd) {
+			rSubCmd.setVertexBuffer(*cube->vertex_buffer);
+			rSubCmd.setIndexBuffer(*cube->index_buffer);
+			rSubCmd.setDynamicIndex("model", 0);
+			rSubCmd.drawIndexed(36);
+			rSubCmd.setDynamicIndex("model", 1);
+			rSubCmd.drawIndexed(36);
+		});
+	}
+	catch (std::runtime_error e)
+	{
+		auto dbug = e.what();
+	}
+	
+	while (true)
+	{
+		MSG msg;
+		if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
+		{
+			if (msg.message == WM_QUIT) {
+				break;
+			}
+
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);
+		}
+		else {
+			auto deltaTime = (Clock::now() - lastUpdate);
+			auto frameTime = (Clock::now() - lastFrame);
+			lastFrame = Clock::now();
+
+			using namespace std::chrono_literals;
+			if (deltaTime > 1s) {
+				lastUpdate = Clock::now();
+				std::stringstream ss;
+				ss << "FPS: " << fps
+					<< " --- Avg. Frame Time: " << 1000.0 / fps << "ms"
+					<< " --- Last Frame Time: " << std::chrono::duration_cast<std::chrono::duration<double, std::milli>>(frameTime).count() << "ms";
+				SetWindowName(hwnd, ss.str());
+				fps = 0;
+			}
+
+			commandBuffer->record(*renderpass, *swapchain, [&](IRecordingCommandBuffer& rCommandBuffer) {
+				//cube->use(rCommandBuffer);
+				rCommandBuffer.clearColorBuffer(0.0f, 0.5f, 0.7f, 1.0f);
+				rCommandBuffer.execute(subCommands);
+			});
+
+
+			graphicsQueue->submitCommands({*commandBuffer});
+
+			graphicsQueue->present();
+			fps++;
+		}
+	}
+	device->waitIdle();
+}
+
 int main()
 {	
 	//example_triangle();
 	//example_cubes();
-	example_cubes_parallel();
+	//example_cubes_parallel();
+	shadow_mapping();
 }
