@@ -26,26 +26,26 @@
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v141</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v141</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
@@ -75,23 +75,25 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ExecutablePath>$(ProjectDir)bin\$(Configuration)\$(Platform);$(ExecutablePath)</ExecutablePath>
-    <OutDir>$(ProjectDir)bin\$(Configuration)\$(Platform)\</OutDir>
-    <IntDir>$(ProjectDir)obj\$(Configuration)\$(Platform)\</IntDir>
+    <OutDir>$(SolutionDir)bin\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(ProjectDir)bin\$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ExecutablePath>$(ProjectDir)bin\$(Configuration)\$(Platform);$(ExecutablePath)</ExecutablePath>
-    <OutDir>$(ProjectDir)bin\$(Configuration)\$(Platform)\</OutDir>
-    <IntDir>$(ProjectDir)obj\$(Configuration)\$(Platform)\</IntDir>
+    <OutDir>$(SolutionDir)bin\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(ProjectDir)bin\$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ExecutablePath>$(ProjectDir)bin\$(Configuration)\$(Platform);$(ExecutablePath)</ExecutablePath>
-    <OutDir>$(ProjectDir)bin\$(Configuration)\$(Platform)\</OutDir>
-    <IntDir>$(ProjectDir)obj\$(Configuration)\$(Platform)\</IntDir>
+    <OutDir>$(SolutionDir)bin\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(ProjectDir)bin\$(Platform)\$(Configuration)\</IntDir>
+    <IncludePath>$(ProjectDir)includes;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ExecutablePath>$(ProjectDir)bin\$(Configuration)\$(Platform);$(ExecutablePath)</ExecutablePath>
-    <OutDir>$(ProjectDir)bin\$(Configuration)\$(Platform)\</OutDir>
-    <IntDir>$(ProjectDir)obj\$(Configuration)\$(Platform)\</IntDir>
+    <OutDir>$(SolutionDir)bin\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(ProjectDir)bin\$(Platform)\$(Configuration)\</IntDir>
+    <IncludePath>$(ProjectDir)includes;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -100,6 +102,9 @@
       <AdditionalIncludeDirectories>$(VulkanSDKDir)\include;$(ProjectDir)include</AdditionalIncludeDirectories>
       <PrecompiledHeader>Create</PrecompiledHeader>
       <PrecompiledHeaderFile>standard_header.hpp</PrecompiledHeaderFile>
+      <PreprocessToFile>false</PreprocessToFile>
+      <PreprocessSuppressLineNumbers>false</PreprocessSuppressLineNumbers>
+      <IgnoreStandardIncludePath>false</IgnoreStandardIncludePath>
     </ClCompile>
     <Link />
     <Link>
@@ -113,12 +118,19 @@
       <AdditionalIncludeDirectories>$(VulkanSDKDir)\include;$(ProjectDir)include</AdditionalIncludeDirectories>
       <PrecompiledHeader>Create</PrecompiledHeader>
       <PrecompiledHeaderFile>standard_header.hpp</PrecompiledHeaderFile>
+      <PreprocessorDefinitions>PAPAGO_USE_VALIDATION_LAYERS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessToFile>false</PreprocessToFile>
+      <PreprocessSuppressLineNumbers>false</PreprocessSuppressLineNumbers>
+      <IgnoreStandardIncludePath>false</IgnoreStandardIncludePath>
     </ClCompile>
     <Link />
     <Link>
       <AdditionalLibraryDirectories>$(VulkanSDKDir)\Lib;$(ProjectDir)lib\$(Platform)</AdditionalLibraryDirectories>
       <AdditionalDependencies>vulkan-1.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PostBuildEvent>
+      <Command>.\fileMover.bat</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -129,6 +141,9 @@
       <AdditionalIncludeDirectories>$(VulkanSDKDir)\include;$(ProjectDir)include</AdditionalIncludeDirectories>
       <PrecompiledHeader>Create</PrecompiledHeader>
       <PrecompiledHeaderFile>standard_header.hpp</PrecompiledHeaderFile>
+      <PreprocessToFile>false</PreprocessToFile>
+      <PreprocessSuppressLineNumbers>false</PreprocessSuppressLineNumbers>
+      <IgnoreStandardIncludePath>false</IgnoreStandardIncludePath>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -145,6 +160,9 @@
       <AdditionalIncludeDirectories>$(VulkanSDKDir)\include;$(ProjectDir)include</AdditionalIncludeDirectories>
       <PrecompiledHeader>Create</PrecompiledHeader>
       <PrecompiledHeaderFile>standard_header.hpp</PrecompiledHeaderFile>
+      <PreprocessToFile>false</PreprocessToFile>
+      <PreprocessSuppressLineNumbers>false</PreprocessSuppressLineNumbers>
+      <IgnoreStandardIncludePath>false</IgnoreStandardIncludePath>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -154,10 +172,72 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="include\common.hpp" />
+    <ClInclude Include="include\ibuffer_resource.hpp" />
+    <ClInclude Include="include\icommand_buffer.hpp" />
+    <ClInclude Include="include\idevice.hpp" />
+    <ClInclude Include="include\igraphics_queue.hpp" />
+    <ClInclude Include="include\iimage_resource.hpp" />
+    <ClInclude Include="include\irender_pass.hpp" />
+    <ClInclude Include="include\isampler.hpp" />
+    <ClInclude Include="include\ishader.hpp" />
+    <ClInclude Include="include\ishader_program.hpp" />
+    <ClInclude Include="include\isurface.hpp" />
+    <ClInclude Include="include\iswapchain.hpp" />
+    <ClInclude Include="include\api_enums.hpp" />
+    <ClInclude Include="include\papago.hpp" />
+    <ClInclude Include="src\buffer_resource.hpp" />
+    <ClInclude Include="src\command_buffer.hpp" />
+    <ClInclude Include="src\device.hpp" />
+    <ClInclude Include="src\fragment_shader.hpp" />
+    <ClInclude Include="src\graphics_queue.hpp" />
+    <ClInclude Include="src\image_resource.hpp" />
+    <ClInclude Include="include\parser.hpp" />
+    <ClInclude Include="src\recording_command_buffer.hpp" />
+    <ClInclude Include="src\render_pass.hpp" />
+    <ClInclude Include="src\resource.hpp" />
+    <ClInclude Include="src\sampler.hpp" />
+    <ClInclude Include="src\shader.hpp" />
+    <ClInclude Include="src\shader_program.hpp" />
     <ClInclude Include="src\standard_header.hpp" />
+    <ClInclude Include="src\sub_command_buffer.hpp" />
+    <ClInclude Include="src\surface.hpp" />
+    <ClInclude Include="src\swap_chain.hpp" />
+    <ClInclude Include="src\vertex_shader.hpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\api_enums.cpp" />
+    <ClCompile Include="src\buffer_resource.cpp" />
+    <ClCompile Include="src\command_buffer.cpp" />
+    <ClCompile Include="src\device.cpp" />
+    <ClCompile Include="src\fragment_shader.cpp" />
+    <ClCompile Include="src\graphics_queue.cpp" />
+    <ClCompile Include="src\image_resource.cpp" />
+    <ClCompile Include="src\parser.cpp" />
+    <ClCompile Include="src\recording_command_buffer.cpp" />
+    <ClCompile Include="src\sampler.cpp" />
+    <ClCompile Include="src\render_pass.cpp" />
+    <ClCompile Include="src\resource.cpp" />
+    <ClCompile Include="src\shader.cpp" />
+    <ClCompile Include="src\shader_program.cpp" />
+    <ClCompile Include="src\sub_command_buffer.cpp" />
+    <ClCompile Include="src\surface.cpp" />
+    <ClCompile Include="src\swap_chain.cpp" />
+    <ClCompile Include="src\vertex_shader.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="fileMover.bat" />
+    <None Include="shader\colorFrag.frag" />
+    <None Include="shader\colorVert.vert" />
+    <None Include="shader\shader.frag" />
+    <None Include="shader\shader.vert" />
+    <None Include="shader\stupidFrag.frag" />
+    <None Include="shader\stupidVert.vert" />
+    <None Include="shader\textureFrag.frag" />
+    <None Include="shader\textureVert.vert" />
+    <None Include="shader\uniformFrag.frag" />
+    <None Include="shader\uniformVert.vert" />
+    <None Include="src\image_resource.impl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

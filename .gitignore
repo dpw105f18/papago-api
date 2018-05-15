@@ -259,3 +259,12 @@ paket-files/
 # Python Tools for Visual Studio (PTVS)
 __pycache__/
 *.pyc
+*.bak
+*.spv
+papago-api-core/lastFrame.png
+papago-api-core/passOneTarget.png
+*.rdc
+papago-api-client/renderDocThingie.cap
+papago-api-client/passOneTarget.png
+papago-api-client/passOneColourTarget.png
+papago-api-client/passOneDepthTarget.png
