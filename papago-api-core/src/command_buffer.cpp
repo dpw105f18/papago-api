@@ -14,7 +14,7 @@ CommandBuffer::operator vk::CommandBuffer&()
 	return *m_vkCommandBuffer;
 }
 
-IRecordingCommandBuffer & CommandBuffer::execute(std::vector<std::unique_ptr<ISubCommandBuffer>>& subCommands)
+IRecordingCommandBuffer & CommandBuffer::execute(const std::vector<std::reference_wrapper<ISubCommandBuffer>>& subCommands)
 {
 	//TODO: check subCommands to see if they are ready to be executed? -AM
 
@@ -22,7 +22,7 @@ IRecordingCommandBuffer & CommandBuffer::execute(std::vector<std::unique_ptr<ISu
 	secondaryCommandBuffers.reserve(subCommands.size());
 
 	for (auto& isub : subCommands) {
-		auto& internalSub = dynamic_cast<SubCommandBuffer&>(*isub);
+		auto& internalSub = dynamic_cast<SubCommandBuffer&>(isub.get());
 		secondaryCommandBuffers.push_back(static_cast<vk::CommandBuffer>(internalSub));
 	}
 	

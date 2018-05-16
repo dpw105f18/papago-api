@@ -7,8 +7,27 @@
 #include <chrono>
 #include <sstream>
 
-//test
-#include "test.h"
+//unique_ptr and multithread stuff:
+#include <memory>
+#include <future>
+
+//GLM - for glsl types in user code:
+#define GLM_ENABLE_EXPERIMENTAL
+#include "external/glm/glm.hpp"
+#include "external/glm/gtx/transform.hpp"
+
+//File read functions (readFile(...) and readPixels(...))
+#include "util.h"
+
+//multithreading
+#include "thread_pool.h"
+
+//API
+#include "external\papago\papago.hpp"
+
+
+#define PARSER_COMPILER_PATH "C:/VulkanSDK/1.0.65.0/Bin/glslangValidator.exe"
+
 
 static LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
@@ -94,6 +113,14 @@ static void SetWindowName(HWND hwnd, const std::string& text)
 	SetWindowText(hwnd, text.c_str());
 }
 
+
+struct Vertex
+{
+	glm::vec3 pos;
+	glm::vec2 uv;
+};
+
+
 void test()
 {
 	//init
@@ -101,10 +128,44 @@ void test()
 	auto windowHeight = 600;
 	auto hwnd = StartWindow(windowWidth, windowHeight);
 
-	Test test;
-	
-	test.Init(hwnd);
+	std::vector<Vertex> cubeVertices{
+		{ { -0.5f, -0.5f,  0.5f }, { 0.0f, 0.0f } },
+		{ { -0.5f,  0.5f,  0.5f }, { 0.0f, 1.0f } },
+		{ { 0.5f,   0.5f,  0.5f }, { 1.0f, 1.0f } },
+		{ { 0.5f,  -0.5f,  0.5f }, { 1.0f, 0.0f } },
+		{ { -0.5f, -0.5f, -0.5f }, { 0.0f, 0.0f } },
+		{ { -0.5f,  0.5f, -0.5f }, { 0.0f, 1.0f } },
+		{ { 0.5f,   0.5f, -0.5f }, { 1.0f, 1.0f } },
+		{ { 0.5f,  -0.5f, -0.5f }, { 1.0f, 0.0f } }
+	};
 
+	std::vector<uint16_t> cubeIndices{
+		// Front
+		0, 1, 2,
+		0, 2, 3,
+		// Top
+		3, 7, 4,
+		3, 4, 0,
+		// Right
+		3, 2, 6,
+		3, 6, 7,
+		// Back
+		7, 6, 5,
+		7, 5, 4,
+		// Bottom
+		1, 5, 6,
+		1, 6, 2,
+		// Left
+		4, 5, 1,
+		4, 1, 0
+	};
+
+
+	//*************************************************************************************************
+	//Init code here:
+	
+	//*************************************************************************************************
+	
 	//Main game loop:
 	using Clock = std::chrono::high_resolution_clock;
 	auto lastUpdate = Clock::now();
@@ -120,8 +181,6 @@ void test()
 			if (msg.message == WM_QUIT) {
 				run = false;
 			}
-
-			//Handle input:
 
 			TranslateMessage(&msg);
 			DispatchMessage(&msg);
@@ -143,8 +202,10 @@ void test()
 				fps = 0;
 			}
 
-			test.Loop();
+			//*************************************************************************************************
+			//Loop code here:
 
+			//*************************************************************************************************
 			++fps;
 		}
 	}

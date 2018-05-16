@@ -1,5 +1,6 @@
 #pragma once
 #include <functional>
+#include <vector>
 
 class IRecordingCommandBuffer;
 class IRecordingSubCommandBuffer;
@@ -41,7 +42,7 @@ class IRecordingCommandBuffer
 public:
 	virtual ~IRecordingCommandBuffer() = default;
 
-	virtual IRecordingCommandBuffer& execute(std::vector<std::unique_ptr<ISubCommandBuffer>>&) = 0;
+	virtual IRecordingCommandBuffer& execute(const std::vector<std::reference_wrapper<ISubCommandBuffer>>&) = 0;
 
 	virtual IRecordingCommandBuffer& clearColorBuffer(float red, float green, float blue, float alpha) = 0;
 	virtual IRecordingCommandBuffer& clearColorBuffer(int32_t red, int32_t green, int32_t blue, int32_t alpha) = 0;
