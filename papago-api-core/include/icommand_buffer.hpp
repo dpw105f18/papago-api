@@ -59,7 +59,7 @@ public:
 	virtual ~IRecordingSubCommandBuffer() = default;
 
 	virtual IRecordingSubCommandBuffer& drawIndexed(size_t indexCount, size_t instanceCount = 1, size_t firstIndex = 0, size_t vertexOffset = 0, size_t firstInstance = 0) = 0;
-	virtual IRecordingSubCommandBuffer& draw(size_t indexCount, size_t instanceCount = 1, size_t firstIndex = 0, size_t firstInstance = 0) = 0;
+	virtual IRecordingSubCommandBuffer& draw(size_t vertexCount, size_t instanceCount = 1, size_t firstVertex = 0, size_t firstInstance = 0) = 0;
 	virtual IRecordingSubCommandBuffer& setVertexBuffer(IBufferResource&) = 0;
 	virtual IRecordingSubCommandBuffer& setIndexBuffer(IBufferResource&) = 0;
 };

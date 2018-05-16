@@ -142,7 +142,7 @@ void test()
 
 	auto swapChain = device->createSwapChain(Format::eR8G8B8A8Unorm, Format::eD32Sfloat, 3, IDevice::PresentMode::eMailbox);
 
-	std::vector<CubeVertex> cubeVertices{
+	std::vector<CubeVertex> cubeVertices {
 		{ { -0.5f, -0.5f,  0.5f }, { 0.0f, 0.0f } },
 		{ { -0.5f,  0.5f,  0.5f }, { 0.0f, 1.0f } },
 		{ { 0.5f,   0.5f,  0.5f }, { 1.0f, 1.0f } },
@@ -174,44 +174,60 @@ void test()
 		4, 1, 0
 	};
 
-	std::vector<glm::vec3> triVertices;
-	triVertices.push_back({ -1.0f, -1.0f, 0.0f });
-	triVertices.push_back({ 0.0f, 1.0f, 0.0f });
-	triVertices.push_back({ 1.0f, -1.0f, 0.0f });
-
 	Parser p(PARSER_COMPILER_PATH);
 
-	auto vertexShader = p.compileVertexShader(readFile("shaders/colorVert.vert"), "main");
-	auto fragmentShader = p.compileFragmentShader(readFile("shaders/colorFrag.frag"), "main");
+	auto vertexShader = p.compileVertexShader(readFile("shaders/mvpTexShader.vert"), "main");
+	auto fragmentShader = p.compileFragmentShader(readFile("shaders/mvpTexShader.frag"), "main");
 
+	int texW, texH;
+	auto pixels = readPixels("textures/BYcheckers.png", texW, texH);
+
+	auto texture = device->createTexture2D(texW, texH, Format::eR8G8B8A8Unorm);
+	texture->upload(pixels);
+
+	auto sampler = device->createTextureSampler2D(Filter::eLinear, Filter::eLinear, TextureWrapMode::eRepeat, TextureWrapMode::eRepeat);
+		
 	auto program = device->createShaderProgram(*vertexShader, *fragmentShader);
 
-	auto vertexBuffer = device->createVertexBuffer(triVertices);
+	auto vertexBuffer = device->createVertexBuffer(cubeVertices);
+	auto indexBuffer = device->createIndexBuffer(cubeIndices);
 	
 	auto renderPass = device->createRenderPass(*program, windowWidth, windowHeight, Format::eR8G8B8A8Unorm, Format::eD32Sfloat);
 	
 	auto graphicsQueue = device->createGraphicsQueue(*swapChain);
 
 	auto subCommandBuffer = device->createSubCommandBuffer();
-	subCommandBuffer->record(*renderPass, [&](IRecordingSubCommandBuffer& cmdBuf) {
-		cmdBuf.setVertexBuffer(*vertexBuffer);
-
-		cmdBuf.draw(3, 1, 0, 0);
-	});
 
 	auto commandBuffer = device->createCommandBuffer();
 
+	auto viewUniformBuffer = device->createDynamicUniformBuffer(sizeof(glm::mat4), 1);
+	auto instanceUniformBuffer = device->createDynamicUniformBuffer(sizeof(glm::mat4) * 1000, 1000);
+
+	renderPass->bindResource("view_projection_matrix", *viewUniformBuffer);
+	renderPass->bindResource("model_matrix", *instanceUniformBuffer);
+
+	renderPass->bindResource("sam", *texture, *sampler);
+	
 	//*************************************************************************************************
 	//Init code here:
-
+	
 	//*************************************************************************************************
 	
 	//Main game loop:
 	using Clock = std::chrono::high_resolution_clock;
+	auto startTime = Clock::now();
 	auto lastUpdate = Clock::now();
 	auto lastFrame = Clock::now();
 	long fps = 0;
 	bool run = true;
+
+	glm::mat4 viewProj;
+	std::vector<glm::mat4> world(1000);
+
+	glm::vec3 translations[1000];
+	for (int i = 0; i < 1000; ++i) {
+		translations[i] = glm::vec3(float(rand() % 100 - 50), float(rand() % 100 - 50), -100.0f);
+	}
 
 	while (run)
 	{
@@ -226,6 +242,24 @@ void test()
 			DispatchMessage(&msg);
 		}
 		else {
+			viewProj = glm::perspective(glm::radians(45.0f), float(windowWidth) / windowHeight, 0.5f, 500.0f);
+
+			for (int i = 0; i < 1000; ++i) {
+				world[i] = glm::translate(translations[i]) *glm::rotate(float((Clock::now() - startTime).count()) * 0.000000002f + float(i), glm::vec3(0.5f, 0.5f, 0.0f));
+			}			
+
+			viewUniformBuffer->upload<glm::mat4>({viewProj});
+			instanceUniformBuffer->upload<glm::mat4>(world);
+
+			subCommandBuffer->record(*renderPass, [&](IRecordingSubCommandBuffer& cmdBuf) {
+				for (int i = 0; i < 1; ++i) {
+					cmdBuf.setDynamicIndex("model_matrix", i);
+					cmdBuf.setVertexBuffer(*vertexBuffer);
+					cmdBuf.setIndexBuffer(*indexBuffer);
+					cmdBuf.drawIndexed(36);
+				}
+			});
+
 			commandBuffer->record(*renderPass, *swapChain, [&](IRecordingCommandBuffer& cmdBuf) {
 				cmdBuf.clearColorBuffer(255, 0, 255, 255);
 				cmdBuf.clearDepthBuffer(1.0f);
