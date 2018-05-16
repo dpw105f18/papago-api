@@ -114,10 +114,15 @@ static void SetWindowName(HWND hwnd, const std::string& text)
 }
 
 
-struct Vertex
+struct CubeVertex
 {
 	glm::vec3 pos;
 	glm::vec2 uv;
+};
+
+struct Vertex
+{
+	glm::vec3 pos;
 };
 
 
@@ -128,7 +133,7 @@ void test()
 	auto windowHeight = 600;
 	auto hwnd = StartWindow(windowWidth, windowHeight);
 
-	std::vector<Vertex> cubeVertices{
+	std::vector<CubeVertex> cubeVertices{
 		{ { -0.5f, -0.5f,  0.5f }, { 0.0f, 0.0f } },
 		{ { -0.5f,  0.5f,  0.5f }, { 0.0f, 1.0f } },
 		{ { 0.5f,   0.5f,  0.5f }, { 1.0f, 1.0f } },
