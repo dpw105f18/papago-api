@@ -132,6 +132,15 @@ void test()
 	auto windowWidth = 800;
 	auto windowHeight = 600;
 	auto hwnd = StartWindow(windowWidth, windowHeight);
+	auto surface = ISurface::createWin32Surface(windowWidth, windowHeight, hwnd);
+
+	IDevice::Features features = { false };
+	IDevice::Extensions extensions = { true, false };
+
+	auto devices = IDevice::enumerateDevices(*surface, features, extensions);
+	auto& device = devices[0];
+
+	auto swapChain = device->createSwapChain(Format::eR8G8B8A8Unorm, Format::eD32Sfloat, 3, IDevice::PresentMode::eMailbox);
 
 	std::vector<CubeVertex> cubeVertices{
 		{ { -0.5f, -0.5f,  0.5f }, { 0.0f, 0.0f } },
@@ -165,6 +174,32 @@ void test()
 		4, 1, 0
 	};
 
+	std::vector<glm::vec3> triVertices;
+	triVertices.push_back({ -1.0f, -1.0f, 0.0f });
+	triVertices.push_back({ 0.0f, 1.0f, 0.0f });
+	triVertices.push_back({ 1.0f, -1.0f, 0.0f });
+
+	Parser p(PARSER_COMPILER_PATH);
+
+	auto vertexShader = p.compileVertexShader(readFile("shaders/colorVert.vert"), "main");
+	auto fragmentShader = p.compileFragmentShader(readFile("shaders/colorFrag.frag"), "main");
+
+	auto program = device->createShaderProgram(*vertexShader, *fragmentShader);
+
+	auto vertexBuffer = device->createVertexBuffer(triVertices);
+	
+	auto renderPass = device->createRenderPass(*program, windowWidth, windowHeight, Format::eR8G8B8A8Unorm, Format::eD32Sfloat);
+	
+	auto graphicsQueue = device->createGraphicsQueue(*swapChain);
+
+	auto subCommandBuffer = device->createSubCommandBuffer();
+	subCommandBuffer->record(*renderPass, [&](IRecordingSubCommandBuffer& cmdBuf) {
+		cmdBuf.setVertexBuffer(*vertexBuffer);
+
+		cmdBuf.draw(3, 1, 0, 0);
+	});
+
+	auto commandBuffer = device->createCommandBuffer();
 
 	//*************************************************************************************************
 	//Init code here:
@@ -191,6 +226,16 @@ void test()
 			DispatchMessage(&msg);
 		}
 		else {
+			commandBuffer->record(*renderPass, *swapChain, [&](IRecordingCommandBuffer& cmdBuf) {
+				cmdBuf.clearColorBuffer(255, 0, 255, 255);
+				cmdBuf.clearDepthBuffer(1.0f);
+
+				cmdBuf.execute({ *subCommandBuffer });
+			});
+
+			graphicsQueue->submitCommands({ *commandBuffer });
+			graphicsQueue->present();
+
 			//FPS counter:
 			auto deltaTime = (Clock::now() - lastUpdate);
 			auto frameTime = (Clock::now() - lastFrame);
