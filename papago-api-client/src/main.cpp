@@ -627,7 +627,7 @@ void userTest()
 			
 
 			commandBuffer->record(*renderPass, *swapChain, [&](IRecordingCommandBuffer& cmdBuf) {
-				cmdBuf.clearColorBuffer(255, 0, 255, 255);
+				cmdBuf.clearColorBuffer(100U, 0U, 100U, 100U);
 				cmdBuf.clearDepthBuffer(1.0f);
 
 				cmdBuf.execute(subCommandBufferReferences);

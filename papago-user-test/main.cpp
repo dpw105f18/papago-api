@@ -176,7 +176,7 @@ void test()
 
 	Parser p(PARSER_COMPILER_PATH);
 
-	auto vertexShader = p.compileVertexShader(readFile("shaders/mvpTexShader.vert"), "main");
+	auto vertexShader = p.compileVertexShader(readFile("shaders/mvpTexShadr.vert"), "main");
 	auto fragmentShader = p.compileFragmentShader(readFile("shaders/mvpTexShader.frag"), "main");
 
 	int texW, texH;

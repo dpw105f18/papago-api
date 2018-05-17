@@ -7,12 +7,20 @@
 #include "external/stb/stb_image.h"
 
 static std::string readFile(const std::string& file_path) {
+	
 	std::ifstream stream(file_path, std::ios::ate);
-	auto size = stream.tellg();
-	stream.seekg(0);
-	std::string result = std::string(size, '\0');
-	stream.read(&result[0], size);
-	return result;
+	if (stream.good()) {
+
+		auto size = stream.tellg();
+		stream.seekg(0);
+		std::string result = std::string(size, '\0');
+		stream.read(&result[0], size);
+		return result;
+	}
+	else {
+		auto msg = "Error reading file \"" + file_path + "\". Does the file exist?";
+		throw std::runtime_error(msg);
+	}
 }
 
 //Returns pixel data in a std::vector<char>. Pixels are loaded in a RGBA format.
