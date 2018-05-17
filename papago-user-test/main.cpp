@@ -169,7 +169,60 @@ void test()
 	
 	//*************************************************************************************************
 	//Init code here:
-	
+
+	auto surface = ISurface::createWin32Surface(
+		windowWidth, windowHeight,
+		hwnd);
+
+	auto devices = IDevice::enumerateDevices(
+		*surface,
+		{} /* features */,
+		{} /* extensions */);
+	auto& device = devices[0]; // Pick first device
+
+	std::vector<glm::vec3> triangleVerticies{
+		{0.0, 0.0, 0.0}, {0.5, 1.0, 0.0}, {1.0, 0.0, 0.0}
+	};
+
+	std::vector<uint16_t> triangleIndicies{
+		0, 1, 2
+	};
+
+	auto vertexBuffer = device->createVertexBuffer(triangleVerticies);
+	auto indexBuffer = device->createIndexBuffer(triangleIndicies);
+
+
+
+	//unique_ptr<ISurface> surface = // create Surface
+
+
+
+	auto parser = Parser(PARSER_COMPILER_PATH);
+
+	auto vertexShader = parser.compileVertexShader(readFile("shaders/colorVert.vert"),"main");
+	auto fragmentShader = parser.compileFragmentShader(readFile("shaders/colorFrag.frag"), "main");
+
+	auto shaderProgram = device->createShaderProgram(*vertexShader, *fragmentShader);
+	auto renderPass = device->createRenderPass(*shaderProgram, windowWidth, windowHeight, Format::eR8G8B8A8Unorm);
+	auto commandBuffer = device->createCommandBuffer();
+
+	auto swapChain = device->createSwapChain(Format::eR8G8B8A8Unorm, 3, IDevice::PresentMode::eMailbox);
+
+	auto subCommandBuffer = device->createSubCommandBuffer();
+	subCommandBuffer->record(*renderPass, [&](IRecordingSubCommandBuffer& subRec) {
+		subRec.setVertexBuffer(*vertexBuffer);
+		subRec.setIndexBuffer(*indexBuffer);
+		subRec.drawIndexed(3);
+	});
+
+
+	auto graphicsQueue = device->createGraphicsQueue(*swapChain);
+
+
+
+
+
+
 	//*************************************************************************************************
 	
 	//Main game loop:
@@ -212,6 +265,11 @@ void test()
 
 			//*************************************************************************************************
 			//Loop code here:
+			commandBuffer->record(*renderPass, *swapChain, [&](IRecordingCommandBuffer& recCommand) {
+				recCommand.execute({ *subCommandBuffer });
+			});
+			graphicsQueue->submitCommands({ *commandBuffer });
+			graphicsQueue->present();
 
 			//*************************************************************************************************
 			++fps;
