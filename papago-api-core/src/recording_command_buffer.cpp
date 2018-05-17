@@ -31,16 +31,15 @@ T & CommandRecorder<T>::setDynamicIndex(const std::string & uniformName, size_t 
 	auto binding = m_renderPassPtr->getBinding(uniformName);
 	m_bindingDynamicOffset[binding] = m_renderPassPtr->m_bindingAlignment[binding] * index;
 
-	std::vector<uint32_t> bindings;
 
 	for (auto& dynamicBindingOffset : m_bindingDynamicOffset)
 	{
-		bindings.push_back(dynamicBindingOffset.first);
+		dynamicBindings.push_back(dynamicBindingOffset.first);
 	}
 
-	std::sort(bindings.begin(), bindings.end());
+	std::sort(dynamicBindings.begin(), dynamicBindings.end());
 
-	for (auto b : bindings) {
+	for (auto b : dynamicBindings) {
 		dynamicOffsets.push_back(m_bindingDynamicOffset[b]);
 	}
 

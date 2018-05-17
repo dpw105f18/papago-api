@@ -110,6 +110,9 @@
     <Link>
       <AdditionalLibraryDirectories>$(VulkanSDKDir)\Lib32;$(ProjectDir)lib\$(Platform)</AdditionalLibraryDirectories>
     </Link>
+    <PostBuildEvent>
+      <Command>dlllibmover.bat "$(outDir)" $(Platform) $(Configuration)</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -129,7 +132,7 @@
       <AdditionalDependencies>vulkan-1.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>.\fileMover.bat</Command>
+      <Command>dlllibmover.bat "$(outDir)" $(Platform) $(Configuration)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -150,6 +153,9 @@
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalLibraryDirectories>$(VulkanSDKDir)\Lib32;$(ProjectDir)lib\$(Platform)</AdditionalLibraryDirectories>
     </Link>
+    <PostBuildEvent>
+      <Command>dlllibmover.bat "$(outDir)" $(Platform) $(Configuration)</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -170,6 +176,9 @@
       <AdditionalLibraryDirectories>$(VulkanSDKDir)\Lib;$(ProjectDir)lib\$(Platform)</AdditionalLibraryDirectories>
       <AdditionalDependencies>vulkan-1.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PostBuildEvent>
+      <Command>dlllibmover.bat "$(outDir)" $(Platform) $(Configuration)</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="include\api_enums.hpp" />

@@ -72,7 +72,7 @@ void RenderPass::setupDescriptorSet(const vk::UniqueDevice &device, const Vertex
 			vk::DescriptorSetLayoutBinding binding = {};
 			binding.setBinding(bindingValue)
 				.setDescriptorCount(1) //TODO: can we assume 1 Descriptor per binding? -AM
-				.setDescriptorType(fragmentBinding.type)
+				.setDescriptorType(type)
 				.setStageFlags(vk::ShaderStageFlagBits::eFragment);
 
 			vkBindings.emplace_back(binding);
