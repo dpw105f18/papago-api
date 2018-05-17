@@ -233,14 +233,20 @@ void test()
 	auto swapChain = device->createSwapChain(Format::eR8G8B8A8Unorm, 3, IDevice::PresentMode::eMailbox);
 
 	auto subCommandBuffer = device->createSubCommandBuffer();
-	subCommandBuffer->record(*renderPass, [&](IRecordingSubCommandBuffer& subRec) {
-		subRec.setVertexBuffer(*vertexBuffer);
-		subRec.setIndexBuffer(*indexBuffer);
-		subRec.setDynamicIndex("model_matrix", 0);
-		subRec.drawIndexed(cubeIndices.size());
-		subRec.setDynamicIndex("model_matrix", 1);
-		subRec.drawIndexed(cubeIndices.size());
-	});
+	//subCommandBuffer->record(*renderPass, [&](IRecordingSubCommandBuffer& subRec) {
+	//	subRec.setVertexBuffer(*vertexBuffer);
+	//	subRec.setIndexBuffer(*indexBuffer);
+	//	subRec.setDynamicIndex("model_matrix", 0);
+	//	subRec.drawIndexed(cubeIndices.size());
+	//});
+
+	auto subCommandBufferLeft = device->createSubCommandBuffer();
+	//subCommandBufferLeft->record(*renderPass, [&](IRecordingSubCommandBuffer& subRec) {
+	//	subRec.setVertexBuffer(*vertexBuffer);
+	//	subRec.setIndexBuffer(*indexBuffer);
+	//	subRec.setDynamicIndex("model_matrix", 1);
+	//	subRec.drawIndexed(cubeIndices.size());
+	//});
 
 
 	auto graphicsQueue = device->createGraphicsQueue(*swapChain);
@@ -249,7 +255,28 @@ void test()
 	auto cubepos = glm::translate(glm::vec3(0.0f, 0.0f, -2.0f));
 	auto cubeRot = glm::rotate(glm::radians(10.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 
+	ThreadPool tp(2);
 
+	auto tpRight = tp.enqueue([&] (int i) {
+		subCommandBuffer->record(*renderPass, [&](IRecordingSubCommandBuffer& subRec) {
+			subRec.setVertexBuffer(*vertexBuffer);
+			subRec.setIndexBuffer(*indexBuffer);
+			subRec.setDynamicIndex("model_matrix", i);
+			subRec.drawIndexed(cubeIndices.size()); 
+		});
+	} , 0);
+
+	auto tpLeft = tp.enqueue([&](int i) {
+		subCommandBufferLeft->record(*renderPass, [&](IRecordingSubCommandBuffer& subRec) {
+			subRec.setVertexBuffer(*vertexBuffer);
+			subRec.setIndexBuffer(*indexBuffer);
+			subRec.setDynamicIndex("model_matrix", i);
+			subRec.drawIndexed(cubeIndices.size());
+		});
+	}, 1);
+
+	tpRight.wait();
+	tpLeft.wait();
 
 	//*************************************************************************************************
 	
@@ -303,7 +330,7 @@ void test()
 
 			commandBuffer->record(*renderPass, *swapChain, [&](IRecordingCommandBuffer& recCommand) {
 				recCommand.clearColorBuffer(0.0f, 0.0f, 0.0f, 1.0f);
-				recCommand.execute({ *subCommandBuffer });
+				recCommand.execute({ *subCommandBuffer, *subCommandBufferLeft });
 			});
 			graphicsQueue->submitCommands({ *commandBuffer });
 			graphicsQueue->present();
