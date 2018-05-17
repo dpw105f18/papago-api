@@ -188,8 +188,18 @@ void test()
 		0, 1, 2
 	};
 
-	auto vertexBuffer = device->createVertexBuffer(triangleVerticies);
-	auto indexBuffer = device->createIndexBuffer(triangleIndicies);
+	auto sampler2D = device->createTextureSampler2D(Filter::eNearest, Filter::eNearest, TextureWrapMode::eClampToEdge, TextureWrapMode::eClampToEdge);
+	
+	int width;
+	int height;
+	auto pixelData = readPixels("textures/BYcheckers.png", width, height);
+	auto tex = device->createTexture2D(width, height, Format::eR8G8B8A8Unorm);
+	tex->upload(pixelData);
+
+
+
+	auto vertexBuffer = device->createVertexBuffer(cubeVertices);
+	auto indexBuffer = device->createIndexBuffer(cubeIndices);
 
 
 
@@ -199,11 +209,25 @@ void test()
 
 	auto parser = Parser(PARSER_COMPILER_PATH);
 
-	auto vertexShader = parser.compileVertexShader(readFile("shaders/colorVert.vert"),"main");
-	auto fragmentShader = parser.compileFragmentShader(readFile("shaders/colorFrag.frag"), "main");
+	auto vertexShader = parser.compileVertexShader(readFile("shaders/mvpTexShader.vert"),"main");
+	auto fragmentShader = parser.compileFragmentShader(readFile("shaders/mvpTexShader.frag"), "main");
 
 	auto shaderProgram = device->createShaderProgram(*vertexShader, *fragmentShader);
 	auto renderPass = device->createRenderPass(*shaderProgram, windowWidth, windowHeight, Format::eR8G8B8A8Unorm);
+
+	renderPass->bindResource("sam", *tex, *sampler2D);
+
+	auto vpBuffer = device->createUniformBuffer(sizeof(glm::mat4));
+	vpBuffer->upload<glm::mat4>({ glm::perspective(glm::radians(60.0f), 4.0f / 3.0f, 0.3f, 1000.0f) });
+	auto mBuffer = device->createUniformBuffer(sizeof(glm::mat4));
+
+	auto mBufferDyn = device->createDynamicUniformBuffer(sizeof(glm::mat4), 2);
+
+	
+
+	renderPass->bindResource("view_projection_matrix", *vpBuffer);
+	renderPass->bindResource("model_matrix", *mBufferDyn);
+
 	auto commandBuffer = device->createCommandBuffer();
 
 	auto swapChain = device->createSwapChain(Format::eR8G8B8A8Unorm, 3, IDevice::PresentMode::eMailbox);
@@ -212,14 +236,18 @@ void test()
 	subCommandBuffer->record(*renderPass, [&](IRecordingSubCommandBuffer& subRec) {
 		subRec.setVertexBuffer(*vertexBuffer);
 		subRec.setIndexBuffer(*indexBuffer);
-		subRec.drawIndexed(3);
+		subRec.setDynamicIndex("model_matrix", 0);
+		subRec.drawIndexed(cubeIndices.size());
+		subRec.setDynamicIndex("model_matrix", 1);
+		subRec.drawIndexed(cubeIndices.size());
 	});
 
 
 	auto graphicsQueue = device->createGraphicsQueue(*swapChain);
 
 
-
+	auto cubepos = glm::translate(glm::vec3(0.0f, 0.0f, -2.0f));
+	auto cubeRot = glm::rotate(glm::radians(10.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 
 
 
@@ -265,7 +293,16 @@ void test()
 
 			//*************************************************************************************************
 			//Loop code here:
+
+
+			cubeRot *= glm::rotate(glm::radians(0.1f), glm::vec3(1.0f, 0.0f, 0.0f));
+			mBuffer->upload<glm::mat4>({cubepos * cubeRot });
+			
+			mBufferDyn->upload<glm::mat4>({ cubepos * glm::translate(glm::vec3(1.0f, 0.0f, 0.0f))  * cubeRot }, 0);
+			mBufferDyn->upload<glm::mat4>({ cubepos * glm::translate(glm::vec3(-1.0f, 0.0f, 0.0f))  * cubeRot }, 1);
+
 			commandBuffer->record(*renderPass, *swapChain, [&](IRecordingCommandBuffer& recCommand) {
+				recCommand.clearColorBuffer(0.0f, 0.0f, 0.0f, 1.0f);
 				recCommand.execute({ *subCommandBuffer });
 			});
 			graphicsQueue->submitCommands({ *commandBuffer });
