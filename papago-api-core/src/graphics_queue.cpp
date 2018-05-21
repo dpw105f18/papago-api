@@ -11,8 +11,6 @@ void GraphicsQueue::submitCommands(const std::vector<std::reference_wrapper<ICom
 {
 	m_vkGraphicsQueue.waitIdle();
 	std::vector<vk::Semaphore> semaphores = { *m_vkRenderFinishSemaphore};
-	std::vector<vk::Semaphore> waitSemaphores = { *m_vkImageAvailableSemaphore};
-	std::vector<vk::PipelineStageFlags> waitStages = { vk::PipelineStageFlagBits::eColorAttachmentOutput };
 	std::vector<vk::CommandBuffer> vkCommandBuffers;
 	vkCommandBuffers.reserve(commandBuffers.size());
 
@@ -21,16 +19,26 @@ void GraphicsQueue::submitCommands(const std::vector<std::reference_wrapper<ICom
 	}
 
 	vk::SubmitInfo submitInfo = {};
-	submitInfo.setWaitSemaphoreCount(waitSemaphores.size())
-		.setPWaitSemaphores(waitSemaphores.data())
-		.setPWaitDstStageMask(waitStages.data())
-		.setCommandBufferCount(vkCommandBuffers.size())
+	submitInfo.setCommandBufferCount(vkCommandBuffers.size())
 		.setPCommandBuffers(vkCommandBuffers.data())
 		.setSignalSemaphoreCount(semaphores.size())
 		.setPSignalSemaphores(semaphores.data());
 
-	auto& fence = m_swapChain.m_vkFences[m_swapChain.m_currentFramebufferIndex];
-	m_device.m_vkDevice->resetFences({*fence});
+	int fenceIndex = -1;
+	for (auto i = 0; i < m_vkFences.size(); ++i) {
+		if (m_device.m_vkDevice->getFenceStatus(*m_vkFences[i]) == vk::Result::eSuccess) {
+			fenceIndex = i;
+			break;
+		}
+	}
+
+	if (fenceIndex == -1) {
+		fenceIndex = m_vkFences.size();
+		m_vkFences.emplace_back(std::move(m_device.m_vkDevice->createFenceUnique({})));
+	}
+
+	auto& fence = m_vkFences[fenceIndex];
+	m_device.m_vkDevice->resetFences({*fence});	//<-- possible bug: newly created fences might not like to be reset.
 
 	//TODO: Test if this works with several command buffers using the same resources. - Brandborg
 	for (auto& cmd : commandBuffers) {
@@ -40,8 +48,6 @@ void GraphicsQueue::submitCommands(const std::vector<std::reference_wrapper<ICom
 			ITERATE(commandBuffer.m_resourcesInUse),								// .. and this ..
 			std::inserter(m_submittedResources, m_submittedResources.begin()));		// .. into that
 		commandBuffer.m_resourcesInUse.clear();
-
-		
 	}
 
 	for (auto& resource : m_submittedResources) {
@@ -51,23 +57,13 @@ void GraphicsQueue::submitCommands(const std::vector<std::reference_wrapper<ICom
 	m_vkGraphicsQueue.submit(submitInfo, *fence);
 }
 
-IImageResource & GraphicsQueue::getLastRenderedImage()
+void GraphicsQueue::present(ISwapchain& swapchain)
 {
-	return m_swapChain.m_colorResources[m_swapChain.m_currentFramebufferIndex];
-}
-
-IImageResource & GraphicsQueue::getLastRenderedDepthBuffer()
-{
-	auto& colorRes = m_swapChain.m_colorResources;
-	return m_swapChain.m_depthResources[(m_swapChain.m_currentFramebufferIndex + colorRes.size() - 1) % colorRes.size()];
-}
-
-void GraphicsQueue::present()
-{
+	auto& internalSwapChain = dynamic_cast<SwapChain&>(swapchain);
 	m_vkPresentQueue.waitIdle();
-	
+
 	std::set<ImageResource*> imageResources;
-	imageResources.emplace(&m_swapChain.m_colorResources[m_swapChain.m_currentFramebufferIndex]);
+	imageResources.emplace(&internalSwapChain.m_colorResources[internalSwapChain.m_currentFramebufferIndex]);
 
 	// Find image resources from the submitted resources 
 	for (auto& resource : m_submittedResources) {
@@ -78,20 +74,20 @@ void GraphicsQueue::present()
 	}
 
 	transitionImageResources<vk::ImageLayout::eGeneral, vk::ImageLayout::ePresentSrcKHR>(
-		m_device.m_internalCommandBuffer, 
-		m_device.m_vkInternalQueue, 
+		m_device.m_internalCommandBuffer,
+		m_device.m_vkInternalQueue,
 		imageResources
-	);
+		);
 
 	std::vector<vk::Semaphore> semaphores = { *m_vkRenderFinishSemaphore };
-	std::vector<vk::SwapchainKHR> swapchains = { static_cast<vk::SwapchainKHR>(m_swapChain) };
+	std::vector<vk::SwapchainKHR> swapchains = { static_cast<vk::SwapchainKHR>(internalSwapChain) };
 
 	vk::PresentInfoKHR presentInfo = {};
 	presentInfo.setWaitSemaphoreCount(semaphores.size())
 		.setPWaitSemaphores(semaphores.data())
 		.setSwapchainCount(1)
 		.setPSwapchains(swapchains.data())
-		.setPImageIndices(&m_swapChain.m_currentFramebufferIndex);
+		.setPImageIndices(&internalSwapChain.m_currentFramebufferIndex);
 
 	auto res = m_vkPresentQueue.presentKHR(presentInfo);
 
@@ -102,30 +98,39 @@ void GraphicsQueue::present()
 		m_device.m_internalCommandBuffer,
 		m_device.m_vkInternalQueue,
 		imageResources
-	);
+		);
 
 	m_submittedResources.clear();
+	//TODO: find some way to not create new fences every present.
 
-	auto nextFramebuffer = m_device.m_vkDevice->acquireNextImageKHR(static_cast<vk::SwapchainKHR>(m_swapChain), 0, *m_vkImageAvailableSemaphore, vk::Fence());
-	m_swapChain.m_currentFramebufferIndex = nextFramebuffer.value;
+
+	vk::UniqueFence fence = m_device.m_vkDevice->createFenceUnique({});
+	auto nextFramebuffer = m_device.m_vkDevice->acquireNextImageKHR(static_cast<vk::SwapchainKHR>(internalSwapChain), 0, {}, *fence).value;
+
+	auto& oldFence = internalSwapChain.m_vkFences[nextFramebuffer];
+
+	
+	if(*oldFence != vk::Fence() && m_device.m_vkDevice->getFenceStatus(*oldFence) != vk::Result::eSuccess) {
+		m_vkPresentQueue.waitIdle();
+	}
+
+	oldFence = std::move(fence);
+	internalSwapChain.m_currentFramebufferIndex = nextFramebuffer;
 }
 
-GraphicsQueue::GraphicsQueue(const Device& device, int graphicsQueueIndex, int presentQueueIndex, SwapChain& swapChain)
-	: m_swapChain(swapChain), m_device(device)
+
+GraphicsQueue::GraphicsQueue(const Device& device, int graphicsQueueIndex, int presentQueueIndex)
+	: m_device(device)
 {
 	m_vkGraphicsQueue = device.m_vkDevice->getQueue(graphicsQueueIndex, 0);
 	m_vkPresentQueue = device.m_vkDevice->getQueue(presentQueueIndex, 0);
 
 	createSemaphores(device.m_vkDevice);
-
-	auto nextFramebuffer = m_device.m_vkDevice->acquireNextImageKHR(static_cast<vk::SwapchainKHR>(m_swapChain), 0, *m_vkImageAvailableSemaphore, vk::Fence());
-	m_swapChain.m_currentFramebufferIndex = nextFramebuffer.value;
 }
 
 void GraphicsQueue::createSemaphores(const vk::UniqueDevice &device)
 {
 	m_vkRenderFinishSemaphore = device->createSemaphoreUnique(vk::SemaphoreCreateInfo());
-	m_vkImageAvailableSemaphore = device->createSemaphoreUnique(vk::SemaphoreCreateInfo());
 }
 
 
