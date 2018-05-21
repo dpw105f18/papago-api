@@ -37,7 +37,7 @@ public:
 	std::unique_ptr<ISubCommandBuffer> createSubCommandBuffer() override;
 	std::unique_ptr<IShaderProgram> createShaderProgram(IVertexShader&, IFragmentShader&) override;
 	std::unique_ptr<IBufferResource> createUniformBuffer(size_t size) override;
-	std::unique_ptr<IGraphicsQueue> createGraphicsQueue() override;
+	std::unique_ptr<IGraphicsQueue> createGraphicsQueue(ISwapchain&) override;
 
 	std::unique_ptr<IDynamicBufferResource> createDynamicUniformBuffer(size_t object_size, int object_count) override;
 

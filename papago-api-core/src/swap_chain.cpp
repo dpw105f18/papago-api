@@ -55,12 +55,8 @@ SwapChain::SwapChain(
 			.setLayers(1);
 
 		m_vkFramebuffers.emplace_back(device.getVkDevice()->createFramebufferUnique(framebufferCreateInfo));
-		m_vkFences.emplace_back(device.getVkDevice()->createFenceUnique({}));
+		m_vkFences.emplace_back(device.getVkDevice()->createFenceUnique(vk::FenceCreateInfo{}));
 	}
-
-	vk::UniqueFence fence = device.getVkDevice()->createFenceUnique({});
-	m_currentFramebufferIndex = device.getVkDevice()->acquireNextImageKHR(*m_vkSwapChain, 0, {}, *fence).value;
-	m_vkFences[m_currentFramebufferIndex] = std::move(fence);
 }
 
 SwapChain::SwapChain(const Device &device, vk::UniqueSwapchainKHR &swapChain, std::vector<ImageResource>& colorResources, vk::Extent2D extent)
@@ -85,7 +81,6 @@ SwapChain::SwapChain(const Device &device, vk::UniqueSwapchainKHR &swapChain, st
 			.setLayers(1);
 
 		m_vkFramebuffers.emplace_back(device.getVkDevice()->createFramebufferUnique(framebufferCreateInfo));
+		m_vkFences.emplace_back(device.getVkDevice()->createFenceUnique(vk::FenceCreateInfo{}));
 	}
-
-	m_currentFramebufferIndex = device.getVkDevice()->acquireNextImageKHR(*m_vkSwapChain, 0, {}, {}).value;	//<-- possible bug.
 }
