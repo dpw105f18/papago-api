@@ -61,7 +61,7 @@ void GraphicsQueue::present(ISwapchain& swapchain)
 {
 	auto& internalSwapChain = dynamic_cast<SwapChain&>(swapchain);
 	m_vkPresentQueue.waitIdle();
-	
+
 	std::set<ImageResource*> imageResources;
 	imageResources.emplace(&internalSwapChain.m_colorResources[internalSwapChain.m_currentFramebufferIndex]);
 
@@ -74,10 +74,10 @@ void GraphicsQueue::present(ISwapchain& swapchain)
 	}
 
 	transitionImageResources<vk::ImageLayout::eGeneral, vk::ImageLayout::ePresentSrcKHR>(
-		m_device.m_internalCommandBuffer, 
-		m_device.m_vkInternalQueue, 
+		m_device.m_internalCommandBuffer,
+		m_device.m_vkInternalQueue,
 		imageResources
-	);
+		);
 
 	std::vector<vk::Semaphore> semaphores = { *m_vkRenderFinishSemaphore };
 	std::vector<vk::SwapchainKHR> swapchains = { static_cast<vk::SwapchainKHR>(internalSwapChain) };
@@ -98,21 +98,26 @@ void GraphicsQueue::present(ISwapchain& swapchain)
 		m_device.m_internalCommandBuffer,
 		m_device.m_vkInternalQueue,
 		imageResources
-	);
+		);
 
 	m_submittedResources.clear();
 	//TODO: find some way to not create new fences every present.
+
+
 	vk::UniqueFence fence = m_device.m_vkDevice->createFenceUnique({});
-	auto nextFramebuffer = m_device.m_vkDevice->acquireNextImageKHR(static_cast<vk::SwapchainKHR>(internalSwapChain), 0, {}, *fence);
-	auto& oldFence = internalSwapChain.m_vkFences[internalSwapChain.m_currentFramebufferIndex];
-	internalSwapChain.m_currentFramebufferIndex = nextFramebuffer.value;
-	if (m_device.m_vkDevice->getFenceStatus(*oldFence) == vk::Result::eSuccess) {
-		internalSwapChain.m_vkFences[internalSwapChain.m_currentFramebufferIndex] = std::move(fence);
+	auto nextFramebuffer = m_device.m_vkDevice->acquireNextImageKHR(static_cast<vk::SwapchainKHR>(internalSwapChain), 0, {}, *fence).value;
+
+	auto& oldFence = internalSwapChain.m_vkFences[nextFramebuffer];
+
+	
+	if(*oldFence != vk::Fence() && m_device.m_vkDevice->getFenceStatus(*oldFence) != vk::Result::eSuccess) {
+		m_vkPresentQueue.waitIdle();
 	}
-	else {
-		PAPAGO_ERROR("DBUG");
-	}
+
+	oldFence = std::move(fence);
+	internalSwapChain.m_currentFramebufferIndex = nextFramebuffer;
 }
+
 
 GraphicsQueue::GraphicsQueue(const Device& device, int graphicsQueueIndex, int presentQueueIndex)
 	: m_device(device)

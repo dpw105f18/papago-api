@@ -39,6 +39,7 @@ SwapChain::SwapChain(
 	// this _may_ be error-prone...
 	m_vkRenderPass = device.createVkRenderpass(m_colorResources[0].m_format, m_depthResources[0].m_format);
 	auto swapChainSize = m_colorResources.size();
+	m_vkFences.resize(swapChainSize);
 
 	for (auto i = 0; i < swapChainSize; ++i) {
 		std::vector<vk::ImageView> attachments = {
@@ -55,9 +56,9 @@ SwapChain::SwapChain(
 			.setLayers(1);
 
 		m_vkFramebuffers.emplace_back(device.getVkDevice()->createFramebufferUnique(framebufferCreateInfo));
-		m_vkFences.emplace_back(device.getVkDevice()->createFenceUnique({}));
 	}
 
+	//ready fences:
 	vk::UniqueFence fence = device.getVkDevice()->createFenceUnique({});
 	m_currentFramebufferIndex = device.getVkDevice()->acquireNextImageKHR(*m_vkSwapChain, 0, {}, *fence).value;
 	m_vkFences[m_currentFramebufferIndex] = std::move(fence);
