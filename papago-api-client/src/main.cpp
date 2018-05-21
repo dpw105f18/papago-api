@@ -12,20 +12,7 @@
 #include <chrono>
 #include <sstream>
 
-#include "ishader.hpp"
-#include "parser.hpp"
-#include "isampler.hpp"
-#include "isurface.hpp"
-#include "iswapchain.hpp"
-#include "iimage_resource.hpp"
-#include "ibuffer_resource.hpp"
-#include "icommand_buffer.hpp"
-#include "ishader_program.hpp"
-#include "icommand_buffer.hpp"
-#include "igraphics_queue.hpp"
-#include "irender_pass.hpp"
-#include "idevice.hpp"
-#include "api_enums.hpp"
+#include "papago.hpp"
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include "external/glm/glm.hpp"
@@ -210,6 +197,7 @@ struct UniformData
 	glm::mat4 model_matrix = glm::mat4(1.0f);
 };
 
+/*
 void multithreadedTest() {
 	const size_t windowWidth = 800;
 	const size_t windowHeight = 600;
@@ -376,7 +364,7 @@ void multithreadedTest() {
 					/*
 					auto& rc = TestConfiguration::GetInstance().rotateCubes;
 					rc = !rc;
-					*/
+					
 				}
 			}
 			else if (msg.message == WM_KEYUP) {
@@ -442,6 +430,7 @@ void multithreadedTest() {
 	}
 	device->waitIdle();
 }
+*/
 
 void uploadTest()
 {
@@ -464,12 +453,220 @@ void uploadTest()
 
 	auto d = "bug";
 }
+#define PARSER_COMPILER_PATH "C:/VulkanSDK/1.0.65.0/Bin/glslangValidator.exe"
+
+static std::vector<char> readPixels(const std::string& localPath, int& outWidth, int& outHeight)
+{
+	int texChannels;
+	auto pixels = stbi_load(localPath.c_str(), &outWidth, &outHeight, &texChannels, STBI_rgb_alpha);
+	if (!pixels) {
+		throw std::runtime_error("Failed to load texture image!");
+	}
+
+	auto result = std::vector<char>();
+	result.resize(outWidth * outHeight * 4);
+	memcpy(result.data(), pixels, result.size());
+	stbi_image_free(pixels);
+
+	return result;
+}
+
+struct CubeVertex
+{
+	glm::vec3 pos;
+	glm::vec2 uv;
+};
+
+void userTest()
+{
+	//init
+	auto windowWidth = 800;
+	auto windowHeight = 600;
+	auto hwnd = StartWindow(windowWidth, windowHeight);
+	auto surface = ISurface::createWin32Surface(windowWidth, windowHeight, hwnd);
+
+	IDevice::Features features = { true };
+	IDevice::Extensions extensions = { true, false };
+
+	auto devices = IDevice::enumerateDevices(*surface, features, extensions);
+	auto& device = devices[0];
+
+	auto swapChain = device->createSwapChain(Format::eR8G8B8A8Unorm, Format::eD32Sfloat, 3, IDevice::PresentMode::eMailbox);
+
+	std::vector<CubeVertex> cubeVertices{
+		{ { -0.5f, -0.5f,  0.5f },{ 0.0f, 0.0f } },
+		{ { -0.5f,  0.5f,  0.5f },{ 0.0f, 1.0f } },
+		{ { 0.5f,   0.5f,  0.5f },{ 1.0f, 1.0f } },
+		{ { 0.5f,  -0.5f,  0.5f },{ 1.0f, 0.0f } },
+		{ { -0.5f, -0.5f, -0.5f },{ 0.0f, 0.0f } },
+		{ { -0.5f,  0.5f, -0.5f },{ 0.0f, 1.0f } },
+		{ { 0.5f,   0.5f, -0.5f },{ 1.0f, 1.0f } },
+		{ { 0.5f,  -0.5f, -0.5f },{ 1.0f, 0.0f } }
+	};
+
+	std::vector<uint16_t> cubeIndices{
+		// Front
+		0, 1, 2,
+		0, 2, 3,
+		// Top
+		3, 7, 4,
+		3, 4, 0,
+		// Right
+		3, 2, 6,
+		3, 6, 7,
+		// Back
+		7, 6, 5,
+		7, 5, 4,
+		// Bottom
+		1, 5, 6,
+		1, 6, 2,
+		// Left
+		4, 5, 1,
+		4, 1, 0
+	};
+
+	Parser p(PARSER_COMPILER_PATH);
+
+	auto vertexShader = p.compileVertexShader(readFile("shaders/mvpTexShader.vert"), "main");
+	auto fragmentShader = p.compileFragmentShader(readFile("shaders/mvpTexShader.frag"), "main");
+
+	int texW, texH;
+	auto pixels = readPixels("textures/BYcheckers.png", texW, texH);
+
+	auto texture = device->createTexture2D(texW, texH, Format::eR8G8B8A8Unorm);
+	texture->upload(pixels);
+
+	auto sampler = device->createTextureSampler2D(Filter::eLinear, Filter::eLinear, TextureWrapMode::eRepeat, TextureWrapMode::eRepeat);
+
+	auto program = device->createShaderProgram(*vertexShader, *fragmentShader);
+
+	auto vertexBuffer = device->createVertexBuffer(cubeVertices);
+	auto indexBuffer = device->createIndexBuffer(cubeIndices);
+
+	auto renderPass = device->createRenderPass(*program, windowWidth, windowHeight, Format::eR8G8B8A8Unorm, Format::eD32Sfloat);
+
+	auto graphicsQueue = device->createGraphicsQueue(*swapChain);
+
+	std::vector<std::unique_ptr<ISubCommandBuffer>> subCommandBuffers(4);
+	std::vector<std::reference_wrapper<ISubCommandBuffer>> subCommandBufferReferences;
+
+	for (int i = 0; i < 4; ++i) {
+		subCommandBuffers[i] = device->createSubCommandBuffer();
+		subCommandBufferReferences.push_back(*subCommandBuffers[i]);
+	}	
+
+	auto commandBuffer = device->createCommandBuffer();
+
+	auto viewUniformBuffer = device->createUniformBuffer(sizeof(glm::mat4));
+	auto instanceUniformBuffer = device->createDynamicUniformBuffer(sizeof(glm::mat4), 1000);
+
+	renderPass->bindResource("view_projection_matrix", *viewUniformBuffer);
+	renderPass->bindResource("model_matrix", *instanceUniformBuffer);
+
+	renderPass->bindResource("sam", *texture, *sampler);
+
+	//*************************************************************************************************
+	//Init code here:
+
+	//*************************************************************************************************
+
+	//Main game loop:
+	using Clock = std::chrono::high_resolution_clock;
+	auto startTime = Clock::now();
+	auto lastUpdate = Clock::now();
+	auto lastFrame = Clock::now();
+	long fps = 0;
+	bool run = true;
+
+	glm::mat4 viewProj;
+	std::vector<glm::mat4> world(1000);
+
+	glm::vec3 translations[1000];
+	for (int i = 0; i < 1000; ++i) {
+		translations[i] = glm::vec3(float(rand() % 100 - 50), float(rand() % 100 - 50), -100.0f);
+	}
+
+	while (run)
+	{
+		MSG msg;
+		if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
+		{
+			if (msg.message == WM_QUIT) {
+				run = false;
+			}
+
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);
+		}
+		else {
+			viewProj = glm::perspective(glm::radians(45.0f), float(windowWidth) / windowHeight, 0.5f, 500.0f);
+
+			for (int i = 0; i < 1000; ++i) {
+				world[i] = glm::translate(translations[i]) *glm::rotate(float((Clock::now() - startTime).count()) * 0.000000002f + float(i), glm::vec3(0.5f, 0.5f, 0.0f));
+			}
+
+			viewUniformBuffer->upload<glm::mat4>({ viewProj });
+			instanceUniformBuffer->upload<glm::mat4>(world);
+
+			ThreadPool tp(4);
+			for (int t = 0; t < 4; ++t) {
+				tp.enqueue([&](int t) {
+					subCommandBuffers[t]->record(*renderPass, [&](IRecordingSubCommandBuffer& cmdBuf) {
+						cmdBuf.setVertexBuffer(*vertexBuffer);
+						cmdBuf.setIndexBuffer(*indexBuffer);
+
+						for (int i = t * 250; i < t * 250 + 250; ++i) {
+							cmdBuf.setDynamicIndex("model_matrix", i);
+							cmdBuf.drawIndexed(36);
+						}
+					});
+				}, t).wait();
+			}
+			
+
+			
+
+			commandBuffer->record(*renderPass, *swapChain, [&](IRecordingCommandBuffer& cmdBuf) {
+				cmdBuf.clearColorBuffer(100U, 0U, 100U, 100U);
+				cmdBuf.clearDepthBuffer(1.0f);
+
+				cmdBuf.execute(subCommandBufferReferences);
+			});
+
+			graphicsQueue->submitCommands({ *commandBuffer });
+			graphicsQueue->present();
+
+			//FPS counter:
+			auto deltaTime = (Clock::now() - lastUpdate);
+			auto frameTime = (Clock::now() - lastFrame);
+			lastFrame = Clock::now();
+
+			using namespace std::chrono_literals;
+			if (deltaTime > 1s) {
+				lastUpdate = Clock::now();
+				std::stringstream ss;
+				ss << "FPS: " << fps
+					<< " --- Avg. Frame Time: " << 1000.0 / fps << "ms"
+					<< " --- Last Frame Time: " << std::chrono::duration_cast<std::chrono::duration<double, std::milli>>(frameTime).count() << "ms";
+				SetWindowName(hwnd, ss.str());
+				fps = 0;
+			}
+
+			//*************************************************************************************************
+			//Loop code here:
+
+			//*************************************************************************************************
+			++fps;
+		}
+	}
+}
 
 int main()
 {
 	try {
 		//uploadTest();
-		multithreadedTest();
+		//multithreadedTest();
+		userTest();
 	}
 	catch (std::exception e) {
 		std::cout << "ERROR: " << e.what() << std::endl;

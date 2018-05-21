@@ -1,5 +1,6 @@
 #pragma once
 #include <functional>
+#include <vector>
 
 class IRecordingCommandBuffer;
 class IRecordingSubCommandBuffer;
@@ -41,7 +42,7 @@ class IRecordingCommandBuffer
 public:
 	virtual ~IRecordingCommandBuffer() = default;
 
-	virtual IRecordingCommandBuffer& execute(std::vector<std::unique_ptr<ISubCommandBuffer>>&) = 0;
+	virtual IRecordingCommandBuffer& execute(const std::vector<std::reference_wrapper<ISubCommandBuffer>>&) = 0;
 
 	virtual IRecordingCommandBuffer& clearColorBuffer(float red, float green, float blue, float alpha) = 0;
 	virtual IRecordingCommandBuffer& clearColorBuffer(int32_t red, int32_t green, int32_t blue, int32_t alpha) = 0;
@@ -58,7 +59,7 @@ public:
 	virtual ~IRecordingSubCommandBuffer() = default;
 
 	virtual IRecordingSubCommandBuffer& drawIndexed(size_t indexCount, size_t instanceCount = 1, size_t firstIndex = 0, size_t vertexOffset = 0, size_t firstInstance = 0) = 0;
-	virtual IRecordingSubCommandBuffer& draw(size_t indexCount, size_t instanceCount = 1, size_t firstIndex = 0, size_t firstInstance = 0) = 0;
+	virtual IRecordingSubCommandBuffer& draw(size_t vertexCount, size_t instanceCount = 1, size_t firstVertex = 0, size_t firstInstance = 0) = 0;
 	virtual IRecordingSubCommandBuffer& setVertexBuffer(IBufferResource&) = 0;
 	virtual IRecordingSubCommandBuffer& setIndexBuffer(IBufferResource&) = 0;
 };
