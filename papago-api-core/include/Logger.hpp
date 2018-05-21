@@ -46,6 +46,6 @@ public:
 	void log(const LogLevel level, const std::string& message) const
 	{
 		if(m_enabled && !m_stream && m_logLevel < level) return;
-		*m_stream << level << message << std::endl;
+		*m_stream << level << ": " << message << std::endl;
 	}
 };
