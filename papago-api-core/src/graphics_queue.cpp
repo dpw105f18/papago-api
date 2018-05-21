@@ -128,8 +128,6 @@ void GraphicsQueue::createSemaphores(const vk::UniqueDevice &device)
 	m_vkImageAvailableSemaphore = device->createSemaphoreUnique(vk::SemaphoreCreateInfo());
 }
 
-
-
 template<vk::ImageLayout from, vk::ImageLayout to>
 inline void GraphicsQueue::transitionImageResources(const CommandBuffer& commandBuffer, const vk::Queue& queue, std::set<ImageResource*> resources) {
 	auto commandBeginInfo = vk::CommandBufferBeginInfo().setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);
