@@ -491,7 +491,7 @@ void userTest()
 	auto devices = IDevice::enumerateDevices(*surface, features, extensions);
 	auto& device = devices[0];
 
-	auto swapChain = device->createSwapChain(Format::eR8G8B8A8Unorm, Format::eD32Sfloat, 3, IDevice::PresentMode::eMailbox);
+	auto swapChain = device->createSwapChain(Format::eB8G8R8A8Unorm, Format::eD32Sfloat, 3, IDevice::PresentMode::eMailbox);
 
 	std::vector<CubeVertex> cubeVertices{
 		{ { -0.5f, -0.5f,  0.5f },{ 0.0f, 0.0f } },
@@ -543,9 +543,9 @@ void userTest()
 	auto vertexBuffer = device->createVertexBuffer(cubeVertices);
 	auto indexBuffer = device->createIndexBuffer(cubeIndices);
 
-	auto renderPass = device->createRenderPass(*program, windowWidth, windowHeight, Format::eR8G8B8A8Unorm, Format::eD32Sfloat);
+	auto renderPass = device->createRenderPass(*program, windowWidth, windowHeight, Format::eB8G8R8A8Unorm, Format::eD32Sfloat);
 
-	auto graphicsQueue = device->createGraphicsQueue(*swapChain);
+	auto graphicsQueue = device->createGraphicsQueue();
 
 	std::vector<std::unique_ptr<ISubCommandBuffer>> subCommandBuffers(4);
 	std::vector<std::reference_wrapper<ISubCommandBuffer>> subCommandBufferReferences;
@@ -634,7 +634,7 @@ void userTest()
 			});
 
 			graphicsQueue->submitCommands({ *commandBuffer });
-			graphicsQueue->present();
+			graphicsQueue->present(*swapChain);
 
 			//FPS counter:
 			auto deltaTime = (Clock::now() - lastUpdate);
