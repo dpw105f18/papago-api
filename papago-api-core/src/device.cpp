@@ -450,14 +450,14 @@ std::unique_ptr<ISwapchain> Device::createSwapChain(Format colorFormat, Format d
 	return createSwapChain(to_vulkan_format(colorFormat), to_vulkan_format(depthStencilFormat), framebufferCount, vkPreferredPresentMode);
 }
 
-std::unique_ptr<IGraphicsQueue> Device::createGraphicsQueue()
+std::unique_ptr<IGraphicsQueue> Device::createGraphicsQueue(ISwapchain& swapChain)
 {
 	auto queueFamilyIndices = findQueueFamilies(m_vkPhysicalDevice, m_surface);
 	return std::make_unique<GraphicsQueue>(
 		*this, 
 		queueFamilyIndices.graphicsFamily, 
-		queueFamilyIndices.presentFamily 
-	);
+		queueFamilyIndices.presentFamily, 
+		(SwapChain&)swapChain );
 }
 
 std::unique_ptr<ICommandBuffer> Device::createCommandBuffer()

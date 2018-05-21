@@ -60,7 +60,7 @@ public:
 	virtual void waitIdle() = 0;
 	virtual std::unique_ptr<IDynamicBufferResource> createDynamicUniformBuffer(size_t object_size, int object_count) = 0;
 
-	virtual std::unique_ptr<IGraphicsQueue> createGraphicsQueue() = 0;
+	virtual std::unique_ptr<IGraphicsQueue> createGraphicsQueue(ISwapchain&) = 0;
 
 	struct Features {
 		bool samplerAnisotropy;

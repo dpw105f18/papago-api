@@ -20,7 +20,6 @@ public:
 	std::vector<vk::UniqueFramebuffer> m_vkFramebuffers;
 	vk::UniqueRenderPass m_vkRenderPass;
 	vk::Extent2D m_vkExtent;
-	//Indicates if image resource is ready to be used. Contains one fence per framebuffer.
 	std::vector<vk::UniqueFence> m_vkFences;
 
 	//updated through GraphicsQueue (both present() and constructor)
