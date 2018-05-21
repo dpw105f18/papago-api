@@ -27,7 +27,7 @@ class Logger
 {
 	Logger() = default; // hide constructor
 
-	std::ostream& m_stream = std::cout;
+	std::ostream* m_stream = &std::cout;
 	LogLevel m_logLevel = LogLevel::eInformation;
 	bool m_enabled = false;
 public:
@@ -37,7 +37,7 @@ public:
 		return instance;
 	}
 
-	void setOutput(std::ostream& stream) { m_stream = stream; }
+	void setOutput(std::ostream& stream) { m_stream = &stream; }
 
 	void setLogLevel(LogLevel log_level) { m_logLevel = log_level; }
 
@@ -45,7 +45,7 @@ public:
 
 	void log(const LogLevel level, const std::string& message) const
 	{
-		if(m_logLevel < level) return;
-		m_stream << level << message << std::endl;
+		if(m_enabled && !m_stream && m_logLevel < level) return;
+		*m_stream << level << message << std::endl;
 	}
 };
