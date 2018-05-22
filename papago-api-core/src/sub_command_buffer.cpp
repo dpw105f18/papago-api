@@ -42,8 +42,6 @@ void SubCommandBuffer::begin()
 
 	m_vkCommandBuffer->reset(vk::CommandBufferResetFlagBits::eReleaseResources);	//TODO: have usage and reset (or not) accordingly. -AM
 	m_vkCommandBuffer->begin(beginInfo);
-
-	m_vkCommandBuffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *m_renderPassPtr->m_vkGraphicsPipelines[m_renderPassPtr->m_descriptorSetKeyMask]);
 }
 
 
@@ -120,7 +118,13 @@ IRecordingSubCommandBuffer & SubCommandBuffer::setParameterBlock(IParameterBlock
 	auto& layout = m_renderPassPtr->getPipelineLayout(internalParameterBlock.m_mask);
 
 	m_vkCommandBuffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *pipeline);
-	m_vkCommandBuffer->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *layout, 0, { *internalParameterBlock.m_vkDescriptorSet }, {});
+	m_vkCommandBuffer->bindDescriptorSets(
+		vk::PipelineBindPoint::eGraphics, 
+		*layout, 
+		0, 
+		{ *internalParameterBlock.m_vkDescriptorSet }, 
+		std::vector<uint32_t>(internalParameterBlock.m_dynamicBufferCount)
+	);
 	
 	return *this;
 }

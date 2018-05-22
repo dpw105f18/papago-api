@@ -19,7 +19,7 @@ class ICommandBuffer;
 class ISubCommandBuffer;
 class IRenderPass;
 class IParameterBlock;
-union ParameterBinding;
+struct ParameterBinding;
 
 class IDevice {
 public:
@@ -61,7 +61,7 @@ public:
 	virtual std::unique_ptr<IRenderPass> createRenderPass(IShaderProgram&, uint32_t width, uint32_t height, Format colorFormat, Format depthStencilFormat) = 0;
 	virtual void waitIdle() = 0;
 	virtual std::unique_ptr<IDynamicBufferResource> createDynamicUniformBuffer(size_t object_size, int object_count) = 0;
-	virtual std::unique_ptr<IParameterBlock> createParameterBlock(IRenderPass& renderPass, std::vector<ParameterBinding> bindings) = 0;
+	virtual std::unique_ptr<IParameterBlock> createParameterBlock(IRenderPass& renderPass, std::vector<ParameterBinding>& bindings) = 0;
 
 	virtual std::unique_ptr<IGraphicsQueue> createGraphicsQueue() = 0;
 

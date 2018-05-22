@@ -191,7 +191,7 @@ bool Device::areExtensionsSupported(const vk::PhysicalDevice & physicalDevice, c
 	return requiredExtensions.empty();
 }
 
-std::unique_ptr<IParameterBlock> Device::createParameterBlock(IRenderPass & renderPass, std::vector<ParameterBinding> bindings)
+std::unique_ptr<IParameterBlock> Device::createParameterBlock(IRenderPass & renderPass, std::vector<ParameterBinding>& bindings)
 {
 	auto& internalRenderPass = dynamic_cast<RenderPass&>(renderPass);
 	return std::make_unique<ParameterBlock>(m_vkDevice, internalRenderPass, bindings);

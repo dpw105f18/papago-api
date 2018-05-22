@@ -138,9 +138,6 @@ void CommandBuffer::begin(RenderPass& renderPass, const vk::UniqueFramebuffer& r
 	m_vkCommandBuffer->begin(beginInfo);
 	m_vkCommandBuffer->beginRenderPass(m_vkRenderPassBeginInfo, vk::SubpassContents::eInline);
 
-	//TODO: can we assume a graphics bindpoint and pipeline? -AM
-	m_vkCommandBuffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *renderPass.m_vkGraphicsPipelines[renderPass.m_descriptorSetKeyMask]);
-
 	//set default bindings:
 	auto dynamicBufferMask = m_renderPassPtr->m_descriptorSetKeyMask;
 	auto offsetCount = 0;

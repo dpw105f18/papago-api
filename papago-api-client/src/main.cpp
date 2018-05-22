@@ -555,19 +555,20 @@ void userTest()
 	for (int i = 0; i < 4; ++i) {
 		subCommandBuffers[i] = device->createSubCommandBuffer();
 		subCommandBufferReferences.push_back(*subCommandBuffers[i]);
-	}	
+	}
 
 	auto commandBuffer = device->createCommandBuffer();
 
 	auto viewUniformBuffer = device->createUniformBuffer(sizeof(glm::mat4));
 	auto instanceUniformBuffer = device->createDynamicUniformBuffer(sizeof(glm::mat4), 1000);
 
-	/*
-	renderPass->bindResource("view_projection_matrix", *viewUniformBuffer);
-	renderPass->bindResource("model_matrix", *instanceUniformBuffer);
+	std::vector<ParameterBinding> bindings;
+	bindings.reserve(3);
+	bindings.emplace_back( "view_projection_matrix", viewUniformBuffer.get());
+	bindings.emplace_back( "model_matrix", instanceUniformBuffer.get());
+	bindings.emplace_back( "sam", texture.get(), sampler.get());
 
-	renderPass->bindResource("sam", *texture, *sampler);
-	*/
+	auto paramBlock = device->createParameterBlock(*renderPass, bindings);
 
 	//*************************************************************************************************
 	//Init code here:
@@ -618,6 +619,7 @@ void userTest()
 			for (int t = 0; t < 4; ++t) {
 				tp.enqueue([&](int t) {
 					subCommandBuffers[t]->record(*renderPass, [&](IRecordingSubCommandBuffer& cmdBuf) {
+						cmdBuf.setParameterBlock(*paramBlock);
 						cmdBuf.setVertexBuffer(*vertexBuffer);
 						cmdBuf.setIndexBuffer(*indexBuffer);
 

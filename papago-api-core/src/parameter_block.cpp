@@ -10,7 +10,10 @@ ParameterBlock::ParameterBlock(const vk::UniqueDevice& device, RenderPass & rend
 {
 	for (auto& binding : bindings) {
 		auto bit = renderPass.getBinding(binding.name);
-		m_mask |= (0x01 << bit);
+		if (binding.type == 1) {
+			m_mask |= (0x01 << bit);
+			++m_dynamicBufferCount;
+		}
 	}
 
 	if (renderPass.m_vkDescriptorSetLayouts.find(m_mask) == renderPass.m_vkDescriptorSetLayouts.end()) {
@@ -72,29 +75,42 @@ void ParameterBlock::makeVkDescriptorSet(const vk::UniqueDevice& device, std::ve
 void ParameterBlock::bindResources(const vk::UniqueDevice & device, std::vector<ParameterBinding>& bindings)
 {
 	std::vector<vk::WriteDescriptorSet> writeDescriptorSets;
-	for (auto& binding : bindings) {
+	std::vector<vk::DescriptorBufferInfo> bufferInfos;
+	bufferInfos.reserve(bindings.size());
+	std::vector<vk::DescriptorImageInfo> imageInfos;
+	imageInfos.reserve(bindings.size());
+
+	for (auto i = 0; i < bindings.size(); ++i) {
+		
+		auto& binding = bindings[i];
 		switch (binding.type)
 		{
 		case 0:
+			bufferInfos.push_back({});
 			writeDescriptorSets.emplace_back(createWriteDescriptorSet(
 				device, 
+				bufferInfos.back(),
 				binding.name, 
-				dynamic_cast<BufferResource&>(binding.bufResource.get()))
+				dynamic_cast<BufferResource&>(*binding.bufResource))
 			);
 			break;
 		case 1:
+			bufferInfos.push_back({});
 			writeDescriptorSets.emplace_back(createWriteDescriptorSet(
 				device, 
+				bufferInfos.back(),
 				binding.name, 
-				dynamic_cast<DynamicBufferResource&>(binding.dBufResource.get()))
+				dynamic_cast<DynamicBufferResource&>(*binding.dBufResource))
 			);
 			break;
 		case 2:
+			imageInfos.push_back({});
 			writeDescriptorSets.emplace_back(createWriteDescriptorSet(
 				device, 
+				imageInfos.back(),
 				binding.name, 
-				dynamic_cast<ImageResource&>(binding.imgResource.get()), 
-				dynamic_cast<Sampler&>(binding.sampler.get()))
+				dynamic_cast<ImageResource&>(*binding.imgResource), 
+				dynamic_cast<Sampler&>(*binding.sampler))
 			);
 			break;
 		default:
@@ -109,9 +125,9 @@ void ParameterBlock::bindResources(const vk::UniqueDevice & device, std::vector<
 	device->updateDescriptorSets(writeDescriptorSets, {});
 }
 
-vk::WriteDescriptorSet ParameterBlock::createWriteDescriptorSet(const vk::UniqueDevice & device, const std::string & name, BufferResource & buffer)
+vk::WriteDescriptorSet ParameterBlock::createWriteDescriptorSet(const vk::UniqueDevice & device, vk::DescriptorBufferInfo& info, const std::string & name, BufferResource & buffer)
 {
-	auto info = buffer.m_vkInfo;
+	info = buffer.m_vkInfo;
 	info.setOffset(m_renderPass.m_shaderProgram.getOffset(name));
 
 	auto writeDescriptorSet = vk::WriteDescriptorSet()
@@ -124,11 +140,11 @@ vk::WriteDescriptorSet ParameterBlock::createWriteDescriptorSet(const vk::Unique
 	return writeDescriptorSet;
 }
 
-vk::WriteDescriptorSet ParameterBlock::createWriteDescriptorSet(const vk::UniqueDevice & device, const std::string & name, DynamicBufferResource & buffer)
+vk::WriteDescriptorSet ParameterBlock::createWriteDescriptorSet(const vk::UniqueDevice & device, vk::DescriptorBufferInfo& info, const std::string & name, DynamicBufferResource & buffer)
 {
 	auto& internalBuffer = dynamic_cast<BufferResource&>(*buffer.m_buffer);
 
-	auto info = internalBuffer.m_vkInfo;
+	info = internalBuffer.m_vkInfo;
 	info.setRange(buffer.m_alignment);
 
 	auto writeDescriptorSet = vk::WriteDescriptorSet()
@@ -141,12 +157,12 @@ vk::WriteDescriptorSet ParameterBlock::createWriteDescriptorSet(const vk::Unique
 	return writeDescriptorSet;
 }
 
-vk::WriteDescriptorSet ParameterBlock::createWriteDescriptorSet(const vk::UniqueDevice & device, const std::string & name, ImageResource & image, Sampler & sampler)
+vk::WriteDescriptorSet ParameterBlock::createWriteDescriptorSet(const vk::UniqueDevice & device, vk::DescriptorImageInfo& info, const std::string & name, ImageResource & image, Sampler & sampler)
 {
 	auto& backendImage = dynamic_cast<ImageResource&>(image);
 	auto binding = m_renderPass.getBinding(name);
 
-	vk::DescriptorImageInfo info = {};
+	info = {};
 	info.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
 		.setImageView(*backendImage.m_vkImageView)
 		.setSampler(static_cast<vk::Sampler>(sampler));
