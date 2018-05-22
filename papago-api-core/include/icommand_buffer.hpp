@@ -11,6 +11,7 @@ class ISubCommandBuffer;
 class IImageResource;
 class IBufferResource;
 class DynamicBufferResource;
+class IParameterBlock;
 
 class ICommandBuffer {
 public:
@@ -62,4 +63,5 @@ public:
 	virtual IRecordingSubCommandBuffer& draw(size_t vertexCount, size_t instanceCount = 1, size_t firstVertex = 0, size_t firstInstance = 0) = 0;
 	virtual IRecordingSubCommandBuffer& setVertexBuffer(IBufferResource&) = 0;
 	virtual IRecordingSubCommandBuffer& setIndexBuffer(IBufferResource&) = 0;
+	virtual IRecordingSubCommandBuffer& setParameterBlock(IParameterBlock&) = 0;
 };

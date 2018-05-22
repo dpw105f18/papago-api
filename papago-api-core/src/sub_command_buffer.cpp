@@ -5,6 +5,7 @@
 #include "image_resource.hpp"
 #include "ibuffer_resource.hpp"
 #include "recording_command_buffer.cpp" //<-- resolves linker issues. -AM
+#include "parameter_block.hpp"
 
 SubCommandBuffer::SubCommandBuffer(const vk::UniqueDevice& device, uint32_t queueFamilyIndex)
 	: CommandRecorder<IRecordingSubCommandBuffer>(device)
@@ -111,4 +112,16 @@ IRecordingSubCommandBuffer & SubCommandBuffer::setIndexBuffer(IBufferResource &i
 		0,
 		indexType);
 	return *this;
-};
+}
+IRecordingSubCommandBuffer & SubCommandBuffer::setParameterBlock(IParameterBlock& parameterBlock)
+{
+	auto& internalParameterBlock = dynamic_cast<ParameterBlock&>(parameterBlock);
+	auto& pipeline = m_renderPassPtr->getPipeline(internalParameterBlock.m_mask);
+	auto& layout = m_renderPassPtr->getPipelineLayout(internalParameterBlock.m_mask);
+
+	m_vkCommandBuffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *pipeline);
+	m_vkCommandBuffer->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *layout, 0, { *internalParameterBlock.m_vkDescriptorSet }, {});
+	
+	return *this;
+}
+;

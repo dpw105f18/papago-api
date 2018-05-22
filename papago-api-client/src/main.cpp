@@ -525,6 +525,8 @@ void userTest()
 		4, 1, 0
 	};
 
+
+
 	Parser p(PARSER_COMPILER_PATH);
 
 	auto vertexShader = p.compileVertexShader(readFile("shaders/mvpTexShader.vert"), "main");
@@ -560,10 +562,12 @@ void userTest()
 	auto viewUniformBuffer = device->createUniformBuffer(sizeof(glm::mat4));
 	auto instanceUniformBuffer = device->createDynamicUniformBuffer(sizeof(glm::mat4), 1000);
 
+	/*
 	renderPass->bindResource("view_projection_matrix", *viewUniformBuffer);
 	renderPass->bindResource("model_matrix", *instanceUniformBuffer);
 
 	renderPass->bindResource("sam", *texture, *sampler);
+	*/
 
 	//*************************************************************************************************
 	//Init code here:
@@ -585,6 +589,8 @@ void userTest()
 	for (int i = 0; i < 1000; ++i) {
 		translations[i] = glm::vec3(float(rand() % 100 - 50), float(rand() % 100 - 50), -100.0f);
 	}
+
+
 
 	while (run)
 	{
@@ -622,9 +628,6 @@ void userTest()
 					});
 				}, t).wait();
 			}
-			
-
-			
 
 			commandBuffer->record(*renderPass, *swapChain, [&](IRecordingCommandBuffer& cmdBuf) {
 				cmdBuf.clearColorBuffer(100U, 0U, 100U, 100U);

@@ -150,13 +150,6 @@ void CommandBuffer::begin(RenderPass& renderPass, const vk::UniqueFramebuffer& r
 			++offsetCount;
 		}
 	}
-	auto defaultDynamicOffsets = std::vector<uint32_t>(offsetCount, 0);
-
-
-	if (m_renderPassPtr->m_vkDescriptorSets[m_renderPassPtr->m_descriptorSetKeyMask])
-	{
-		m_vkCommandBuffer->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *m_renderPassPtr->m_vkPipelineLayouts[renderPass.m_descriptorSetKeyMask], 0, { *m_renderPassPtr->m_vkDescriptorSets[renderPass.m_descriptorSetKeyMask] }, defaultDynamicOffsets);
-	}
 }
 
 void CommandBuffer::end()

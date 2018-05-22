@@ -13,6 +13,7 @@
 #include "graphics_queue.hpp"
 #include "shader_program.hpp"
 #include "buffer_resource.hpp"
+#include "parameter_block.hpp"
 
 std::vector<std::unique_ptr<IDevice>> IDevice::enumerateDevices(ISurface & surface, const Features & features, const Extensions & extensions)
 {
@@ -188,6 +189,12 @@ bool Device::areExtensionsSupported(const vk::PhysicalDevice & physicalDevice, c
 		requiredExtensions.erase(extension.extensionName);
 	}
 	return requiredExtensions.empty();
+}
+
+std::unique_ptr<IParameterBlock> Device::createParameterBlock(IRenderPass & renderPass, std::vector<ParameterBinding> bindings)
+{
+	auto& internalRenderPass = dynamic_cast<RenderPass&>(renderPass);
+	return std::make_unique<ParameterBlock>(m_vkDevice, internalRenderPass, bindings);
 }
 
 

@@ -18,6 +18,8 @@ class ShaderProgram;
 class RenderPass;
 class IBufferResource;
 class ISubCommandBuffer;
+class IParameterBlock;
+union ParameterBinding;
 
 class Device : public IDevice {
 public:
@@ -46,6 +48,8 @@ public:
 
 	std::unique_ptr<SwapChain> createSwapChain(const vk::Format & format, size_t framebufferCount, vk::PresentModeKHR preferredPresentMode) ;
 	std::unique_ptr<SwapChain> createSwapChain(const vk::Format & colorFormat, vk::Format depthStencilFormat, size_t framebufferCount, vk::PresentModeKHR preferredPresentMode) ;
+
+	std::unique_ptr<IParameterBlock> createParameterBlock(IRenderPass & renderPass, std::vector<ParameterBinding> bindings) override;
 
 	void waitIdle() override;
 	const vk::UniqueDevice& getVkDevice() const;
@@ -101,4 +105,5 @@ private:
 
 	static bool isPhysicalDeviceSuitable(const vk::PhysicalDevice& physicalDevice, Surface&, const std::vector<const char*> &);
 	static bool areExtensionsSupported(const vk::PhysicalDevice& physicalDevice, const std::vector<const char*> &extensions);	
+
 };

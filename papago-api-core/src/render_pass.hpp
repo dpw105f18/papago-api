@@ -22,11 +22,6 @@ public:
 	explicit operator vk::RenderPass&();
 	RenderPass(const vk::UniqueDevice&, vk::UniqueRenderPass&, const ShaderProgram&, const vk::Extent2D&, DepthStencilFlags);
 
-	//Inherited from IRenderPass
-	void bindResource(const std::string& name, IBufferResource&) override;
-	void bindResource(const std::string& name, IDynamicBufferResource&) override;
-	void bindResource(const std::string& name, IImageResource&, ISampler&) override;
-
 
 	vk::UniqueRenderPass m_vkRenderPass;
 	std::map<uint64_t, vk::UniquePipeline> m_vkGraphicsPipelines;
@@ -45,11 +40,15 @@ public:
 
 	std::map<uint32_t, uint32_t> m_bindingAlignment;
 
-	void setupDescriptorSet(const vk::UniqueDevice&, const VertexShader& vertexShader, const FragmentShader& fragmentShader, uint64_t bindingMask);
-	long RenderPass::getBinding(const std::string& name);
+	void setupDescriptorSetLayout(const vk::UniqueDevice&, const VertexShader& vertexShader, const FragmentShader& fragmentShader, uint64_t bindingMask);
+	long getBinding(const std::string& name) const;
 	vk::VertexInputBindingDescription getBindingDescription();
 	std::vector<vk::VertexInputAttributeDescription> getAttributeDescriptions();
 
-private:
+	vk::UniquePipeline& getPipeline(uint64_t mask);
+	vk::UniquePipelineLayout& getPipelineLayout(uint64_t mask);
+	vk::UniqueDescriptorSetLayout& getDescriptorSetLayout(uint64_t mask);
+
 	void cacheNewPipeline(uint64_t bindingMask);
+private:
 };

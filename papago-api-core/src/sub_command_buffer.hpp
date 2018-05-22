@@ -27,6 +27,7 @@ public:
 	IRecordingSubCommandBuffer& draw(size_t vertexCount, size_t instanceCount = 1, size_t firstVertex = 0, size_t firstInstance = 0) override;
 	IRecordingSubCommandBuffer& setVertexBuffer(IBufferResource &) override;
 	IRecordingSubCommandBuffer& setIndexBuffer(IBufferResource &) override;
+	IRecordingSubCommandBuffer& setParameterBlock(IParameterBlock&) override;
 
 	/*
 	//defined in IRecordingSubCommandBuffer, implemented in CommandRecorder<IRecordingSubCommandBuffer>:
