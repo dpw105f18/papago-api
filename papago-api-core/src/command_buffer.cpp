@@ -137,16 +137,6 @@ void CommandBuffer::begin(RenderPass& renderPass, const vk::UniqueFramebuffer& r
 
 	m_vkCommandBuffer->begin(beginInfo);
 	m_vkCommandBuffer->beginRenderPass(m_vkRenderPassBeginInfo, vk::SubpassContents::eInline);
-
-	//set default bindings:
-	auto dynamicBufferMask = m_renderPassPtr->m_descriptorSetKeyMask;
-	auto offsetCount = 0;
-	uint64_t longOne = 0x01;
-	for (auto i = 0; i < 64; ++i) {
-		if (dynamicBufferMask & (longOne << i)) {
-			++offsetCount;
-		}
-	}
 }
 
 void CommandBuffer::end()

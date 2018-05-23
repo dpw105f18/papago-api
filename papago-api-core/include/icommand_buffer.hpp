@@ -34,7 +34,7 @@ class IRecorder
 public:
 	virtual ~IRecorder() = default;
 
-	virtual T& setDynamicIndex(const std::string& uniformName, size_t) = 0;
+	virtual T& setDynamicIndex(IParameterBlock& parameterBlock, const std::string& uniformName, size_t) = 0;
 };
 
 class IRecordingCommandBuffer 

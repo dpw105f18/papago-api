@@ -13,6 +13,10 @@ ParameterBlock::ParameterBlock(const vk::UniqueDevice& device, RenderPass & rend
 		if (binding.type == 1) {
 			m_mask |= (0x01 << bit);
 			++m_dynamicBufferCount;
+			m_namedAlignments[binding.name] = dynamic_cast<DynamicBufferResource&>(*binding.dBufResource).m_alignment;
+		}
+		else {
+			m_namedAlignments[binding.name] = 0;
 		}
 	}
 
@@ -117,9 +121,6 @@ void ParameterBlock::bindResources(const vk::UniqueDevice & device, std::vector<
 			//TODO: log error.
 			break;
 		}
-
-		//TODO: make method on renderpass to update this value.
-		m_renderPass.m_bindingAlignment[m_renderPass.getBinding(binding.name)] = 0;
 	}
 
 	device->updateDescriptorSets(writeDescriptorSets, {});

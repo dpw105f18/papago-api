@@ -1,6 +1,7 @@
 #pragma once
 #include "iparameter_block.hpp"
 #include <vector>
+#include <map>
 #include "vulkan\vulkan.hpp"
 
 class RenderPass;
@@ -17,6 +18,8 @@ public:
 	uint64_t m_mask;
 	RenderPass& m_renderPass;
 	uint32_t m_dynamicBufferCount;
+	std::map<std::string, uint32_t> m_namedAlignments;
+
 private:
 	void makeVkDescriptorSet(const vk::UniqueDevice& device, std::vector<ParameterBinding>& bindings);
 	void bindResources(const vk::UniqueDevice& device, std::vector<ParameterBinding>& bindings);

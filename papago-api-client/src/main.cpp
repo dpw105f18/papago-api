@@ -538,6 +538,10 @@ void userTest()
 	auto texture = device->createTexture2D(texW, texH, Format::eR8G8B8A8Unorm);
 	texture->upload(pixels);
 
+	pixels = readPixels("textures/eldorado.jpg", texW, texH);
+	auto eldoTexture = device->createTexture2D(texW, texH, Format::eR8G8B8A8Unorm);
+	eldoTexture->upload(pixels);
+
 	auto sampler = device->createTextureSampler2D(Filter::eLinear, Filter::eLinear, TextureWrapMode::eRepeat, TextureWrapMode::eRepeat);
 
 	auto program = device->createShaderProgram(*vertexShader, *fragmentShader);
@@ -566,9 +570,15 @@ void userTest()
 	bindings.reserve(3);
 	bindings.emplace_back( "view_projection_matrix", viewUniformBuffer.get());
 	bindings.emplace_back( "model_matrix", instanceUniformBuffer.get());
-	bindings.emplace_back( "sam", texture.get(), sampler.get());
-
+	bindings.emplace_back( "sam", eldoTexture.get(), sampler.get());
 	auto paramBlock = device->createParameterBlock(*renderPass, bindings);
+
+	bindings.clear();
+	bindings.emplace_back("view_projection_matrix", viewUniformBuffer.get());
+	bindings.emplace_back("model_matrix", instanceUniformBuffer.get());
+	bindings.emplace_back("sam", texture.get(), sampler.get());
+	auto paramBlock2 = device->createParameterBlock(*renderPass, bindings);
+
 
 	//*************************************************************************************************
 	//Init code here:
@@ -619,12 +629,13 @@ void userTest()
 			for (int t = 0; t < 4; ++t) {
 				tp.enqueue([&](int t) {
 					subCommandBuffers[t]->record(*renderPass, [&](IRecordingSubCommandBuffer& cmdBuf) {
-						cmdBuf.setParameterBlock(*paramBlock);
+						auto& block = (t % 2 == 0) ? paramBlock : paramBlock2;
+						cmdBuf.setParameterBlock(*block);
 						cmdBuf.setVertexBuffer(*vertexBuffer);
 						cmdBuf.setIndexBuffer(*indexBuffer);
 
 						for (int i = t * 250; i < t * 250 + 250; ++i) {
-							cmdBuf.setDynamicIndex("model_matrix", i);
+							cmdBuf.setDynamicIndex(*block, "model_matrix", i);
 							cmdBuf.drawIndexed(36);
 						}
 					});
