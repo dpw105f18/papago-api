@@ -42,6 +42,10 @@ void SubCommandBuffer::begin()
 
 	m_vkCommandBuffer->reset(vk::CommandBufferResetFlagBits::eReleaseResources);	//TODO: have usage and reset (or not) accordingly. -AM
 	m_vkCommandBuffer->begin(beginInfo);
+
+	if (m_renderPassPtr->m_shaderProgram.getUniqueUniformBindings().empty()) {
+		m_vkCommandBuffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *m_renderPassPtr->getPipeline(0));
+	}
 }
 
 

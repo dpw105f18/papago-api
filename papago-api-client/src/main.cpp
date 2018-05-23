@@ -677,12 +677,120 @@ void userTest()
 	}
 }
 
+bool handleWindowMessages(bool& run)
+{
+	MSG msg;
+	bool pm;
+	if (pm = PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
+	{
+		if (msg.message == WM_QUIT) {
+			run = false;
+		}
+
+		TranslateMessage(&msg);
+		DispatchMessage(&msg);
+	}
+
+	return pm;
+}
+
+void triangleTest() {
+	auto windowWidth = 800;
+	auto windowHeight = 600;
+	auto hwnd = StartWindow(windowWidth, windowHeight);
+	IDevice::Features features;
+	features.samplerAnisotropy = true;
+	IDevice::Extensions extensions;
+	extensions.swapchain = true;
+	extensions.samplerMirrorClampToEdge = true;
+
+
+	auto& surface = ISurface::createWin32Surface(windowWidth, windowHeight, hwnd);
+
+	auto parser = Parser(PARSER_COMPILER_PATH);
+	auto vertexShader = parser.compileVertexShader(readFile("shaders/colorVert.vert"), "main");
+	auto fragmentShader = parser.compileFragmentShader(readFile("shaders/colorFrag.frag"), "main");
+
+	auto device = std::move(IDevice::enumerateDevices(*surface, features, extensions)[0]);
+
+	auto& shaderProgam = device->createShaderProgram(*vertexShader, *fragmentShader);
+	auto& swapChain = device->createSwapChain(Format::eR8G8B8A8Unorm, 3, IDevice::PresentMode::eMailbox);
+	auto& renderPass = device->createRenderPass(*shaderProgam, surface->getWidth(), surface->getHeight(), swapChain->getFormat());
+
+
+	std::vector<glm::vec3> vertices = { {0.0, -1.0, 0.5}, {-1.0, 0.0, 0.5}, {1.0, 0.0, 0.5} };
+	auto& vertexBuffer = device->createVertexBuffer(vertices);
+
+	auto& cmdBuf =  device->createCommandBuffer();
+	auto& subCmdBuf = device->createSubCommandBuffer();
+	auto& queue = device->createGraphicsQueue();
+
+	subCmdBuf->record(*renderPass, [&](IRecordingSubCommandBuffer& subRec) {
+		subRec.setVertexBuffer(*vertexBuffer);
+		subRec.draw(3);
+	});
+
+
+
+	//Main game loop:
+	using Clock = std::chrono::high_resolution_clock;
+	auto startTime = Clock::now();
+	auto lastUpdate = Clock::now();
+	auto lastFrame = Clock::now();
+	long fps = 0;
+	bool run = true;
+
+	std::vector<std::reference_wrapper<ISubCommandBuffer>> subCmds;
+	subCmds.emplace_back(*subCmdBuf);
+
+	while (run)
+	{
+		if(handleWindowMessages(run))
+		{
+			//messages has been handled
+		}
+		else {
+			auto d = "bug";
+			cmdBuf->record(*renderPass, *swapChain, [&](IRecordingCommandBuffer& recCmd) {
+				recCmd.clearColorBuffer(1.0f, 0.0f, 0.0f, 1.0f);
+				recCmd.execute(subCmds);
+			});
+
+			queue->submitCommands({ *cmdBuf });
+			queue->present(*swapChain);
+
+			//FPS counter:
+			auto deltaTime = (Clock::now() - lastUpdate);
+			auto frameTime = (Clock::now() - lastFrame);
+			lastFrame = Clock::now();
+
+			using namespace std::chrono_literals;
+			if (deltaTime > 1s) {
+				lastUpdate = Clock::now();
+				std::stringstream ss;
+				ss << "FPS: " << fps
+					<< " --- Avg. Frame Time: " << 1000.0 / fps << "ms"
+					<< " --- Last Frame Time: " << std::chrono::duration_cast<std::chrono::duration<double, std::milli>>(frameTime).count() << "ms";
+				SetWindowName(hwnd, ss.str());
+				fps = 0;
+			}
+
+			//*************************************************************************************************
+			//Loop code here:
+
+			//*************************************************************************************************
+			++fps;
+		}
+	}
+}
+
 int main()
 {
 	try {
 		//uploadTest();
 		//multithreadedTest();
-		userTest();
+		triangleTest();
+		//userTest();
 	}
 	catch (std::exception e) {
 		std::cout << "ERROR: " << e.what() << std::endl;

@@ -24,6 +24,11 @@ RenderPass::RenderPass(
 	, m_depthStencilFlags(depthStencilFlags)
 	, m_vkExtent(extent)
 {
+
+	if (program.getUniqueUniformBindings().empty()) {
+		cacheNewPipeline(0);
+	}
+
 }
 
 void RenderPass::setupDescriptorSetLayout(const vk::UniqueDevice &device, const VertexShader& vertexShader, const FragmentShader& fragmentShader, uint64_t bindingMask)

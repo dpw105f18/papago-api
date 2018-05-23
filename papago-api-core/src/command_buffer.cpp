@@ -137,6 +137,10 @@ void CommandBuffer::begin(RenderPass& renderPass, const vk::UniqueFramebuffer& r
 
 	m_vkCommandBuffer->begin(beginInfo);
 	m_vkCommandBuffer->beginRenderPass(m_vkRenderPassBeginInfo, vk::SubpassContents::eInline);
+
+	if (m_renderPassPtr->m_shaderProgram.getUniqueUniformBindings().empty()) {
+		m_vkCommandBuffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *m_renderPassPtr->getPipeline(0));
+	}
 }
 
 void CommandBuffer::end()
