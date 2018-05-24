@@ -178,6 +178,7 @@
     <ClInclude Include="include\idevice.hpp" />
     <ClInclude Include="include\igraphics_queue.hpp" />
     <ClInclude Include="include\iimage_resource.hpp" />
+    <ClInclude Include="include\iparameter_block.hpp" />
     <ClInclude Include="include\irender_pass.hpp" />
     <ClInclude Include="include\isampler.hpp" />
     <ClInclude Include="include\ishader.hpp" />
@@ -194,6 +195,7 @@
     <ClInclude Include="src\graphics_queue.hpp" />
     <ClInclude Include="src\image_resource.hpp" />
     <ClInclude Include="include\parser.hpp" />
+    <ClInclude Include="src\parameter_block.hpp" />
     <ClInclude Include="src\recording_command_buffer.hpp" />
     <ClInclude Include="src\render_pass.hpp" />
     <ClInclude Include="src\resource.hpp" />
@@ -214,6 +216,7 @@
     <ClCompile Include="src\fragment_shader.cpp" />
     <ClCompile Include="src\graphics_queue.cpp" />
     <ClCompile Include="src\image_resource.cpp" />
+    <ClCompile Include="src\parameter_block.cpp" />
     <ClCompile Include="src\parser.cpp" />
     <ClCompile Include="src\recording_command_buffer.cpp" />
     <ClCompile Include="src\sampler.cpp" />

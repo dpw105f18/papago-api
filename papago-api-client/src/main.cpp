@@ -525,6 +525,8 @@ void userTest()
 		4, 1, 0
 	};
 
+
+
 	Parser p(PARSER_COMPILER_PATH);
 
 	auto vertexShader = p.compileVertexShader(readFile("shaders/mvpTexShader.vert"), "main");
@@ -535,6 +537,10 @@ void userTest()
 
 	auto texture = device->createTexture2D(texW, texH, Format::eR8G8B8A8Unorm);
 	texture->upload(pixels);
+
+	pixels = readPixels("textures/eldorado.jpg", texW, texH);
+	auto eldoTexture = device->createTexture2D(texW, texH, Format::eR8G8B8A8Unorm);
+	eldoTexture->upload(pixels);
 
 	auto sampler = device->createTextureSampler2D(Filter::eLinear, Filter::eLinear, TextureWrapMode::eRepeat, TextureWrapMode::eRepeat);
 
@@ -553,17 +559,26 @@ void userTest()
 	for (int i = 0; i < 4; ++i) {
 		subCommandBuffers[i] = device->createSubCommandBuffer();
 		subCommandBufferReferences.push_back(*subCommandBuffers[i]);
-	}	
+	}
 
 	auto commandBuffer = device->createCommandBuffer();
 
 	auto viewUniformBuffer = device->createUniformBuffer(sizeof(glm::mat4));
 	auto instanceUniformBuffer = device->createDynamicUniformBuffer(sizeof(glm::mat4), 1000);
 
-	renderPass->bindResource("view_projection_matrix", *viewUniformBuffer);
-	renderPass->bindResource("model_matrix", *instanceUniformBuffer);
+	std::vector<ParameterBinding> bindings;
+	bindings.reserve(3);
+	bindings.emplace_back( "view_projection_matrix", viewUniformBuffer.get());
+	bindings.emplace_back( "model_matrix", instanceUniformBuffer.get());
+	bindings.emplace_back( "sam", eldoTexture.get(), sampler.get());
+	auto paramBlock = device->createParameterBlock(*renderPass, bindings);
 
-	renderPass->bindResource("sam", *texture, *sampler);
+	bindings.clear();
+	bindings.emplace_back("view_projection_matrix", viewUniformBuffer.get());
+	bindings.emplace_back("model_matrix", instanceUniformBuffer.get());
+	bindings.emplace_back("sam", texture.get(), sampler.get());
+	auto paramBlock2 = device->createParameterBlock(*renderPass, bindings);
+
 
 	//*************************************************************************************************
 	//Init code here:
@@ -585,6 +600,8 @@ void userTest()
 	for (int i = 0; i < 1000; ++i) {
 		translations[i] = glm::vec3(float(rand() % 100 - 50), float(rand() % 100 - 50), -100.0f);
 	}
+
+
 
 	while (run)
 	{
@@ -612,19 +629,18 @@ void userTest()
 			for (int t = 0; t < 4; ++t) {
 				tp.enqueue([&](int t) {
 					subCommandBuffers[t]->record(*renderPass, [&](IRecordingSubCommandBuffer& cmdBuf) {
+						auto& block = (t % 2 == 0) ? paramBlock : paramBlock2;
+						cmdBuf.setParameterBlock(*block);
 						cmdBuf.setVertexBuffer(*vertexBuffer);
 						cmdBuf.setIndexBuffer(*indexBuffer);
 
 						for (int i = t * 250; i < t * 250 + 250; ++i) {
-							cmdBuf.setDynamicIndex("model_matrix", i);
+							cmdBuf.setDynamicIndex(*block, "model_matrix", i);
 							cmdBuf.drawIndexed(36);
 						}
 					});
 				}, t).wait();
 			}
-			
-
-			
 
 			commandBuffer->record(*renderPass, *swapChain, [&](IRecordingCommandBuffer& cmdBuf) {
 				cmdBuf.clearColorBuffer(100U, 0U, 100U, 100U);
@@ -659,6 +675,114 @@ void userTest()
 			++fps;
 		}
 	}
+	device->waitIdle();
+}
+
+bool handleWindowMessages(bool& run)
+{
+	MSG msg;
+	bool pm;
+	if (pm = PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
+	{
+		if (msg.message == WM_QUIT) {
+			run = false;
+		}
+
+		TranslateMessage(&msg);
+		DispatchMessage(&msg);
+	}
+
+	return pm;
+}
+
+void triangleTest() {
+	auto windowWidth = 800;
+	auto windowHeight = 600;
+	auto hwnd = StartWindow(windowWidth, windowHeight);
+	IDevice::Features features;
+	features.samplerAnisotropy = true;
+	IDevice::Extensions extensions;
+	extensions.swapchain = true;
+	extensions.samplerMirrorClampToEdge = true;
+
+
+	auto surface = ISurface::createWin32Surface(windowWidth, windowHeight, hwnd);
+
+	auto parser = Parser(PARSER_COMPILER_PATH);
+	auto vertexShader = parser.compileVertexShader(readFile("shaders/colorVert.vert"), "main");
+	auto fragmentShader = parser.compileFragmentShader(readFile("shaders/colorFrag.frag"), "main");
+
+	auto device = std::move(IDevice::enumerateDevices(*surface, features, extensions)[0]);
+
+	auto shaderProgam = device->createShaderProgram(*vertexShader, *fragmentShader);
+	auto swapChain = device->createSwapChain(Format::eR8G8B8A8Unorm, 3, IDevice::PresentMode::eMailbox);
+	auto renderPass = device->createRenderPass(*shaderProgam, surface->getWidth(), surface->getHeight(), swapChain->getFormat());
+
+
+	std::vector<glm::vec3> vertices = { {0.0, -1.0, 0.5}, {-1.0, 0.0, 0.5}, {1.0, 0.0, 0.5} };
+	auto vertexBuffer = device->createVertexBuffer(vertices);
+
+	auto cmdBuf =  device->createCommandBuffer();
+	auto subCmdBuf = device->createSubCommandBuffer();
+	auto queue = device->createGraphicsQueue();
+
+	subCmdBuf->record(*renderPass, [&](IRecordingSubCommandBuffer& subRec) {
+		subRec.setVertexBuffer(*vertexBuffer);
+		subRec.draw(3);
+	});
+
+
+
+	//Main game loop:
+	using Clock = std::chrono::high_resolution_clock;
+	auto startTime = Clock::now();
+	auto lastUpdate = Clock::now();
+	auto lastFrame = Clock::now();
+	long fps = 0;
+	bool run = true;
+
+	std::vector<std::reference_wrapper<ISubCommandBuffer>> subCmds;
+	subCmds.emplace_back(*subCmdBuf);
+
+	while (run)
+	{
+		if(handleWindowMessages(run))
+		{
+			//messages has been handled
+		}
+		else {
+			auto d = "bug";
+			cmdBuf->record(*renderPass, *swapChain, [&](IRecordingCommandBuffer& recCmd) {
+				recCmd.clearColorBuffer(1.0f, 0.0f, 0.0f, 1.0f);
+				recCmd.execute(subCmds);
+			});
+
+			queue->submitCommands({ *cmdBuf });
+			queue->present(*swapChain);
+
+			//FPS counter:
+			auto deltaTime = (Clock::now() - lastUpdate);
+			auto frameTime = (Clock::now() - lastFrame);
+			lastFrame = Clock::now();
+
+			using namespace std::chrono_literals;
+			if (deltaTime > 1s) {
+				lastUpdate = Clock::now();
+				std::stringstream ss;
+				ss << "FPS: " << fps
+					<< " --- Avg. Frame Time: " << 1000.0 / fps << "ms"
+					<< " --- Last Frame Time: " << std::chrono::duration_cast<std::chrono::duration<double, std::milli>>(frameTime).count() << "ms";
+				SetWindowName(hwnd, ss.str());
+				fps = 0;
+			}
+
+			//*************************************************************************************************
+			//Loop code here:
+
+			//*************************************************************************************************
+			++fps;
+		}
+	}
 }
 
 int main()
@@ -666,6 +790,7 @@ int main()
 	try {
 		//uploadTest();
 		//multithreadedTest();
+		//triangleTest();
 		userTest();
 	}
 	catch (std::exception e) {

@@ -3,19 +3,15 @@
 
 
 #include "render_pass.hpp"
-#include "vertex_shader.hpp"
-#include "fragment_shader.hpp"
-#include "image_resource.hpp"
-#include "sampler.hpp"
 #include "buffer_resource.hpp"
-
-#include <heapapi.h>
+#include "parameter_block.hpp"
 
 
 template<class T>
-T & CommandRecorder<T>::setDynamicIndex(const std::string & uniformName, size_t index)
+T & CommandRecorder<T>::setDynamicIndex(IParameterBlock& parameterBlock, const std::string & uniformName, size_t index)
 {
-	auto dynamicBufferMask = m_renderPassPtr->m_descriptorSetKeyMask;
+	auto& internalParameterBlock = dynamic_cast<ParameterBlock&>(parameterBlock);
+	auto dynamicBufferMask = internalParameterBlock.m_mask;
 	auto bindingCount = m_renderPassPtr->m_shaderProgram.getUniqueUniformBindings().size();
 
 	uint64_t longOne = 0x01;
@@ -29,8 +25,8 @@ T & CommandRecorder<T>::setDynamicIndex(const std::string & uniformName, size_t 
 	auto dynamicOffsets = std::vector<uint32_t>();
 
 	auto binding = m_renderPassPtr->getBinding(uniformName);
-	m_bindingDynamicOffset[binding] = m_renderPassPtr->m_bindingAlignment[binding] * index;
-
+	//TODO: check [name] is actually in the map before trying to access the alignment. -AM
+	m_bindingDynamicOffset[binding] = internalParameterBlock.m_namedAlignments[uniformName] * index;
 
 	std::sort(dynamicBindings.begin(), dynamicBindings.end());
 
@@ -38,7 +34,7 @@ T & CommandRecorder<T>::setDynamicIndex(const std::string & uniformName, size_t 
 		dynamicOffsets.push_back(m_bindingDynamicOffset[b]);
 	}
 
-	m_vkCommandBuffer->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *m_renderPassPtr->m_vkPipelineLayouts[m_renderPassPtr->m_descriptorSetKeyMask], 0, { *m_renderPassPtr->m_vkDescriptorSets[m_renderPassPtr->m_descriptorSetKeyMask] }, dynamicOffsets);
+	m_vkCommandBuffer->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *m_renderPassPtr->m_vkPipelineLayouts[internalParameterBlock.m_mask], 0, { *internalParameterBlock.m_vkDescriptorSet }, dynamicOffsets);
 	return *this;
 }
 ;
