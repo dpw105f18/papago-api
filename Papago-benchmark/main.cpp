@@ -245,6 +245,7 @@ void main(int argc, char* argv[])
 	int texW, texH;
 	auto texPixels = readPixels("textures/texture.png", texW, texH);
 	auto texture = device->createTexture2D(texW, texH, Format::eR8G8B8A8Unorm);
+	texture->upload(texPixels);
 
 	auto sampler = device->createTextureSampler2D(Filter::eLinear, Filter::eLinear, TextureWrapMode::eRepeat, TextureWrapMode::eRepeat);
 
@@ -376,7 +377,7 @@ void main(int argc, char* argv[])
 			{
 				auto& render_object = scene.renderObjects()[index];
 				auto newModel = glm::mat4(1.0f);
-				newModel = translate(glm::mat4(), { render_object.x(), render_object.y(), render_object.z() });
+				newModel = translate(glm::mat4(1.0f), { render_object.x(), render_object.y(), render_object.z() });
 
 				//hack around the const to update m_RotationAngle. //TODO: remove rotation feature or const from m_Scene.renderObjects()
 				auto noconst = const_cast<RenderObject*>(&render_object);
