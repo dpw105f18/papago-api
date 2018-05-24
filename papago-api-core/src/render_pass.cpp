@@ -35,6 +35,7 @@ void RenderPass::setupDescriptorSetLayout(const vk::UniqueDevice &device, const 
 {
 	//Descriptor Set Layout
 	std::vector<vk::DescriptorSetLayoutBinding> vkBindings;
+	//maps a binding (key) into an index in vkBindings (val)
 	std::map<uint32_t, size_t> bindingMap;
 
 	auto vertexBindings = vertexShader.getBindings();
@@ -61,11 +62,13 @@ void RenderPass::setupDescriptorSetLayout(const vk::UniqueDevice &device, const 
 	auto fragmentBindings = fragmentShader.getBindings();
 	for (size_t i = 0; i < fragmentBindings.size(); ++i) {
 		//if the binding was used by VertexShader:
-		if (bindingMap.size() > 0 && bindingMap.find(i) == bindingMap.end()) {
-			vkBindings[i].stageFlags |= vk::ShaderStageFlagBits::eFragment;
+		auto& fragmentBinding = fragmentBindings[i];
+
+		if (bindingMap.size() > 0 && bindingMap.find(fragmentBinding.binding) != bindingMap.end()) {
+			auto vkBindingIndex = bindingMap[fragmentBinding.binding];
+			vkBindings[vkBindingIndex].stageFlags |= vk::ShaderStageFlagBits::eFragment;
 		}
 		else {
-			auto& fragmentBinding = fragmentBindings[i];
 			vk::DescriptorType type = fragmentBinding.type;
 			auto bindingValue = fragmentBinding.binding;
 			if (type == vk::DescriptorType::eUniformBuffer) {
@@ -158,7 +161,6 @@ vk::UniqueDescriptorSetLayout & RenderPass::getDescriptorSetLayout(uint64_t mask
 
 void RenderPass::cacheNewPipeline(uint64_t bindingMask)
 {
-	auto bindings = m_shaderProgram.getUniqueUniformBindings();
 
 	setupDescriptorSetLayout(m_vkDevice, m_shaderProgram.m_vertexShader, m_shaderProgram.m_fragmentShader, bindingMask);
 

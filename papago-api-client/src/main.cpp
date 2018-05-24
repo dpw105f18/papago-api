@@ -15,6 +15,7 @@
 #include "papago.hpp"
 
 #define GLM_ENABLE_EXPERIMENTAL
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include "external/glm/glm.hpp"
 #include "external/glm/gtx/transform.hpp"
 
@@ -784,116 +785,213 @@ void triangleTest() {
 	}
 }
 
+struct CubeVertWNorm
+{
+	glm::vec3 pos;
+	glm::vec2 uv;
+	glm::vec3 norm;
+};
+
+void phongExample()
+{
+	//construct cube:
+	std::vector<CubeVertWNorm> cubeVertices;
+	auto polygonSides = 12;
+	auto cakeSlizeRad = glm::radians(360.0f / polygonSides);
+	/*
+	auto polyAngle = ((polygonSides - 2) * 180.0f) / polygonSides;
+	auto polyZdist = (std::sin(glm::radians(polyAngle / 2) * 0.5f)) / std::sin(glm::radians(90 - polyAngle / 2));
+	*/
+	auto polySideLength = std::sinf(cakeSlizeRad / 2.0f);
+	auto polyHalfLength = polySideLength / 2.0f;
+	auto polyZdist = std::sqrtf(std::pow(polyHalfLength / std::sin(cakeSlizeRad / 2.0f), 2) - std::pow(polyHalfLength, 2));
+
+	std::vector<CubeVertWNorm> cakeSlizeVertices{
+		//top
+		{ {  0.0f,			 -polyHalfLength, 0.0f		}, { 0.5f, 0.5f }, { 0.0f, -1.0f, 0.0f } },	//0
+		{ { -polyHalfLength, -polyHalfLength, polyZdist }, { 0.0f, 0.0f }, { 0.0f, -1.0f, 0.0f } },	//1
+		{ {  polyHalfLength, -polyHalfLength, polyZdist }, { 1.0f, 0.0f }, { 0.0f, -1.0f, 0.0f } },	//2
+		
+		//side
+		{ { -polyHalfLength, -polyHalfLength, polyZdist }, { 0.0f, 0.0f }, { 0.0f,  0.0f, 1.0f } },	//3
+		{ { -polyHalfLength,  polyHalfLength, polyZdist }, { 0.0f, 1.0f }, { 0.0f,  0.0f, 1.0f } },	//4 
+		{ {  polyHalfLength,  polyHalfLength, polyZdist }, { 1.0f, 1.0f }, { 0.0f,  0.0f, 1.0f } },	//5 
+		{ {  polyHalfLength, -polyHalfLength, polyZdist }, { 1.0f, 0.0f }, { 0.0f,  0.0f, 1.0f } },	//6 
+															    
+		//bottom											    
+		{ {  0.0f,  polyHalfLength, 0.0f	    }, { 0.5f, 0.5f }, { 0.0f,  1.0f, 0.0f } },	//7
+		{ {  polyHalfLength,  polyHalfLength, polyZdist }, { 1.0f, 1.0f }, { 0.0f,  1.0f, 0.0f } },	//8
+		{ { -polyHalfLength,  polyHalfLength, polyZdist }, { 0.0f, 1.0f }, { 0.0f,  1.0f, 0.0f } },	//9
+	};																			
+
+
+	for (auto rotations = 0; rotations < polygonSides; ++rotations) {
+		auto rotMat = glm::rotate(glm::radians((360.0f / polygonSides) * rotations), glm::vec3{ 0.0f, 1.0f, 0.0f });
+		for (auto& vert : cakeSlizeVertices) {
+			auto rotatedPos = glm::vec3(glm::vec4(vert.pos, 0.0f) * rotMat);
+			auto rotatedNorm = glm::vec3(glm::vec4(vert.norm, 0.0f) * rotMat);
+			cubeVertices.push_back({ rotatedPos, vert.uv, rotatedNorm });
+		}
+	}
+
+	/*
+	//lid/base
+	for (auto rotations = 0; rotations < 2; ++rotations) {
+		for (auto& vert : cakeSlizeVertices) {
+			auto rotateMat = glm::rotate(glm::radians(180.0f * rotations + 90), glm::vec3(1.0f, 0.0f, 0.0f));
+			auto rotatedPos = glm::vec3(glm::vec4(vert.pos, 0.0f) * rotateMat);
+			auto rotatedNorm = glm::vec3(glm::vec4(vert.norm, 0.0f) * rotateMat);
+			cubeVertices.push_back({ rotatedPos, vert.uv, rotatedNorm });
+		}
+	}
+	*/
+
+	std::vector<uint16_t> cubeIndices;
+
+
+	std::vector<uint16_t> sideIndices{
+		0, 1, 2,
+		3, 4, 5,
+		3, 5, 6,
+		7, 8, 9
+	};
+	
+	for (auto side = 0; side < polygonSides; ++side)
+	{
+		for (auto i : sideIndices) {
+			cubeIndices.push_back(i + cakeSlizeVertices.size() * side);
+		}
+	}
+
+	auto hwnd = StartWindow(800, 600);
+	auto surface = ISurface::createWin32Surface(800, 600, hwnd);
+	bool swapchainExt = true;
+	auto devices = IDevice::enumerateDevices(*surface, {true}, { swapchainExt, false });
+	auto& device = devices[0];
+	auto swapchain = device->createSwapChain(Format::eB8G8R8A8Unorm, Format::eD32Sfloat, 3, IDevice::PresentMode::eMailbox);
+	auto graphicsQueue = device->createGraphicsQueue();
+	
+	auto parser = Parser(PARSER_COMPILER_PATH);
+	auto vertexShader = parser.compileVertexShader(readFile("shaders/phong.vert"), "main");
+	auto fragmentShader = parser.compileFragmentShader(readFile("shaders/phong.frag"), "main");
+	auto shaderProgram = device->createShaderProgram(*vertexShader, *fragmentShader);
+
+	auto renderpass = device->createRenderPass(*shaderProgram, 800, 600, Format::eB8G8R8A8Unorm, Format::eD32Sfloat);
+
+	auto vertexBuffer = device->createVertexBuffer(cubeVertices);
+	auto indexBuffer = device->createIndexBuffer(cubeIndices);
+
+	int texW, texH;
+	auto texturePixels = readPixels("textures/eldorado.jpg", texW, texH);
+	auto texture = device->createTexture2D(texW, texH, Format::eR8G8B8A8Unorm);
+	texture->upload(texturePixels);
+
+	auto sampler = device->createTextureSampler2D(Filter::eLinear, Filter::eLinear, TextureWrapMode::eMirroredRepeat, TextureWrapMode::eMirroredRepeat);
+
+	glm::mat4 translateMat = glm::mat4(1.0f) * glm::translate(glm::vec3{ 0.0f, 0.0f, 0.0f });
+	glm::mat4 rotateMat = glm::mat4(1.0f);
+
+	glm::mat4 viewMat = glm::mat4(1.0f) * glm::lookAt(
+		glm::vec3{0.0f, 0.0f, 2.0f},
+		glm::vec3{0.0f, 0.0f, 0.0f},
+		glm::vec3{0.0f, 1.0f, 0.0f}
+	);
+
+	glm::mat4 projectionMat = glm::mat4(1.0f) * glm::perspective(glm::radians(45.0f), 800.0f / 600, 1.0f, 500.0f);
+
+	auto model = device->createUniformBuffer(sizeof(glm::mat4));
+	model->upload<glm::mat4>({ translateMat * rotateMat });
+
+	auto viewProj = device->createUniformBuffer(sizeof(glm::mat4));
+	viewProj->upload<glm::mat4>({ projectionMat * viewMat * translateMat });
+
+
+	auto light = device->createUniformBuffer(sizeof(glm::vec3));
+	light->upload<float>({ 1.0f, 2.0f, 0.0f });
+
+	std::vector<ParameterBinding> bindings;
+	bindings.emplace_back("model", model.get());
+	bindings.emplace_back("viewProj", viewProj.get());
+	bindings.emplace_back("tex", texture.get(), sampler.get());
+	bindings.emplace_back("pos", light.get());
+
+	auto parameterBlock = device->createParameterBlock(*renderpass, bindings);
+
+	auto cmdBuf = device->createCommandBuffer();
+	auto subCmd = device->createSubCommandBuffer();
+
+	subCmd->record(*renderpass, [&](IRecordingSubCommandBuffer& rcmd) {
+		rcmd.setVertexBuffer(*vertexBuffer);
+		rcmd.setIndexBuffer(*indexBuffer);
+		rcmd.setParameterBlock(*parameterBlock);
+		rcmd.drawIndexed(cubeIndices.size());
+	});
+
+	//Main game loop:
+	using Clock = std::chrono::high_resolution_clock;
+	auto startTime = Clock::now();
+	auto lastUpdate = Clock::now();
+	auto lastFrame = Clock::now();
+	long fps = 0;
+	bool run = true;
+
+	while (run)
+	{
+		if (handleWindowMessages(run))
+		{
+			//messages has been handled
+		}
+		else {
+			
+			rotateMat *= glm::rotate(glm::radians(0.05f), glm::vec3(0.3f, 1.0f, 0.0f));
+			model->upload<glm::mat4>({ translateMat * rotateMat});
+
+			cmdBuf->record(*renderpass, *swapchain, [&](IRecordingCommandBuffer& recCmd) {
+				recCmd.clearColorBuffer(1.0f, 0.0f, 1.0f, 1.0f);
+				recCmd.clearDepthBuffer(1.0f);
+				recCmd.execute({ *subCmd });
+			});
+
+			graphicsQueue->submitCommands({ *cmdBuf });
+			graphicsQueue->present(*swapchain);
+
+			//FPS counter:
+			auto deltaTime = (Clock::now() - lastUpdate);
+			auto frameTime = (Clock::now() - lastFrame);
+			lastFrame = Clock::now();
+
+			using namespace std::chrono_literals;
+			if (deltaTime > 1s) {
+				lastUpdate = Clock::now();
+				std::stringstream ss;
+				ss << "FPS: " << fps
+					<< " --- Avg. Frame Time: " << 1000.0 / fps << "ms"
+					<< " --- Last Frame Time: " << std::chrono::duration_cast<std::chrono::duration<double, std::milli>>(frameTime).count() << "ms";
+				SetWindowName(hwnd, ss.str());
+				fps = 0;
+			}
+
+			++fps;
+		}
+	}
+
+}
+
 int main()
 {
 	try {
 		//uploadTest();
 		//multithreadedTest();
-		triangleTest();
+		//triangleTest();
 		//userTest();
+		phongExample();
 	}
 	catch (std::exception e) {
+		std::cout << "Returned to main()..." << std::endl;
 		std::cout << "ERROR: " << e.what() << std::endl;
 	}
 	std::cout << "Press enter to continue...";
 	std::cin.ignore();
 	return 0;
-	/*
-	{
-		auto hwnd = StartWindow(800, 600);
-		auto surface = ISurface::createWin32Surface(800, 600, hwnd);
-		IDevice::Features features;
-		features.samplerAnisotropy = true;
-		IDevice::Extensions extensions;
-		extensions.swapchain = true;
-		extensions.samplerMirrorClampToEdge = true;
-		auto devices = IDevice::enumerateDevices(*surface, features, extensions);
-		auto& device = devices[0];
-
-		auto stupidVertexBuffer = device->createVertexBuffer(std::vector<Vertex>{
-			{ { -0.5, -0.5, 0.5 }, { 0.0, 0.0 } },
-			{ { -0.5,  0.5, 0.5 }, { 0.0, 1.0 } },
-			{ {  0.5,  0.5, 0.5 }, { 1.0, 1.0 } },
-			{ {  0.5, -0.5, 0.5 }, { 1.0, 0.0 } }
-		});
-		auto vertexBuffer = device->createVertexBuffer(std::vector<vec3>{
-			{-0.5, -0.5, 0.5 },
-			{-0.5,  0.5, 0.5 },
-			{ 0.5,  0.5, 0.5 },
-			{ 0.5, -0.5, 0.5 }
-		});
-		auto indexBuffer = device->createIndexBuffer(std::vector<uint16_t>{
-			0, 1, 2,
-			0, 2, 3
-		});
-
-		auto parser = Parser("C:/VulkanSDK/1.0.65.0/Bin32/glslangValidator.exe");
-		auto swapchain = device->createSwapChain(Format::eR8G8B8A8Unorm, 3, IDevice::PresentMode::eMailbox);
-		auto graphicsQueue = device->createGraphicsQueue(*swapchain);
-		auto passOneTarget = device->createTexture2D(800, 600, Format::eR8G8B8A8Unorm);
-		auto uniformBuffer = device->createUniformBuffer(sizeof(vec3));
-		auto sampler = device->createTextureSampler2D(Filter::eLinear, Filter::eLinear, TextureWrapMode::eMirroredRepeat, TextureWrapMode::eMirrorClampToEdge);
-		
-		// PASS 1
-		auto colVert = parser.compileVertexShader(readFile("shader/colorVert.vert"), "main");
-		auto colFrag = parser.compileFragmentShader(readFile("shader/colorFrag.frag"), "main");
-		auto colProgram = device->createShaderProgram(*colVert, *colFrag);
-		auto colPass = device->createRenderPass(*colProgram, 800, 600, Format::eR8G8B8A8Unorm, false);
-		
-		// PASS 2
-		auto stupidVert = parser.compileVertexShader(readFile("shader/stupidVert.vert"), "main");
-		auto stupidFrag = parser.compileFragmentShader(readFile("shader/stupidFrag.frag"), "main");
-		auto stupidProgram = device->createShaderProgram(*stupidVert, *stupidFrag);
-		auto stupidPass = device->createRenderPass(*stupidProgram, swapchain->getWidth(), swapchain->getHeight(), swapchain->getFormat(),  true);
-
-		while (true)
-		{
-			MSG msg;
-			if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
-			{
-				if (msg.message == WM_QUIT) {
-					break;
-				}
-				TranslateMessage(&msg);
-				DispatchMessage(&msg);
-			}
-			else {
-				auto cmd = device->createCommandBuffer(Usage::eReset);
-				cmd->record(*colPass, *passOneTarget, [&](IRecordingCommandBuffer& commandBuffer) {
-					commandBuffer
-						.setInput(*vertexBuffer)
-						.setIndexBuffer(*indexBuffer)
-						.drawIndexed(6);
-				});
-				auto stupidCmd = device->createCommandBuffer(Usage::eReuse);
-
-				if (!uniformBuffer->inUse()) {
-					vec3 randomColor = {
-						(float) std::rand() / RAND_MAX,
-						(float) std::rand() / RAND_MAX,
-						(float) std::rand() / RAND_MAX };
-					uniformBuffer->upload(std::vector<vec3>{ randomColor });
-				}
-
-				stupidCmd->record(*stupidPass, *swapchain, graphicsQueue->getNextFrameIndex(), [&](IRecordingCommandBuffer& commandBuffer) {
-					commandBuffer.setUniform("val", *uniformBuffer);
-					commandBuffer.setUniform("sam", *passOneTarget, *sampler);
-					commandBuffer.setInput(*stupidVertexBuffer);
-					commandBuffer.setIndexBuffer(*indexBuffer);
-					commandBuffer.drawIndexed(6);
-				});
-
-				graphicsQueue->submitCommands(std::vector<std::reference_wrapper<ICommandBuffer>> {
-					*cmd,
-					*stupidCmd
-				});
-
-				graphicsQueue->present();
-			}
-		}
-		device->waitIdle();
-	}
-	std::cout << "Press enter to continue...";
-	std::cin.ignore();
-	*/
 }
+
