@@ -134,6 +134,14 @@ static std::vector<char> readPixels(const std::string& localPath, int& outWidth,
 	return result;
 }
 
+void SaveToFile(const std::string& file, const std::string& data)
+{
+	std::ofstream fs;
+	fs.open(file, std::ofstream::app);
+	fs << data;
+	fs.close();
+}
+
 struct CubeVertex
 {
 	glm::vec3 pos;
@@ -277,6 +285,9 @@ void main(int argc, char* argv[])
 
 	std::stringstream frametimeCsv;
 	frametimeCsv << "frametime(nanoseconds)\n";
+	
+	std::stringstream fpsCsv;
+	fpsCsv << "FPS\n";
 
 	int probeCount = 0;
 	
@@ -292,7 +303,7 @@ void main(int argc, char* argv[])
 
 	while (run && 
 		(testConfig.seconds == 0 ||
-		std::chrono::duration<double, std::milli>(runTime).count() > testConfig.seconds * 1000
+		std::chrono::duration<double, std::milli>(runTime).count() < testConfig.seconds * 1000
 		))
 	{
 		MSG msg;
@@ -327,6 +338,11 @@ void main(int argc, char* argv[])
 					<< " --- Avg. Frame Time: " << deltaTimeMs / fps << "ms"
 					<< " --- Last Frame Time: " << std::chrono::duration_cast<std::chrono::duration<double, std::milli>>(frameTime).count() << "ms";
 				SetWindowName(hwnd, ss.str());
+				
+				if (TestConfiguration::GetInstance().recordFPS) {
+					fpsCsv << oldFps << "\n";
+				}
+
 				oldFps = fps;
 				fps = 0;
 
@@ -334,7 +350,6 @@ void main(int argc, char* argv[])
 					frametimeCsv << deltaTime.count() << "\n";
 				}
 			}
-
 
 			//OHM
 			if (testConfig.openHardwareMonitorData &&
@@ -445,4 +460,41 @@ void main(int argc, char* argv[])
 
 		runTime = Clock::now() - startTime;
 	}
+
+	device->waitIdle();
+
+	//save files
+	auto now = time(NULL);
+	tm* localNow = new tm();
+	localtime_s(localNow, &now);
+
+	auto yearStr = std::to_string((1900 + localNow->tm_year));
+	auto monthStr = localNow->tm_mon < 9 ? "0" + std::to_string(localNow->tm_mon + 1) : std::to_string(localNow->tm_mon + 1);
+	auto dayStr = localNow->tm_mday < 10 ? "0" + std::to_string(localNow->tm_mday) : std::to_string(localNow->tm_mday);
+	auto hourStr = localNow->tm_hour < 10 ? "0" + std::to_string(localNow->tm_hour) : std::to_string(localNow->tm_hour);
+	auto minStr = localNow->tm_min < 10 ? "0" + std::to_string(localNow->tm_min) : std::to_string(localNow->tm_min);
+	auto secStr = localNow->tm_sec < 10 ? "0" + std::to_string(localNow->tm_sec) : std::to_string(localNow->tm_sec);
+
+	auto fname = yearStr + monthStr + dayStr + hourStr + minStr + secStr;
+
+	if (testConfig.exportCsv && testConfig.openHardwareMonitorData) {
+
+		auto csvStr = wmiCollection.MakeString(";");
+		SaveToFile("data_" + fname + ".csv", csvStr);
+	}
+
+	if (testConfig.exportCsv) {
+		auto csvStr = testConfig.MakeString(";");
+		SaveToFile("conf_" + fname + ".csv", csvStr);
+	}
+
+	if (testConfig.recordFPS) {
+		SaveToFile("fps_" + fname + ".csv", fpsCsv.str());
+	}
+
+	if (testConfig.recordFrameTime) {
+		SaveToFile("frameTime_" + fname + ".csv", frametimeCsv.str());
+	}
+
+	delete localNow;
 };
