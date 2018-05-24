@@ -3,14 +3,8 @@
 
 
 #include "render_pass.hpp"
-#include "vertex_shader.hpp"
-#include "fragment_shader.hpp"
-#include "image_resource.hpp"
-#include "sampler.hpp"
 #include "buffer_resource.hpp"
 #include "parameter_block.hpp"
-
-#include <heapapi.h>
 
 
 template<class T>

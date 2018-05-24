@@ -675,6 +675,7 @@ void userTest()
 			++fps;
 		}
 	}
+	device->waitIdle();
 }
 
 bool handleWindowMessages(bool& run)
@@ -705,7 +706,7 @@ void triangleTest() {
 	extensions.samplerMirrorClampToEdge = true;
 
 
-	auto& surface = ISurface::createWin32Surface(windowWidth, windowHeight, hwnd);
+	auto surface = ISurface::createWin32Surface(windowWidth, windowHeight, hwnd);
 
 	auto parser = Parser(PARSER_COMPILER_PATH);
 	auto vertexShader = parser.compileVertexShader(readFile("shaders/colorVert.vert"), "main");
@@ -713,17 +714,17 @@ void triangleTest() {
 
 	auto device = std::move(IDevice::enumerateDevices(*surface, features, extensions)[0]);
 
-	auto& shaderProgam = device->createShaderProgram(*vertexShader, *fragmentShader);
-	auto& swapChain = device->createSwapChain(Format::eR8G8B8A8Unorm, 3, IDevice::PresentMode::eMailbox);
-	auto& renderPass = device->createRenderPass(*shaderProgam, surface->getWidth(), surface->getHeight(), swapChain->getFormat());
+	auto shaderProgam = device->createShaderProgram(*vertexShader, *fragmentShader);
+	auto swapChain = device->createSwapChain(Format::eR8G8B8A8Unorm, 3, IDevice::PresentMode::eMailbox);
+	auto renderPass = device->createRenderPass(*shaderProgam, surface->getWidth(), surface->getHeight(), swapChain->getFormat());
 
 
 	std::vector<glm::vec3> vertices = { {0.0, -1.0, 0.5}, {-1.0, 0.0, 0.5}, {1.0, 0.0, 0.5} };
-	auto& vertexBuffer = device->createVertexBuffer(vertices);
+	auto vertexBuffer = device->createVertexBuffer(vertices);
 
-	auto& cmdBuf =  device->createCommandBuffer();
-	auto& subCmdBuf = device->createSubCommandBuffer();
-	auto& queue = device->createGraphicsQueue();
+	auto cmdBuf =  device->createCommandBuffer();
+	auto subCmdBuf = device->createSubCommandBuffer();
+	auto queue = device->createGraphicsQueue();
 
 	subCmdBuf->record(*renderPass, [&](IRecordingSubCommandBuffer& subRec) {
 		subRec.setVertexBuffer(*vertexBuffer);
@@ -789,8 +790,8 @@ int main()
 	try {
 		//uploadTest();
 		//multithreadedTest();
-		triangleTest();
-		//userTest();
+		//triangleTest();
+		userTest();
 	}
 	catch (std::exception e) {
 		std::cout << "ERROR: " << e.what() << std::endl;

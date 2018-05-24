@@ -10,7 +10,7 @@ ParameterBlock::ParameterBlock(const vk::UniqueDevice& device, RenderPass & rend
 {
 	for (auto& binding : bindings) {
 		auto bit = renderPass.getBinding(binding.name);
-		if (binding.type == 1) {
+		if (binding.type == BindingType::eDynamicBufferResource) {
 			m_mask |= (0x01 << bit);
 			++m_dynamicBufferCount;
 			m_namedAlignments[binding.name] = dynamic_cast<DynamicBufferResource&>(*binding.dBufResource).m_alignment;
@@ -20,9 +20,7 @@ ParameterBlock::ParameterBlock(const vk::UniqueDevice& device, RenderPass & rend
 		}
 	}
 
-	if (renderPass.m_vkDescriptorSetLayouts.find(m_mask) == renderPass.m_vkDescriptorSetLayouts.end()) {
-		renderPass.cacheNewPipeline(m_mask);
-	}
+	renderPass.createNewPipelineIfNone(m_mask);
 
 	makeVkDescriptorSet(device, bindings);
 
@@ -41,18 +39,17 @@ void ParameterBlock::makeVkDescriptorSet(const vk::UniqueDevice& device, std::ve
 		vk::DescriptorType type;
 
 		switch (binding.type) {
-		case 0:
+		case BindingType::eBufferResource:
 			type = vk::DescriptorType::eUniformBuffer;
 			break;
-		case 1:
+		case BindingType::eDynamicBufferResource:
 			type = vk::DescriptorType::eUniformBufferDynamic;
 			break;
-		case 2:
+		case BindingType::eCombinedImageSampler:
 			type = vk::DescriptorType::eCombinedImageSampler;
 			break;
 		default:
-			//TODO: log error
-			break;
+			PAPAGO_ERROR("Unknown binding type " + std::to_string(static_cast<int>(binding.type)));
 		}
 
 		poolSizes[i].setDescriptorCount(1)
@@ -65,7 +62,7 @@ void ParameterBlock::makeVkDescriptorSet(const vk::UniqueDevice& device, std::ve
 		.setMaxSets(1)	//TODO: keep this default value? -AM.
 		.setFlags(vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet);
 
-	m_vkPool = std::move(device->createDescriptorPoolUnique(poolCreateInfo));
+	m_vkPool = device->createDescriptorPoolUnique(poolCreateInfo);
 
 	//Descriptor Set:
 	vk::DescriptorSetAllocateInfo allocateInfo = {};
@@ -84,33 +81,29 @@ void ParameterBlock::bindResources(const vk::UniqueDevice & device, std::vector<
 	std::vector<vk::DescriptorImageInfo> imageInfos;
 	imageInfos.reserve(bindings.size());
 
-	for (auto i = 0; i < bindings.size(); ++i) {
-		
-		auto& binding = bindings[i];
+	for (auto& binding : bindings)
+	{
 		switch (binding.type)
 		{
-		case 0:
-			bufferInfos.push_back({});
+		case BindingType::eBufferResource:
+			bufferInfos.emplace_back();
 			writeDescriptorSets.emplace_back(createWriteDescriptorSet(
-				device, 
 				bufferInfos.back(),
 				binding.name, 
 				dynamic_cast<BufferResource&>(*binding.bufResource))
 			);
 			break;
-		case 1:
-			bufferInfos.push_back({});
+		case BindingType::eDynamicBufferResource:
+			bufferInfos.emplace_back();
 			writeDescriptorSets.emplace_back(createWriteDescriptorSet(
-				device, 
 				bufferInfos.back(),
 				binding.name, 
 				dynamic_cast<DynamicBufferResource&>(*binding.dBufResource))
 			);
 			break;
-		case 2:
-			imageInfos.push_back({});
+		case BindingType::eCombinedImageSampler:
+			imageInfos.emplace_back();
 			writeDescriptorSets.emplace_back(createWriteDescriptorSet(
-				device, 
 				imageInfos.back(),
 				binding.name, 
 				dynamic_cast<ImageResource&>(*binding.imgResource), 
@@ -118,15 +111,14 @@ void ParameterBlock::bindResources(const vk::UniqueDevice & device, std::vector<
 			);
 			break;
 		default:
-			//TODO: log error.
-			break;
+			PAPAGO_ERROR("Unknown binding type " + std::to_string(static_cast<int>(binding.type)));
 		}
 	}
 
 	device->updateDescriptorSets(writeDescriptorSets, {});
 }
 
-vk::WriteDescriptorSet ParameterBlock::createWriteDescriptorSet(const vk::UniqueDevice & device, vk::DescriptorBufferInfo& info, const std::string & name, BufferResource & buffer)
+vk::WriteDescriptorSet ParameterBlock::createWriteDescriptorSet(vk::DescriptorBufferInfo& info, const std::string & name, BufferResource & buffer)
 {
 	info = buffer.m_vkInfo;
 	info.setOffset(m_renderPass.m_shaderProgram.getOffset(name));
@@ -141,7 +133,7 @@ vk::WriteDescriptorSet ParameterBlock::createWriteDescriptorSet(const vk::Unique
 	return writeDescriptorSet;
 }
 
-vk::WriteDescriptorSet ParameterBlock::createWriteDescriptorSet(const vk::UniqueDevice & device, vk::DescriptorBufferInfo& info, const std::string & name, DynamicBufferResource & buffer)
+vk::WriteDescriptorSet ParameterBlock::createWriteDescriptorSet(vk::DescriptorBufferInfo& info, const std::string & name, DynamicBufferResource & buffer)
 {
 	auto& internalBuffer = dynamic_cast<BufferResource&>(*buffer.m_buffer);
 
@@ -158,12 +150,12 @@ vk::WriteDescriptorSet ParameterBlock::createWriteDescriptorSet(const vk::Unique
 	return writeDescriptorSet;
 }
 
-vk::WriteDescriptorSet ParameterBlock::createWriteDescriptorSet(const vk::UniqueDevice & device, vk::DescriptorImageInfo& info, const std::string & name, ImageResource & image, Sampler & sampler)
+vk::WriteDescriptorSet ParameterBlock::createWriteDescriptorSet(vk::DescriptorImageInfo& info, const std::string & name, ImageResource & image, Sampler & sampler)
 {
 	auto& backendImage = dynamic_cast<ImageResource&>(image);
 	auto binding = m_renderPass.getBinding(name);
 
-	info = {};
+	info = vk::DescriptorImageInfo{};
 	info.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
 		.setImageView(*backendImage.m_vkImageView)
 		.setSampler(static_cast<vk::Sampler>(sampler));

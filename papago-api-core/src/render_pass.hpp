@@ -44,5 +44,6 @@ public:
 	vk::UniqueDescriptorSetLayout& getDescriptorSetLayout(uint64_t mask);
 
 	void cacheNewPipeline(uint64_t bindingMask);
+	void createNewPipelineIfNone(uint64_t mask);
 private:
 };
