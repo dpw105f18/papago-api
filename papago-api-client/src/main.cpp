@@ -877,7 +877,7 @@ void phongExample()
 	auto indexBuffer = device->createIndexBuffer(cubeIndices);
 
 	int texW, texH;
-	auto texturePixels = readPixels("textures/eldorado.jpg", texW, texH);
+	auto texturePixels = readPixels("textures/BYcheckers.png", texW, texH);
 	auto texture = device->createTexture2D(texW, texH, Format::eR8G8B8A8Unorm);
 	texture->upload(texturePixels);
 
