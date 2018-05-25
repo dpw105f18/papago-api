@@ -488,7 +488,7 @@ void userTest()
 	IDevice::Features features = { true };
 	IDevice::Extensions extensions = { true, false };
 
-	auto devices = IDevice::enumerateDevices(*surface, features, extensions);
+	auto devices = IDevice::enumerateDevices(*surface, features, extensions, true);
 	auto& device = devices[0];
 
 	auto swapChain = device->createSwapChain(Format::eB8G8R8A8Unorm, Format::eD32Sfloat, 3, IDevice::PresentMode::eMailbox);

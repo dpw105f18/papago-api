@@ -129,7 +129,7 @@
       <AdditionalDependencies>vulkan-1.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>.\fileMover.bat</Command>
+      <Command>dlllibmover.bat "$(outDir)" $(Platform) $(Configuration)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -170,6 +170,9 @@
       <AdditionalLibraryDirectories>$(VulkanSDKDir)\Lib;$(ProjectDir)lib\$(Platform)</AdditionalLibraryDirectories>
       <AdditionalDependencies>vulkan-1.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PostBuildEvent>
+      <Command>dlllibmover.bat "$(outDir)" $(Platform) $(Configuration)</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="include\common.hpp" />
