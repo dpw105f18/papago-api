@@ -23,11 +23,11 @@ struct ParameterBinding;
 
 class Device : public IDevice {
 public:
-	static std::vector<Device> enumerateDevices(Surface& surface, const vk::PhysicalDeviceFeatures &features, const std::vector<const char*> &extensions);
-	Device(vk::PhysicalDevice, vk::UniqueDevice&, Surface&);
+	static std::vector<Device> enumerateDevices(Surface& surface, const vk::PhysicalDeviceFeatures &features, const std::vector<const char*> &extensions, bool = false);
+	Device(vk::PhysicalDevice, vk::UniqueDevice&, Surface&, bool preferSplitQueue);
 
-	std::unique_ptr<ISwapchain> createSwapChain(Format, size_t framebufferCount, PresentMode preferredPresentMode, bool) override;
-	std::unique_ptr<ISwapchain> createSwapChain(Format colorFormat, Format depthStencilFormat, size_t framebufferCount, PresentMode preferredPresentMode, bool) override;
+	std::unique_ptr<ISwapchain> createSwapChain(Format, size_t framebufferCount, PresentMode preferredPresentMode) override;
+	std::unique_ptr<ISwapchain> createSwapChain(Format colorFormat, Format depthStencilFormat, size_t framebufferCount, PresentMode preferredPresentMode) override;
 	std::unique_ptr<IRenderPass> createRenderPass(IShaderProgram&, uint32_t width, uint32_t height, Format colorFormat) override;
 	std::unique_ptr<IRenderPass> createRenderPass(IShaderProgram&, uint32_t width, uint32_t height, Format colorFormat, Format depthStencilFormat) override;
 	std::unique_ptr<ISampler> createTextureSampler1D(Filter magFil, Filter minFil, TextureWrapMode modeU) override;
@@ -46,8 +46,8 @@ public:
 	vk::UniqueRenderPass createVkRenderpass(vk::Format colorFormat) const;
 	vk::UniqueRenderPass createVkRenderpass(vk::Format colorFormat, vk::Format depthStencilFormat) const;
 
-	std::unique_ptr<SwapChain> createSwapChain(const vk::Format & format, size_t framebufferCount, vk::PresentModeKHR preferredPresentMode, bool) ;
-	std::unique_ptr<SwapChain> createSwapChain(const vk::Format & colorFormat, vk::Format depthStencilFormat, size_t framebufferCount, vk::PresentModeKHR preferredPresentMode, bool) ;
+	std::unique_ptr<SwapChain> createSwapChain(const vk::Format & format, size_t framebufferCount, vk::PresentModeKHR preferredPresentMode) ;
+	std::unique_ptr<SwapChain> createSwapChain(const vk::Format & colorFormat, vk::Format depthStencilFormat, size_t framebufferCount, vk::PresentModeKHR preferredPresentMode) ;
 
 	std::unique_ptr<IParameterBlock> createParameterBlock(IRenderPass & renderPass, std::vector<ParameterBinding>& bindings) override;
 
@@ -59,6 +59,7 @@ public:
 	vk::UniqueDevice m_vkDevice;
 
 	Surface& m_surface;
+	bool m_preferSplitQueue;
 
 	vk::Queue m_vkInternalQueue;
 	CommandBuffer m_internalCommandBuffer;
@@ -96,14 +97,14 @@ private:
 
 	static SwapChainSupportDetails querySwapChainSupport(const vk::PhysicalDevice& , Surface& ) ;
 	
-	static QueueFamilyIndices findQueueFamilies(const vk::PhysicalDevice& device, Surface& surface);
+	static QueueFamilyIndices findQueueFamilies(const vk::PhysicalDevice& device, Surface& surface, bool preferMultiBuffer);
 	static vk::SurfaceFormatKHR chooseSwapSurfaceFormat(vk::Format,  std::vector<vk::SurfaceFormatKHR>& availableFormats);
 	static vk::PresentModeKHR chooseSwapPresentMode(vk::PresentModeKHR, const std::vector<vk::PresentModeKHR>& availablePresentModes);
 	static vk::Extent2D chooseSwapChainExtent(uint32_t width, uint32_t height, const vk::SurfaceCapabilitiesKHR& availableCapabilities);
 	static std::vector<vk::DeviceQueueCreateInfo> createQueueCreateInfos(QueueFamilyIndices, const float&);
-	vk::SwapchainCreateInfoKHR createSwapChainCreateInfo(Surface&, const size_t& framebufferCount, const vk::SurfaceFormatKHR&, const vk::Extent2D&, const vk::SurfaceCapabilitiesKHR&, const vk::PresentModeKHR&, uint32_t[], bool) const;
+	vk::SwapchainCreateInfoKHR createSwapChainCreateInfo(Surface&, const size_t& framebufferCount, const vk::SurfaceFormatKHR&, const vk::Extent2D&, const vk::SurfaceCapabilitiesKHR&, const vk::PresentModeKHR&, uint32_t[]) const;
 
-	static bool isPhysicalDeviceSuitable(const vk::PhysicalDevice& physicalDevice, Surface&, const std::vector<const char*> &);
+	static bool isPhysicalDeviceSuitable(const vk::PhysicalDevice& physicalDevice, Surface&, const std::vector<const char*> &, bool);
 	static bool areExtensionsSupported(const vk::PhysicalDevice& physicalDevice, const std::vector<const char*> &extensions);	
 
 };

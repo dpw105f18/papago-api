@@ -27,8 +27,8 @@ public:
 		eMailbox
 	};
 
-	virtual std::unique_ptr<ISwapchain> createSwapChain(Format, size_t framebufferCount, PresentMode, bool = false) = 0;
-	virtual std::unique_ptr<ISwapchain> createSwapChain(Format colorFormat, Format depthStencilFormat, size_t framebufferCount, PresentMode, bool = false) = 0;
+	virtual std::unique_ptr<ISwapchain> createSwapChain(Format, size_t framebufferCount, PresentMode) = 0;
+	virtual std::unique_ptr<ISwapchain> createSwapChain(Format colorFormat, Format depthStencilFormat, size_t framebufferCount, PresentMode) = 0;
 	
 	template<class T>
 	std::unique_ptr<IBufferResource> createVertexBuffer(std::vector<T> data);
@@ -74,7 +74,7 @@ public:
 		bool samplerMirrorClampToEdge;
 	};
 
-	PAPAGO_API static std::vector<std::unique_ptr<IDevice>> enumerateDevices(ISurface&, const Features&, const Extensions&);
+	PAPAGO_API static std::vector<std::unique_ptr<IDevice>> enumerateDevices(ISurface&, const Features&, const Extensions&, bool = false);
 
 protected:
 	virtual std::unique_ptr<IBufferResource> createVertexBufferInternal(std::vector<char>& data) = 0;

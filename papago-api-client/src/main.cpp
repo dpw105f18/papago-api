@@ -488,10 +488,10 @@ void userTest()
 	IDevice::Features features = { true };
 	IDevice::Extensions extensions = { true, false };
 
-	auto devices = IDevice::enumerateDevices(*surface, features, extensions);
+	auto devices = IDevice::enumerateDevices(*surface, features, extensions, true);
 	auto& device = devices[0];
 
-	auto swapChain = device->createSwapChain(Format::eB8G8R8A8Unorm, Format::eD32Sfloat, 3, IDevice::PresentMode::eMailbox, true);
+	auto swapChain = device->createSwapChain(Format::eB8G8R8A8Unorm, Format::eD32Sfloat, 3, IDevice::PresentMode::eMailbox);
 
 	std::vector<CubeVertex> cubeVertices{
 		{ { -0.5f, -0.5f,  0.5f },{ 0.0f, 0.0f } },
@@ -715,7 +715,7 @@ void triangleTest() {
 	auto device = std::move(IDevice::enumerateDevices(*surface, features, extensions)[0]);
 
 	auto shaderProgam = device->createShaderProgram(*vertexShader, *fragmentShader);
-	auto swapChain = device->createSwapChain(Format::eR8G8B8A8Unorm, 3, IDevice::PresentMode::eMailbox, true);
+	auto swapChain = device->createSwapChain(Format::eR8G8B8A8Unorm, 3, IDevice::PresentMode::eMailbox);
 	auto renderPass = device->createRenderPass(*shaderProgam, surface->getWidth(), surface->getHeight(), swapChain->getFormat());
 
 
