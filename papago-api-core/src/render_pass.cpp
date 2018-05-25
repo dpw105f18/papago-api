@@ -82,6 +82,7 @@ void RenderPass::setupDescriptorSetLayout(const vk::UniqueDevice &device, const 
 				.setStageFlags(vk::ShaderStageFlagBits::eFragment);
 
 			vkBindings.emplace_back(binding);
+			bindingMap.insert(std::pair<uint32_t, size_t>{fragmentBinding.binding, i});	//HACK: <-- if more than one name is in a binding, only register the first
 		}
 	}
 

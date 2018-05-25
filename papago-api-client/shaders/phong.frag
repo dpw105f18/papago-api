@@ -11,35 +11,54 @@ layout(binding = 0) uniform VPMatrix {
 } vpMat;
 
 layout(binding = 2) uniform sampler2D tex;
+ 
+layout(binding = 3) uniform LightPos {
+	vec3 lightPos;
+} lightPos;
 
-layout(binding = 3) uniform Light{
-	vec3 pos;
-} light;
+layout(binding = 4) uniform ViewPos {
+	vec3 viewPos;
+} viewPos;
 
+layout(binding = 5) uniform LightColor {
+	vec3 lightColor;
+} lightColor;
+
+layout(binding = 6) uniform LightShinyness {
+	float lightShinyness; 
+} lightShinyness;
 
 layout(location = 0) out vec4 color;
 
-vec4 ambient()
+float ambient()
 {
-	return vec4(0.1f, 0.1f, 0.1f, 1.0f);
+	return 0.5f;
 }
 
-vec4 diffuse()
+float diffuse()
 {
-	vec3 dirToLight = fragPos - (mat3(vpMat.viewProj) * light.pos);
-	float intensity = dot(normalize(dirToLight), normalize(-norm)); //-norm => wrong normal?
-	return clamp(intensity, 0.0f, 1.0f) * vec4(1.0f);
+	vec3 dirToLight = (mat3(vpMat.viewProj) * lightPos.lightPos) - fragPos;
+	float intensity = dot(normalize(norm), normalize(dirToLight)); 
+	return clamp(intensity, 0.0f, 1.0f);
+	//return vec4(lightColor.color, 1.0f);
 }
 
-vec4 specular()
+float specular()
 {
-	return vec4(0.0f);
+	vec3 dirToLight = (mat3(vpMat.viewProj) * lightPos.lightPos) - fragPos;
+	vec3 dirToEye =  (mat3(vpMat.viewProj) * viewPos.viewPos) - fragPos;
+	vec3 lightReflection = reflect(normalize(-dirToLight), normalize(norm));
+	float intensity = clamp(dot(normalize(lightReflection), normalize(-dirToEye)), 0.0f, 1.0f);
+	return pow(intensity, lightShinyness.lightShinyness);
 }
 
 
 void main()
 {
 	float intensity = 1.0f;
-	vec4 phong = ambient() + intensity * (diffuse() + specular());
-	color =  texture(tex, uv) * phong;
+	vec3 phong = lightColor.lightColor * (ambient() + diffuse() + specular());
+	phong = clamp(phong, 0.0f, 1.0f);
+	vec4 sam = texture(tex, uv);
+	color =  vec4(sam.rgb * phong, sam.a);
+	//color = vec4(phong, 1.0f);
 }

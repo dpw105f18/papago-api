@@ -792,11 +792,18 @@ struct CubeVertWNorm
 	glm::vec3 norm;
 };
 
+struct LightData {
+	glm::vec3 pos;
+	glm::vec3 viewPos;
+	glm::vec3 color;
+	glm::vec3 shinyness; //HACK: only use R channel - buffer memory does not align for vec4s!
+};
+
 void phongExample()
 {
 	//construct cube:
 	std::vector<CubeVertWNorm> cubeVertices;
-	auto polygonSides = 12;
+	auto polygonSides = 45;
 	auto cakeSlizeRad = glm::radians(360.0f / polygonSides);
 	/*
 	auto polyAngle = ((polygonSides - 2) * 180.0f) / polygonSides;
@@ -833,18 +840,6 @@ void phongExample()
 			cubeVertices.push_back({ rotatedPos, vert.uv, rotatedNorm });
 		}
 	}
-
-	/*
-	//lid/base
-	for (auto rotations = 0; rotations < 2; ++rotations) {
-		for (auto& vert : cakeSlizeVertices) {
-			auto rotateMat = glm::rotate(glm::radians(180.0f * rotations + 90), glm::vec3(1.0f, 0.0f, 0.0f));
-			auto rotatedPos = glm::vec3(glm::vec4(vert.pos, 0.0f) * rotateMat);
-			auto rotatedNorm = glm::vec3(glm::vec4(vert.norm, 0.0f) * rotateMat);
-			cubeVertices.push_back({ rotatedPos, vert.uv, rotatedNorm });
-		}
-	}
-	*/
 
 	std::vector<uint16_t> cubeIndices;
 
@@ -890,9 +885,10 @@ void phongExample()
 
 	glm::mat4 translateMat = glm::mat4(1.0f) * glm::translate(glm::vec3{ 0.0f, 0.0f, 0.0f });
 	glm::mat4 rotateMat = glm::mat4(1.0f);
-
+	
+	glm::vec3 camPos = { 0.0f, 0.0f, 2.0f };
 	glm::mat4 viewMat = glm::mat4(1.0f) * glm::lookAt(
-		glm::vec3{0.0f, 0.0f, 2.0f},
+		camPos,
 		glm::vec3{0.0f, 0.0f, 0.0f},
 		glm::vec3{0.0f, 1.0f, 0.0f}
 	);
@@ -905,15 +901,35 @@ void phongExample()
 	auto viewProj = device->createUniformBuffer(sizeof(glm::mat4));
 	viewProj->upload<glm::mat4>({ projectionMat * viewMat * translateMat });
 
+	glm::vec3 lightPosData = camPos - glm::vec3(-1.0f, 0.0f, 0.0f);
 
-	auto light = device->createUniformBuffer(sizeof(glm::vec3));
-	light->upload<float>({ 1.0f, 2.0f, 0.0f });
+	LightData lightData = {};
+	lightData.pos = lightPosData;
+	lightData.viewPos = camPos;
+	lightData.color = {1.0f, 1.0f, 1.0f};
+	lightData.shinyness = { 32.0f, 0.0f, 0.0f };
+
+	auto lightPos = device->createUniformBuffer(sizeof(glm::vec3));
+	lightPos->upload<glm::vec3>({ lightData.pos });
+
+	auto viewPos = device->createUniformBuffer(sizeof(glm::vec3));
+	viewPos->upload<glm::vec3>({ lightData.viewPos });
+
+	auto lightColor = device->createUniformBuffer(sizeof(glm::vec3));
+	lightColor->upload<glm::vec3>({ lightData.color });
+
+	auto lightShinyness = device->createUniformBuffer(sizeof(float));
+	lightShinyness->upload<glm::vec3>({ lightData.shinyness });
+
 
 	std::vector<ParameterBinding> bindings;
 	bindings.emplace_back("model", model.get());
 	bindings.emplace_back("viewProj", viewProj.get());
 	bindings.emplace_back("tex", texture.get(), sampler.get());
-	bindings.emplace_back("pos", light.get());
+	bindings.emplace_back("lightPos", lightPos.get());
+	bindings.emplace_back("viewPos", viewPos.get());
+	bindings.emplace_back("lightColor", lightColor.get());
+	bindings.emplace_back("lightShinyness", lightShinyness.get());
 
 	auto parameterBlock = device->createParameterBlock(*renderpass, bindings);
 
@@ -937,14 +953,46 @@ void phongExample()
 
 	while (run)
 	{
-		if (handleWindowMessages(run))
+		MSG msg;
+		if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
 		{
-			//messages has been handled
+			if (msg.message == WM_QUIT) {
+				run = false;
+			}
+			else if (msg.message == WM_KEYUP) {
+				
+				//'p' key
+				if (msg.wParam == 80) {
+					auto currentLightPos = lightPos->download<glm::vec3>()[0];
+					std::cout << "light: (" << currentLightPos.x << ", " << currentLightPos.y << ", " << currentLightPos.z << ")" << std::endl;
+				}
+				//'r' key
+				else if (msg.wParam == 82) {
+					rotateMat *= glm::rotate(glm::radians(30.00f), glm::vec3(0.3f, 1.0f, 0.0f));
+				}
+				else {
+					std::cout << "key code: " << std::to_string(msg.wParam) << std::endl;
+				}
+			}
+
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);
 		}
 		else {
 			
-			rotateMat *= glm::rotate(glm::radians(0.05f), glm::vec3(0.3f, 1.0f, 0.0f));
+			//FPS counter:
+			auto deltaTime = (Clock::now() - lastUpdate);
+			auto frameTime = (Clock::now() - lastFrame);
+			lastFrame = Clock::now();
+
+			
 			model->upload<glm::mat4>({ translateMat * rotateMat});
+
+			
+			auto rotateAmount = 0.000000001f * (Clock::now() - startTime).count();
+			glm::vec3 newLightPos = glm::vec3(glm::rotate(rotateAmount, glm::vec3{ 0.0f, 0.0f, 1.0f }) * glm::vec4(lightPosData, 1.0f));
+			lightPos->upload<glm::vec3>({ newLightPos});
+			
 
 			cmdBuf->record(*renderpass, *swapchain, [&](IRecordingCommandBuffer& recCmd) {
 				recCmd.clearColorBuffer(1.0f, 0.0f, 1.0f, 1.0f);
@@ -955,10 +1003,7 @@ void phongExample()
 			graphicsQueue->submitCommands({ *cmdBuf });
 			graphicsQueue->present(*swapchain);
 
-			//FPS counter:
-			auto deltaTime = (Clock::now() - lastUpdate);
-			auto frameTime = (Clock::now() - lastFrame);
-			lastFrame = Clock::now();
+			
 
 			using namespace std::chrono_literals;
 			if (deltaTime > 1s) {

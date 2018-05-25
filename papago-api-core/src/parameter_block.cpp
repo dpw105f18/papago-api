@@ -31,9 +31,6 @@ ParameterBlock::ParameterBlock(const vk::UniqueDevice& device, RenderPass & rend
 
 void ParameterBlock::makeVkDescriptorSet(const vk::UniqueDevice& device, std::vector<ParameterBinding>& bindings)
 {
-	//Descriptor Set Layout
-	std::map<uint32_t, size_t> bindingMap;
-
 	//Descriptor Pool:
 	auto poolSizes = std::vector<vk::DescriptorPoolSize>(bindings.size());
 	for (auto i = 0; i < bindings.size(); ++i) {
