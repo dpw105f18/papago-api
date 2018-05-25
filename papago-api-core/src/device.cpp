@@ -130,7 +130,9 @@ vk::SwapchainCreateInfoKHR Device::createSwapChainCreateInfo(
 	const vk::SurfaceFormatKHR &swapFormat, 
 	const vk::Extent2D &extent,
 	const vk::SurfaceCapabilitiesKHR& capabilities, 
-	const vk::PresentModeKHR& presentMode) const
+	const vk::PresentModeKHR& presentMode, 
+	uint32_t queueFamilyIndices[],
+	const bool preferMultiQueue) const
 {
 	auto createInfo = vk::SwapchainCreateInfoKHR()
 		.setSurface(static_cast<vk::SurfaceKHR>(surface))
@@ -147,16 +149,17 @@ vk::SwapchainCreateInfoKHR Device::createSwapChainCreateInfo(
 		.setClipped(VK_TRUE);
 
 	auto indices = findQueueFamilies(m_vkPhysicalDevice, surface);
-	uint32_t queueFamilyIndices[] = {
-		indices.graphicsFamily, indices.presentFamily
-	};
+	queueFamilyIndices[0] = indices.graphicsFamily;
+	queueFamilyIndices[1] = indices.presentFamily;
 
-	if (indices.graphicsFamily != indices.presentFamily) {
+	
+	if ((indices.graphicsFamily != indices.presentFamily) & preferMultiQueue) {
 		createInfo.setImageSharingMode(vk::SharingMode::eConcurrent)
 			.setQueueFamilyIndexCount(2)
 			.setPQueueFamilyIndices(queueFamilyIndices);
 	}
 	else {
+	
 		createInfo.setImageSharingMode(vk::SharingMode::eExclusive)
 			.setQueueFamilyIndexCount(0)
 			.setPQueueFamilyIndices(nullptr);
@@ -339,7 +342,7 @@ vk::UniqueRenderPass Device::createVkRenderpass(vk::Format colorFormat) const
 }
 
 // framebufferCount is a prefered minimum of buffers in the swapchain
-std::unique_ptr<SwapChain> Device::createSwapChain(const vk::Format& format, size_t framebufferCount, vk::PresentModeKHR preferredPresentMode)
+std::unique_ptr<SwapChain> Device::createSwapChain(const vk::Format& format, size_t framebufferCount, vk::PresentModeKHR preferredPresentMode, bool preferMultiQueue = false)
 {
 	auto details = querySwapChainSupport(m_vkPhysicalDevice, m_surface);
 
@@ -354,7 +357,8 @@ std::unique_ptr<SwapChain> Device::createSwapChain(const vk::Format& format, siz
 		framebufferCount = details.capabilities.maxImageCount;
 	}
 
-	auto createInfo = createSwapChainCreateInfo(m_surface, framebufferCount, swapFormat, extent, details.capabilities, presentMode);
+	uint32_t queueFamilyIndices[2];
+	auto createInfo = createSwapChainCreateInfo(m_surface, framebufferCount, swapFormat, extent, details.capabilities, presentMode, queueFamilyIndices, preferMultiQueue = false);
 
 	auto swapChain =  m_vkDevice->createSwapchainKHRUnique(createInfo);
 
@@ -379,7 +383,7 @@ std::unique_ptr<SwapChain> Device::createSwapChain(const vk::Format& format, siz
 	return std::make_unique<SwapChain>(*this, swapChain, colorResources, extent);
 }
 
-std::unique_ptr<SwapChain> Device::createSwapChain(const vk::Format & colorFormat, vk::Format depthStencilFormat, size_t framebufferCount, vk::PresentModeKHR preferredPresentMode)
+std::unique_ptr<SwapChain> Device::createSwapChain(const vk::Format & colorFormat, vk::Format depthStencilFormat, size_t framebufferCount, vk::PresentModeKHR preferredPresentMode, bool preferMultiQueue = false)
 {
 	auto details = querySwapChainSupport(m_vkPhysicalDevice, m_surface);
 
@@ -394,7 +398,8 @@ std::unique_ptr<SwapChain> Device::createSwapChain(const vk::Format & colorForma
 		framebufferCount = details.capabilities.maxImageCount;
 	}
 
-	auto createInfo = createSwapChainCreateInfo(m_surface, framebufferCount, swapFormat, extent, details.capabilities, presentMode);
+	uint32_t queueFamilyIndices[2];
+	auto createInfo = createSwapChainCreateInfo(m_surface, framebufferCount, swapFormat, extent, details.capabilities, presentMode, queueFamilyIndices, preferMultiQueue);
 
 	auto swapChain = m_vkDevice->createSwapchainKHRUnique(createInfo);
 
@@ -427,7 +432,7 @@ std::unique_ptr<SwapChain> Device::createSwapChain(const vk::Format & colorForma
 	return std::make_unique<SwapChain>(*this, swapChain, colorResources, depthResources, extent);
 }
 
-std::unique_ptr<ISwapchain> Device::createSwapChain(Format format, size_t framebufferCount, PresentMode preferredPesentMode)
+std::unique_ptr<ISwapchain> Device::createSwapChain(Format format, size_t framebufferCount, PresentMode preferredPesentMode, bool preferMultiQueue = false)
 {
 	vk::PresentModeKHR vkPreferredPresentMode;
 	switch (preferredPesentMode)
@@ -439,10 +444,10 @@ std::unique_ptr<ISwapchain> Device::createSwapChain(Format format, size_t frameb
 		PAPAGO_ERROR("Unknown presentmode");
 		break;
 	}
-	return createSwapChain(to_vulkan_format(format), framebufferCount, vkPreferredPresentMode);
+	return createSwapChain(to_vulkan_format(format), framebufferCount, vkPreferredPresentMode, preferMultiQueue);
 }
 
-std::unique_ptr<ISwapchain> Device::createSwapChain(Format colorFormat, Format depthStencilFormat, size_t framebufferCount, PresentMode preferredPresentMode)
+std::unique_ptr<ISwapchain> Device::createSwapChain(Format colorFormat, Format depthStencilFormat, size_t framebufferCount, PresentMode preferredPresentMode, bool preferMultiQueue = false)
 {
 	vk::PresentModeKHR vkPreferredPresentMode;
 	switch (preferredPresentMode)
@@ -454,7 +459,7 @@ std::unique_ptr<ISwapchain> Device::createSwapChain(Format colorFormat, Format d
 		PAPAGO_ERROR("Unknown presentmode");
 		break;
 	}
-	return createSwapChain(to_vulkan_format(colorFormat), to_vulkan_format(depthStencilFormat), framebufferCount, vkPreferredPresentMode);
+	return createSwapChain(to_vulkan_format(colorFormat), to_vulkan_format(depthStencilFormat), framebufferCount, vkPreferredPresentMode, preferMultiQueue);
 }
 
 std::unique_ptr<IGraphicsQueue> Device::createGraphicsQueue()

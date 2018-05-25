@@ -27,8 +27,8 @@ public:
 		eMailbox
 	};
 
-	virtual std::unique_ptr<ISwapchain> createSwapChain(Format, size_t framebufferCount, PresentMode) = 0;
-	virtual std::unique_ptr<ISwapchain> createSwapChain(Format colorFormat, Format depthStencilFormat, size_t framebufferCount, PresentMode) = 0;
+	virtual std::unique_ptr<ISwapchain> createSwapChain(Format, size_t framebufferCount, PresentMode, bool = false) = 0;
+	virtual std::unique_ptr<ISwapchain> createSwapChain(Format colorFormat, Format depthStencilFormat, size_t framebufferCount, PresentMode, bool = false) = 0;
 	
 	template<class T>
 	std::unique_ptr<IBufferResource> createVertexBuffer(std::vector<T> data);
