@@ -796,7 +796,7 @@ struct LightData {
 	glm::vec3 pos;
 	glm::vec3 viewPos;
 	glm::vec3 color;
-	glm::vec3 shinyness; //HACK: only use R channel - buffer memory does not align for vec4s!
+	float shinyness;
 };
 
 void phongExample()
@@ -907,7 +907,7 @@ void phongExample()
 	lightData.pos = lightPosData;
 	lightData.viewPos = camPos;
 	lightData.color = {1.0f, 1.0f, 1.0f};
-	lightData.shinyness = { 32.0f, 0.0f, 0.0f };
+	lightData.shinyness = 32.0f;
 
 	auto lightPos = device->createUniformBuffer(sizeof(glm::vec3));
 	lightPos->upload<glm::vec3>({ lightData.pos });
@@ -919,7 +919,7 @@ void phongExample()
 	lightColor->upload<glm::vec3>({ lightData.color });
 
 	auto lightShinyness = device->createUniformBuffer(sizeof(float));
-	lightShinyness->upload<glm::vec3>({ lightData.shinyness });
+	lightShinyness->upload<float>({ lightData.shinyness });
 
 
 	std::vector<ParameterBinding> bindings;
