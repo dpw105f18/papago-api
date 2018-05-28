@@ -1,6 +1,8 @@
 #include "standard_header.hpp"
 #include "sub_command_buffer.hpp"
 #include "render_pass.hpp"
+#include "swap_chain.hpp"
+#include "image_resource.hpp"
 #include "ibuffer_resource.hpp"
 #include "recording_command_buffer.cpp" //<-- resolves linker issues. -AM
 #include "parameter_block.hpp"

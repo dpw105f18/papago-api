@@ -10,7 +10,7 @@ ParameterBlock::ParameterBlock(const vk::UniqueDevice& device, RenderPass & rend
 {
 	for (auto& binding : bindings) {
 		auto bit = renderPass.getBinding(binding.name);
-		if (binding.type == BindingType::eDynamicBufferResource) {
+		if (binding.type == 1) {
 			m_mask |= (0x01 << bit);
 			++m_dynamicBufferCount;
 			m_namedAlignments[binding.name] = dynamic_cast<DynamicBufferResource&>(*binding.dBufResource).m_alignment;
@@ -20,7 +20,9 @@ ParameterBlock::ParameterBlock(const vk::UniqueDevice& device, RenderPass & rend
 		}
 	}
 
-	renderPass.createNewPipelineIfNone(m_mask);
+	if (renderPass.m_vkDescriptorSetLayouts.find(m_mask) == renderPass.m_vkDescriptorSetLayouts.end()) {
+		renderPass.cacheNewPipeline(m_mask);
+	}
 
 	makeVkDescriptorSet(device, bindings);
 
@@ -29,9 +31,6 @@ ParameterBlock::ParameterBlock(const vk::UniqueDevice& device, RenderPass & rend
 
 void ParameterBlock::makeVkDescriptorSet(const vk::UniqueDevice& device, std::vector<ParameterBinding>& bindings)
 {
-	//Descriptor Set Layout
-	std::map<uint32_t, size_t> bindingMap;
-
 	//Descriptor Pool:
 	auto poolSizes = std::vector<vk::DescriptorPoolSize>(bindings.size());
 	for (auto i = 0; i < bindings.size(); ++i) {
@@ -39,17 +38,18 @@ void ParameterBlock::makeVkDescriptorSet(const vk::UniqueDevice& device, std::ve
 		vk::DescriptorType type;
 
 		switch (binding.type) {
-		case BindingType::eBufferResource:
+		case 0:
 			type = vk::DescriptorType::eUniformBuffer;
 			break;
-		case BindingType::eDynamicBufferResource:
+		case 1:
 			type = vk::DescriptorType::eUniformBufferDynamic;
 			break;
-		case BindingType::eCombinedImageSampler:
+		case 2:
 			type = vk::DescriptorType::eCombinedImageSampler;
 			break;
 		default:
-			PAPAGO_ERROR("Unknown binding type " + std::to_string(static_cast<int>(binding.type)));
+			//TODO: log error
+			break;
 		}
 
 		poolSizes[i].setDescriptorCount(1)
@@ -62,7 +62,7 @@ void ParameterBlock::makeVkDescriptorSet(const vk::UniqueDevice& device, std::ve
 		.setMaxSets(1)	//TODO: keep this default value? -AM.
 		.setFlags(vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet);
 
-	m_vkPool = device->createDescriptorPoolUnique(poolCreateInfo);
+	m_vkPool = std::move(device->createDescriptorPoolUnique(poolCreateInfo));
 
 	//Descriptor Set:
 	vk::DescriptorSetAllocateInfo allocateInfo = {};
@@ -81,29 +81,33 @@ void ParameterBlock::bindResources(const vk::UniqueDevice & device, std::vector<
 	std::vector<vk::DescriptorImageInfo> imageInfos;
 	imageInfos.reserve(bindings.size());
 
-	for (auto& binding : bindings)
-	{
+	for (auto i = 0; i < bindings.size(); ++i) {
+		
+		auto& binding = bindings[i];
 		switch (binding.type)
 		{
-		case BindingType::eBufferResource:
-			bufferInfos.emplace_back();
+		case 0:
+			bufferInfos.push_back({});
 			writeDescriptorSets.emplace_back(createWriteDescriptorSet(
+				device, 
 				bufferInfos.back(),
 				binding.name, 
 				dynamic_cast<BufferResource&>(*binding.bufResource))
 			);
 			break;
-		case BindingType::eDynamicBufferResource:
-			bufferInfos.emplace_back();
+		case 1:
+			bufferInfos.push_back({});
 			writeDescriptorSets.emplace_back(createWriteDescriptorSet(
+				device, 
 				bufferInfos.back(),
 				binding.name, 
 				dynamic_cast<DynamicBufferResource&>(*binding.dBufResource))
 			);
 			break;
-		case BindingType::eCombinedImageSampler:
-			imageInfos.emplace_back();
+		case 2:
+			imageInfos.push_back({});
 			writeDescriptorSets.emplace_back(createWriteDescriptorSet(
+				device, 
 				imageInfos.back(),
 				binding.name, 
 				dynamic_cast<ImageResource&>(*binding.imgResource), 
@@ -111,14 +115,15 @@ void ParameterBlock::bindResources(const vk::UniqueDevice & device, std::vector<
 			);
 			break;
 		default:
-			PAPAGO_ERROR("Unknown binding type " + std::to_string(static_cast<int>(binding.type)));
+			//TODO: log error.
+			break;
 		}
 	}
 
 	device->updateDescriptorSets(writeDescriptorSets, {});
 }
 
-vk::WriteDescriptorSet ParameterBlock::createWriteDescriptorSet(vk::DescriptorBufferInfo& info, const std::string & name, BufferResource & buffer)
+vk::WriteDescriptorSet ParameterBlock::createWriteDescriptorSet(const vk::UniqueDevice & device, vk::DescriptorBufferInfo& info, const std::string & name, BufferResource & buffer)
 {
 	info = buffer.m_vkInfo;
 	info.setOffset(m_renderPass.m_shaderProgram.getOffset(name));
@@ -133,7 +138,7 @@ vk::WriteDescriptorSet ParameterBlock::createWriteDescriptorSet(vk::DescriptorBu
 	return writeDescriptorSet;
 }
 
-vk::WriteDescriptorSet ParameterBlock::createWriteDescriptorSet(vk::DescriptorBufferInfo& info, const std::string & name, DynamicBufferResource & buffer)
+vk::WriteDescriptorSet ParameterBlock::createWriteDescriptorSet(const vk::UniqueDevice & device, vk::DescriptorBufferInfo& info, const std::string & name, DynamicBufferResource & buffer)
 {
 	auto& internalBuffer = dynamic_cast<BufferResource&>(*buffer.m_buffer);
 
@@ -150,12 +155,12 @@ vk::WriteDescriptorSet ParameterBlock::createWriteDescriptorSet(vk::DescriptorBu
 	return writeDescriptorSet;
 }
 
-vk::WriteDescriptorSet ParameterBlock::createWriteDescriptorSet(vk::DescriptorImageInfo& info, const std::string & name, ImageResource & image, Sampler & sampler)
+vk::WriteDescriptorSet ParameterBlock::createWriteDescriptorSet(const vk::UniqueDevice & device, vk::DescriptorImageInfo& info, const std::string & name, ImageResource & image, Sampler & sampler)
 {
 	auto& backendImage = dynamic_cast<ImageResource&>(image);
 	auto binding = m_renderPass.getBinding(name);
 
-	info = vk::DescriptorImageInfo{};
+	info = {};
 	info.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
 		.setImageView(*backendImage.m_vkImageView)
 		.setSampler(static_cast<vk::Sampler>(sampler));

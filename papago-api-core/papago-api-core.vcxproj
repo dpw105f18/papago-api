@@ -110,6 +110,9 @@
     <Link>
       <AdditionalLibraryDirectories>$(VulkanSDKDir)\Lib32;$(ProjectDir)lib\$(Platform)</AdditionalLibraryDirectories>
     </Link>
+    <PostBuildEvent>
+      <Command>dlllibmover.bat "$(outDir)" $(Platform) $(Configuration)</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -150,6 +153,9 @@
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalLibraryDirectories>$(VulkanSDKDir)\Lib32;$(ProjectDir)lib\$(Platform)</AdditionalLibraryDirectories>
     </Link>
+    <PostBuildEvent>
+      <Command>dlllibmover.bat "$(outDir)" $(Platform) $(Configuration)</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -175,6 +181,7 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="include\api_enums.hpp" />
     <ClInclude Include="include\common.hpp" />
     <ClInclude Include="include\ibuffer_resource.hpp" />
     <ClInclude Include="include\icommand_buffer.hpp" />
@@ -188,16 +195,14 @@
     <ClInclude Include="include\ishader_program.hpp" />
     <ClInclude Include="include\isurface.hpp" />
     <ClInclude Include="include\iswapchain.hpp" />
-    <ClInclude Include="include\api_enums.hpp" />
     <ClInclude Include="include\papago.hpp" />
-    <ClInclude Include="include\Logger.hpp" />
+    <ClInclude Include="include\parser.hpp" />
     <ClInclude Include="src\buffer_resource.hpp" />
     <ClInclude Include="src\command_buffer.hpp" />
     <ClInclude Include="src\device.hpp" />
     <ClInclude Include="src\fragment_shader.hpp" />
     <ClInclude Include="src\graphics_queue.hpp" />
     <ClInclude Include="src\image_resource.hpp" />
-    <ClInclude Include="include\parser.hpp" />
     <ClInclude Include="src\parameter_block.hpp" />
     <ClInclude Include="src\recording_command_buffer.hpp" />
     <ClInclude Include="src\render_pass.hpp" />

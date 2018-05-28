@@ -15,7 +15,7 @@
 #include "buffer_resource.hpp"
 #include "parameter_block.hpp"
 
-std::vector<std::unique_ptr<IDevice>> IDevice::enumerateDevices(ISurface & surface, const Features & features, const Extensions & extensions, bool preferSplitQueue)
+std::vector<std::unique_ptr<IDevice>> IDevice::enumerateDevices(ISurface & surface, const Features & features, const Extensions & extensions)
 {
 	// TODO: Support more features and extensions
 	vk::PhysicalDeviceFeatures vkFeatures = {};
@@ -30,7 +30,7 @@ std::vector<std::unique_ptr<IDevice>> IDevice::enumerateDevices(ISurface & surfa
 		vkExtensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 	}
 
-	auto devices = Device::enumerateDevices((Surface&)surface, vkFeatures, vkExtensions, preferSplitQueue);
+	auto devices = Device::enumerateDevices((Surface&)surface, vkFeatures, vkExtensions);
 	std::vector<std::unique_ptr<IDevice>> result;
 	result.reserve(devices.size());
 	for (auto& device : devices) {
@@ -40,7 +40,7 @@ std::vector<std::unique_ptr<IDevice>> IDevice::enumerateDevices(ISurface & surfa
 }
 
 //Provides a vector of devices with the given [features] and [extensions] enabled
-std::vector<Device> Device::enumerateDevices(Surface& surface, const vk::PhysicalDeviceFeatures &features, const std::vector<const char*> &extensions, bool preferSplitQueue)
+std::vector<Device> Device::enumerateDevices(Surface& surface, const vk::PhysicalDeviceFeatures &features, const std::vector<const char*> &extensions)
 {
 	std::vector<const char*> enabledLayers;
 #ifdef PAPAGO_USE_VALIDATION_LAYERS
@@ -50,11 +50,11 @@ std::vector<Device> Device::enumerateDevices(Surface& surface, const vk::Physica
 	std::vector<Device> result;
 	const float queuePriority = 1.0f;
 	for (auto& physicalDevice : surface.m_vkInstance->enumeratePhysicalDevices()) {
-		if (! isPhysicalDeviceSuitable(physicalDevice, surface, extensions, preferSplitQueue)) {
+		if (! isPhysicalDeviceSuitable(physicalDevice, surface, extensions)) {
 			continue;
 		}
 
-		auto queueFamilyIndicies = findQueueFamilies(physicalDevice, surface, preferSplitQueue);
+		auto queueFamilyIndicies = findQueueFamilies(physicalDevice, surface);
 		auto queueCreateInfos = createQueueCreateInfos(queueFamilyIndicies, queuePriority);
 
 		auto logicalDevice = physicalDevice.createDeviceUnique(vk::DeviceCreateInfo()
@@ -66,14 +66,14 @@ std::vector<Device> Device::enumerateDevices(Surface& surface, const vk::Physica
 			.setQueueCreateInfoCount(queueCreateInfos.size())
 			.setPQueueCreateInfos(queueCreateInfos.data()));
 
-		result.emplace_back(physicalDevice, logicalDevice, surface, preferSplitQueue);
+		result.emplace_back(physicalDevice, logicalDevice, surface);
 	}
 	
 	return result;
 }
 
 // Tries to keep graphics and present families on separate physical queues
-Device::QueueFamilyIndices Device::findQueueFamilies(const vk::PhysicalDevice & device, Surface& surface, bool preferSplitQueue)
+Device::QueueFamilyIndices Device::findQueueFamilies(const vk::PhysicalDevice & device, Surface& surface)
 {
 	int graphicsQueueFamily = QueueFamilyIndices::NOT_FOUND();
 	int presentQueueFamily = QueueFamilyIndices::NOT_FOUND();
@@ -85,14 +85,14 @@ Device::QueueFamilyIndices Device::findQueueFamilies(const vk::PhysicalDevice & 
 
 		if (queueFamily.queueCount > 0) {
 			if ((graphicsQueueFamily == QueueFamilyIndices::NOT_FOUND() ||
-				((graphicsQueueFamily == presentQueueFamily) && preferSplitQueue)) &&
+				graphicsQueueFamily == presentQueueFamily) &&
 				queueFamily.queueFlags & vk::QueueFlagBits::eGraphics)
 			{
 				graphicsQueueFamily = i;
 			}
 
 			if ((presentQueueFamily == QueueFamilyIndices::NOT_FOUND() ||
-				((presentQueueFamily == graphicsQueueFamily) && preferSplitQueue)) &&
+				presentQueueFamily == graphicsQueueFamily) &&
 				device.getSurfaceSupportKHR(i, static_cast<vk::SurfaceKHR>(surface))) {
 				presentQueueFamily = i;
 			}
@@ -130,8 +130,7 @@ vk::SwapchainCreateInfoKHR Device::createSwapChainCreateInfo(
 	const vk::SurfaceFormatKHR &swapFormat, 
 	const vk::Extent2D &extent,
 	const vk::SurfaceCapabilitiesKHR& capabilities, 
-	const vk::PresentModeKHR& presentMode, 
-	uint32_t queueFamilyIndices[]) const
+	const vk::PresentModeKHR& presentMode) const
 {
 	auto createInfo = vk::SwapchainCreateInfoKHR()
 		.setSurface(static_cast<vk::SurfaceKHR>(surface))
@@ -147,18 +146,17 @@ vk::SwapchainCreateInfoKHR Device::createSwapChainCreateInfo(
 		.setPresentMode(presentMode)
 		.setClipped(VK_TRUE);
 
-	auto indices = findQueueFamilies(m_vkPhysicalDevice, surface, m_preferSplitQueue);
-	queueFamilyIndices[0] = indices.graphicsFamily;
-	queueFamilyIndices[1] = indices.presentFamily;
+	auto indices = findQueueFamilies(m_vkPhysicalDevice, surface);
+	uint32_t queueFamilyIndices[] = {
+		indices.graphicsFamily, indices.presentFamily
+	};
 
-	
-	if ((indices.graphicsFamily != indices.presentFamily) & m_preferSplitQueue) {
+	if (indices.graphicsFamily != indices.presentFamily) {
 		createInfo.setImageSharingMode(vk::SharingMode::eConcurrent)
 			.setQueueFamilyIndexCount(2)
 			.setPQueueFamilyIndices(queueFamilyIndices);
 	}
 	else {
-	
 		createInfo.setImageSharingMode(vk::SharingMode::eExclusive)
 			.setQueueFamilyIndexCount(0)
 			.setPQueueFamilyIndices(nullptr);
@@ -167,9 +165,9 @@ vk::SwapchainCreateInfoKHR Device::createSwapChainCreateInfo(
 	return createInfo;
 }
 
-bool Device::isPhysicalDeviceSuitable(const vk::PhysicalDevice & physicalDevice, Surface& surface, const std::vector<const char*>& extensions, bool preferSplitQueue)
+bool Device::isPhysicalDeviceSuitable(const vk::PhysicalDevice & physicalDevice, Surface& surface, const std::vector<const char*>& extensions)
 {
-	auto queueFamilyIndicies = findQueueFamilies(physicalDevice, surface, preferSplitQueue);
+	auto queueFamilyIndicies = findQueueFamilies(physicalDevice, surface);
 
 	bool extensionsSupported = areExtensionsSupported(physicalDevice, extensions);
 
@@ -356,8 +354,7 @@ std::unique_ptr<SwapChain> Device::createSwapChain(const vk::Format& format, siz
 		framebufferCount = details.capabilities.maxImageCount;
 	}
 
-	uint32_t queueFamilyIndices[2];
-	auto createInfo = createSwapChainCreateInfo(m_surface, framebufferCount, swapFormat, extent, details.capabilities, presentMode, queueFamilyIndices);
+	auto createInfo = createSwapChainCreateInfo(m_surface, framebufferCount, swapFormat, extent, details.capabilities, presentMode);
 
 	auto swapChain =  m_vkDevice->createSwapchainKHRUnique(createInfo);
 
@@ -397,8 +394,7 @@ std::unique_ptr<SwapChain> Device::createSwapChain(const vk::Format & colorForma
 		framebufferCount = details.capabilities.maxImageCount;
 	}
 
-	uint32_t queueFamilyIndices[2];
-	auto createInfo = createSwapChainCreateInfo(m_surface, framebufferCount, swapFormat, extent, details.capabilities, presentMode, queueFamilyIndices);
+	auto createInfo = createSwapChainCreateInfo(m_surface, framebufferCount, swapFormat, extent, details.capabilities, presentMode);
 
 	auto swapChain = m_vkDevice->createSwapchainKHRUnique(createInfo);
 
@@ -463,7 +459,7 @@ std::unique_ptr<ISwapchain> Device::createSwapChain(Format colorFormat, Format d
 
 std::unique_ptr<IGraphicsQueue> Device::createGraphicsQueue()
 {
-	auto queueFamilyIndices = findQueueFamilies(m_vkPhysicalDevice, m_surface, m_preferSplitQueue);
+	auto queueFamilyIndices = findQueueFamilies(m_vkPhysicalDevice, m_surface);
 	return std::make_unique<GraphicsQueue>(
 		*this, 
 		queueFamilyIndices.graphicsFamily, 
@@ -473,7 +469,7 @@ std::unique_ptr<IGraphicsQueue> Device::createGraphicsQueue()
 
 std::unique_ptr<ICommandBuffer> Device::createCommandBuffer()
 {
-	auto queueFamilyIndices = findQueueFamilies(m_vkPhysicalDevice, m_surface, m_preferSplitQueue);
+	auto queueFamilyIndices = findQueueFamilies(m_vkPhysicalDevice, m_surface);
 	return std::make_unique<CommandBuffer>(
 		m_vkDevice, 
 		queueFamilyIndices.graphicsFamily);
@@ -481,7 +477,7 @@ std::unique_ptr<ICommandBuffer> Device::createCommandBuffer()
 
 std::unique_ptr<ISubCommandBuffer> Device::createSubCommandBuffer()
 {
-	auto queueFamilyIndex = findQueueFamilies(m_vkPhysicalDevice, m_surface, m_preferSplitQueue).graphicsFamily;
+	auto queueFamilyIndex = findQueueFamilies(m_vkPhysicalDevice, m_surface).graphicsFamily;
 	return std::make_unique<SubCommandBuffer>(m_vkDevice, queueFamilyIndex);
 }
 
@@ -675,14 +671,13 @@ std::unique_ptr<IImageResource> Device::createDepthTexture2D(uint32_t width, uin
 	return std::make_unique<ImageResource>(ImageResource::createDepthResource(*this, { width, height, 1 }, { to_vulkan_format(format) }));
 }
 
-Device::Device(vk::PhysicalDevice physicalDevice, vk::UniqueDevice &device, Surface &surface, bool preferSplitQueue)
+Device::Device(vk::PhysicalDevice physicalDevice, vk::UniqueDevice &device, Surface &surface)
 	: m_vkPhysicalDevice(physicalDevice)
 	, m_vkDevice(std::move(device))
 	, m_surface(surface)
-	, m_preferSplitQueue(preferSplitQueue)
-	, m_internalCommandBuffer(CommandBuffer{ m_vkDevice, findQueueFamilies(physicalDevice, surface,  m_preferSplitQueue).graphicsFamily})
+	, m_internalCommandBuffer(CommandBuffer{ m_vkDevice, findQueueFamilies(physicalDevice, surface).graphicsFamily})
 {
-	m_vkInternalQueue = m_vkDevice->getQueue(findQueueFamilies(physicalDevice, surface, m_preferSplitQueue).graphicsFamily, 0);
+	m_vkInternalQueue = m_vkDevice->getQueue(findQueueFamilies(physicalDevice, surface).graphicsFamily, 0);
 }
 
 Device::SwapChainSupportDetails Device::querySwapChainSupport(const vk::PhysicalDevice& physicalDevice, Surface& surface) 

@@ -74,7 +74,7 @@ public:
 		bool samplerMirrorClampToEdge;
 	};
 
-	PAPAGO_API static std::vector<std::unique_ptr<IDevice>> enumerateDevices(ISurface&, const Features&, const Extensions&, bool = false);
+	PAPAGO_API static std::vector<std::unique_ptr<IDevice>> enumerateDevices(ISurface&, const Features&, const Extensions&);
 
 protected:
 	virtual std::unique_ptr<IBufferResource> createVertexBufferInternal(std::vector<char>& data) = 0;
