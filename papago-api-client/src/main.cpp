@@ -799,16 +799,16 @@ struct LightData {
 	float shinyness;
 };
 
+#include "../circle_mesh.hpp"
+
 void phongExample()
 {
+	/*
 	//construct cube:
 	std::vector<CubeVertWNorm> cubeVertices;
 	auto polygonSides = 45;
 	auto cakeSlizeRad = glm::radians(360.0f / polygonSides);
-	/*
-	auto polyAngle = ((polygonSides - 2) * 180.0f) / polygonSides;
-	auto polyZdist = (std::sin(glm::radians(polyAngle / 2) * 0.5f)) / std::sin(glm::radians(90 - polyAngle / 2));
-	*/
+
 	auto polySideLength = std::sinf(cakeSlizeRad / 2.0f);
 	auto polyHalfLength = polySideLength / 2.0f;
 	auto polyZdist = std::sqrtf(std::pow(polyHalfLength / std::sin(cakeSlizeRad / 2.0f), 2) - std::pow(polyHalfLength, 2));
@@ -840,6 +840,7 @@ void phongExample()
 			cubeVertices.push_back({ rotatedPos, vert.uv, rotatedNorm });
 		}
 	}
+	
 
 	std::vector<uint16_t> cubeIndices;
 
@@ -857,6 +858,9 @@ void phongExample()
 			cubeIndices.push_back(i + cakeSlizeVertices.size() * side);
 		}
 	}
+	*/
+
+	auto circleMesh = circle_mesh::generateCircleMesh<6>();
 
 	auto hwnd = StartWindow(800, 600);
 	auto surface = ISurface::createWin32Surface(800, 600, hwnd);
@@ -873,8 +877,8 @@ void phongExample()
 
 	auto renderpass = device->createRenderPass(*shaderProgram, 800, 600, Format::eB8G8R8A8Unorm, Format::eD32Sfloat);
 
-	auto vertexBuffer = device->createVertexBuffer(cubeVertices);
-	auto indexBuffer = device->createIndexBuffer(cubeIndices);
+	auto vertexBuffer = device->createVertexBuffer(circleMesh.vertices);
+	auto indexBuffer = device->createIndexBuffer(circleMesh.indices);
 
 	int texW, texH;
 	auto texturePixels = readPixels("textures/BYcheckers.png", texW, texH);
@@ -883,7 +887,7 @@ void phongExample()
 
 	auto sampler = device->createTextureSampler2D(Filter::eLinear, Filter::eLinear, TextureWrapMode::eMirroredRepeat, TextureWrapMode::eMirroredRepeat);
 
-	glm::mat4 translateMat = glm::mat4(1.0f) * glm::translate(glm::vec3{ 0.0f, 0.0f, 0.0f });
+	glm::mat4 translateMat = glm::translate(glm::vec3{ 0.0f, 0.0f, -3.0f });
 	glm::mat4 rotateMat = glm::mat4(1.0f);
 	
 	glm::vec3 camPos = { 0.0f, 0.0f, 2.0f };
@@ -901,12 +905,13 @@ void phongExample()
 	auto viewProj = device->createUniformBuffer(sizeof(glm::mat4));
 	viewProj->upload<glm::mat4>({ projectionMat * viewMat * translateMat });
 
-	glm::vec3 lightPosData = camPos - glm::vec3(-1.0f, 0.0f, 0.0f);
+	glm::vec3 lightPosData = camPos - glm::vec3(0.0f, 1.0f, -7.0f);
+	lightPosData = glm::vec3(0.1f, -0.4f, -9.0f); //<-- debug
 
 	LightData lightData = {};
 	lightData.pos = lightPosData;
 	lightData.viewPos = camPos;
-	lightData.color = {1.0f, 1.0f, 1.0f};
+	lightData.color = {0.2f, 0.3f, 0.7f};
 	lightData.shinyness = 32.0f;
 
 	auto lightPos = device->createUniformBuffer(sizeof(glm::vec3));
@@ -940,7 +945,7 @@ void phongExample()
 		rcmd.setVertexBuffer(*vertexBuffer);
 		rcmd.setIndexBuffer(*indexBuffer);
 		rcmd.setParameterBlock(*parameterBlock);
-		rcmd.drawIndexed(cubeIndices.size());
+		rcmd.drawIndexed(circleMesh.indices.size());
 	});
 
 	//Main game loop:
@@ -967,8 +972,18 @@ void phongExample()
 					std::cout << "light: (" << currentLightPos.x << ", " << currentLightPos.y << ", " << currentLightPos.z << ")" << std::endl;
 				}
 				//'r' key
-				else if (msg.wParam == 82) {
+				else if (msg.wParam == 'R') {
+					
 					rotateMat *= glm::rotate(glm::radians(30.00f), glm::vec3(0.3f, 1.0f, 0.0f));
+
+				}
+				else if (msg.wParam == 'I') {
+					lightData.shinyness += 2;
+					std::cout << "Shinyness: " << lightData.shinyness << std::endl;
+				}
+				else if (msg.wParam == 'J') {
+					lightData.shinyness -= 2;
+					std::cout << "Shinyness: " << lightData.shinyness << std::endl;
 				}
 				else {
 					std::cout << "key code: " << std::to_string(msg.wParam) << std::endl;
@@ -990,8 +1005,10 @@ void phongExample()
 
 			
 			auto rotateAmount = 0.000000001f * (Clock::now() - startTime).count();
-			glm::vec3 newLightPos = glm::vec3(glm::rotate(rotateAmount, glm::vec3{ 0.0f, 0.0f, 1.0f }) * glm::vec4(lightPosData, 1.0f));
+			glm::vec3 newLightPos = glm::vec3(glm::rotate(rotateAmount, glm::vec3{ 0.0f, 1.0f, 0.0f }) * glm::vec4(lightPosData, 1.0f));
 			lightPos->upload<glm::vec3>({ newLightPos});
+
+			lightShinyness->upload<float>({lightData.shinyness});
 			
 
 			cmdBuf->record(*renderpass, *swapchain, [&](IRecordingCommandBuffer& recCmd) {

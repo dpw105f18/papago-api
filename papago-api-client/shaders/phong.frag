@@ -1,7 +1,6 @@
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
 
-layout(location = 0) in vec2 uv;
 layout(location = 1) in vec3 norm;
 layout(location = 2) in vec3 fragPos;
 
@@ -55,10 +54,9 @@ float specular()
 
 void main()
 {
-	float intensity = 1.0f;
 	vec3 phong = lightColor.lightColor * (ambient() + diffuse() + specular());
 	phong = clamp(phong, 0.0f, 1.0f);
-	vec4 sam = texture(tex, uv);
-	color =  vec4(sam.rgb * phong, sam.a);
-	//color = vec4(phong, 1.0f);
+	//vec4 sam = texture(tex, uv);
+	//color =  vec4(sam.rgb * phong, sam.a);
+	color = vec4(phong, 1.0f);
 }
