@@ -10,8 +10,9 @@
 #include <iostream>
 #define VK_USE_PLATFORM_WIN32_KHR
 #include <vulkan/vulkan.hpp>
+#include "Logger.hpp"
 
-#define PAPAGO_ERROR(msg) throw std::runtime_error(__FILE__ ":" + std::to_string(__LINE__) + ": " + msg);
+#define PAPAGO_ERROR(msg) {Logger::instance().log(LogLevel::eError, msg); throw std::runtime_error(__FILE__ ":" + std::to_string(__LINE__) + ": " + msg);}
 #define ITERATE(collection) std::begin(collection), std::end(collection)
 #define PAPAGO_EXPORT
 

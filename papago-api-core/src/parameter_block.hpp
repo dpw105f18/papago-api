@@ -17,14 +17,14 @@ public:
 	vk::UniqueDescriptorSet m_vkDescriptorSet;
 	uint64_t m_mask;
 	RenderPass& m_renderPass;
-	uint32_t m_dynamicBufferCount;
+	uint32_t m_dynamicBufferCount = 0;
 	std::map<std::string, uint32_t> m_namedAlignments;
 
 private:
 	void makeVkDescriptorSet(const vk::UniqueDevice& device, std::vector<ParameterBinding>& bindings);
 	void bindResources(const vk::UniqueDevice& device, std::vector<ParameterBinding>& bindings);
 
-	vk::WriteDescriptorSet createWriteDescriptorSet(const vk::UniqueDevice& device, vk::DescriptorBufferInfo& info, const std::string& name, BufferResource& buffer);
-	vk::WriteDescriptorSet createWriteDescriptorSet(const vk::UniqueDevice& device, vk::DescriptorBufferInfo& info, const std::string& name, DynamicBufferResource& buffer);
-	vk::WriteDescriptorSet createWriteDescriptorSet(const vk::UniqueDevice& device, vk::DescriptorImageInfo& info, const std::string& name, ImageResource& image, Sampler& sampler);
+	vk::WriteDescriptorSet createWriteDescriptorSet(vk::DescriptorBufferInfo& info, const std::string& name, BufferResource& buffer);
+	vk::WriteDescriptorSet createWriteDescriptorSet(vk::DescriptorBufferInfo& info, const std::string& name, DynamicBufferResource& buffer);
+	vk::WriteDescriptorSet createWriteDescriptorSet(vk::DescriptorImageInfo& info, const std::string& name, ImageResource& image, Sampler& sampler);
 };

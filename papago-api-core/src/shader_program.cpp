@@ -43,11 +43,15 @@ std::set<uint32_t> ShaderProgram::getUniqueUniformBindings() const
 	auto& fBindings = m_fragmentShader.getBindings();
 
 	for (auto& vb : vBindings) {
-		uniqueBindings.insert(vb.binding);
+		if (vb.type == vk::DescriptorType::eUniformBuffer) {
+			uniqueBindings.insert(vb.binding);
+		}
 	}
 
 	for (auto& fb : fBindings) {
-		uniqueBindings.insert(fb.binding);
+		if (fb.type == vk::DescriptorType::eUniformBuffer) {
+			uniqueBindings.insert(fb.binding);
+		}
 	}
 
 	return uniqueBindings;
