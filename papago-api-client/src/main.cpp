@@ -49,7 +49,6 @@ HWND StartWindow(size_t width, size_t height)
 	auto windowName = L"test window name";
 	auto windowClassName = L"testWindowClassName";
 
-
 	WNDCLASSEX wc = {};
 	wc.cbSize = sizeof(WNDCLASSEX);
 	wc.style = CS_HREDRAW | CS_VREDRAW;
