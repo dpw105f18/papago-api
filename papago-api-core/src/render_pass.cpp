@@ -58,12 +58,13 @@ void RenderPass::setupDescriptorSetLayout(const vk::UniqueDevice &device, const 
 
 	auto fragmentBindings = fragmentShader.getBindings();
 	for (size_t i = 0; i < fragmentBindings.size(); ++i) {
+		auto& fragmentBinding = fragmentBindings[i];
 		//if the binding was used by VertexShader:
-		if (!bindingMap.empty() && bindingMap.find(i) == bindingMap.end()) {
-			vkBindings[i].stageFlags |= vk::ShaderStageFlagBits::eFragment;
+		if (!bindingMap.empty() && bindingMap.find(fragmentBinding.binding) != bindingMap.end()) {
+			auto vkBindingIndex = bindingMap[fragmentBinding.binding];
+			vkBindings[vkBindingIndex].stageFlags |= vk::ShaderStageFlagBits::eFragment;
 		}
 		else {
-			auto& fragmentBinding = fragmentBindings[i];
 			vk::DescriptorType type = fragmentBinding.type;
 			auto bindingValue = fragmentBinding.binding;
 			if (type == vk::DescriptorType::eUniformBuffer) {
@@ -77,6 +78,7 @@ void RenderPass::setupDescriptorSetLayout(const vk::UniqueDevice &device, const 
 				.setStageFlags(vk::ShaderStageFlagBits::eFragment);
 
 			vkBindings.emplace_back(binding);
+			bindingMap.insert(std::pair<uint32_t, size_t>{fragmentBinding.binding, i});
 		}
 	}
 
