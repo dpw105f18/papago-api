@@ -174,10 +174,14 @@ void test()
 		windowWidth, windowHeight,
 		hwnd);
 
+	IDevice::Features features = {};
+	IDevice::Extensions extensions = {};
+	extensions.swapchain = true;
+
 	auto devices = IDevice::enumerateDevices(
 		*surface,
-		{} /* features */,
-		{} /* extensions */);
+		features,
+		extensions);
 	auto& device = devices[0]; // Pick first device
 
 	std::vector<glm::vec3> triangleVerticies{
@@ -211,9 +215,11 @@ void test()
 
 	auto vertexShader = parser.compileVertexShader(readFile("shaders/mvpTexShader.vert"),"main");
 	auto fragmentShader = parser.compileFragmentShader(readFile("shaders/mvpTexShader.frag"), "main");
+	
+	auto swapChain = device->createSwapChain(Format::eR8G8B8A8Unorm, 3, IDevice::PresentMode::eMailbox);
 
 	auto shaderProgram = device->createShaderProgram(*vertexShader, *fragmentShader);
-	auto renderPass = device->createRenderPass(*shaderProgram, windowWidth, windowHeight, Format::eR8G8B8A8Unorm);
+	auto renderPass = device->createRenderPass(*shaderProgram, swapChain->getWidth(), swapChain->getHeight(), swapChain->getFormat());
 
 	renderPass->bindResource("sam", *tex, *sampler2D);
 
@@ -230,7 +236,6 @@ void test()
 
 	auto commandBuffer = device->createCommandBuffer();
 
-	auto swapChain = device->createSwapChain(Format::eR8G8B8A8Unorm, 3, IDevice::PresentMode::eMailbox);
 
 	auto subCommandBuffer = device->createSubCommandBuffer();
 	//subCommandBuffer->record(*renderPass, [&](IRecordingSubCommandBuffer& subRec) {
