@@ -247,9 +247,6 @@ void main(int argc, char* argv[])
 		subCmdRefs.emplace_back(*scmd);
 	}
 	
-	
-	
-	
 	int texW, texH;
 	auto texPixels = readPixels("textures/texture.png", texW, texH);
 	auto texture = device->createTexture2D(texW, texH, Format::eR8G8B8A8Unorm);
@@ -272,6 +269,52 @@ void main(int argc, char* argv[])
 	auto parameterBlock = device->createParameterBlock(*renderpass, bindings);
 
 	auto graphicsQueue = device->createGraphicsQueue();
+
+	auto subCmdRecs = std::vector<std::function<void(IRecordingSubCommandBuffer& rcmd)>>(testConfig.drawThreadCount);
+	for (auto i = 0; i < testConfig.drawThreadCount; ++i) {
+		subCmdRecs[i] = [&, i](IRecordingSubCommandBuffer& rcmd) {
+			rcmd.setVertexBuffer(*vertexBuffer);
+			rcmd.setIndexBuffer(*indexBuffer);
+			rcmd.setParameterBlock(*parameterBlock);
+
+			auto threadCount = testConfig.drawThreadCount;
+			auto roCount = scene.renderObjects().size() / threadCount;
+			auto stride = roCount;
+
+			//last thread handles the remainder after integer division
+			if (i == threadCount - 1) {
+				roCount += scene.renderObjects().size() % threadCount;
+			}
+
+			for (auto j = 0; j < roCount; ++j) {
+				rcmd.setDynamicIndex(*parameterBlock, "model", i * stride + j);
+				rcmd.drawIndexed(cubeIndices.size());
+			}
+		};
+	}
+
+	auto threadPoolEnqueuFunc = [&](std::reference_wrapper<ISubCommandBuffer> cmd, int threadIndex) {
+		cmd.get().record(*renderpass, subCmdRecs[threadIndex]);
+	};
+
+
+	//update uniform buffers:
+	glm::mat4 newView = glm::lookAt(
+		glm::vec3(camera.Position()),
+		glm::vec3(camera.Target()),
+		glm::vec3(camera.Up())
+	);
+
+	view->upload<glm::mat4>({ newView });
+
+	glm::mat4 newProjection = glm::perspective(
+		camera.FieldOfView(),
+		float(windowWidth) / windowHeight,
+		camera.Near(),
+		camera.Far()
+	);
+
+	projection->upload<glm::mat4>({ newProjection });
 
 	//*********************************************************
 	//Main game loop:
@@ -369,24 +412,9 @@ void main(int argc, char* argv[])
 				++probeCount;
 			}
 
-			//update uniform buffers:
-			glm::mat4 newView = glm::lookAt(
-				glm::vec3(camera.Position()),
-				glm::vec3(camera.Target()),
-				glm::vec3(camera.Up())
-			);
-
-			view->upload<glm::mat4>({ newView });
-
-			glm::mat4 newProjection = glm::perspective(
-				camera.FieldOfView(),
-				float(windowWidth) / windowHeight,
-				camera.Near(),
-				camera.Far()
-			);
-
-			projection->upload<glm::mat4>({newProjection});
+		
 			std::vector<glm::mat4> dynamicBufferData;
+			dynamicBufferData.reserve(scene.renderObjects().size());
 			//dynamic uniform buffer:
 			for (auto index = 0; index < scene.renderObjects().size(); index++)
 			{
@@ -416,27 +444,7 @@ void main(int argc, char* argv[])
 			for (auto i = 0; i < testConfig.drawThreadCount; ++i) {
 				auto scmd = subCmdRefs[i];
 				futures.emplace_back(
-					threadPool.enqueue([&](std::reference_wrapper<ISubCommandBuffer> cmd, int threadIndex, const std::vector<RenderObject>& renderObjects) {
-						cmd.get().record(*renderpass, [&](IRecordingSubCommandBuffer& rcmd) {
-							rcmd.setVertexBuffer(*vertexBuffer);
-							rcmd.setIndexBuffer(*indexBuffer);
-							rcmd.setParameterBlock(*parameterBlock);
-							
-							auto threadCount = testConfig.drawThreadCount;
-							auto roCount = renderObjects.size() / threadCount;
-							auto stride = roCount;
-
-							//last thread handles the remainder after integer division
-							if (threadIndex == threadCount - 1) {
-								roCount += renderObjects.size() % threadCount;
-							}
-							
-							for (auto j = 0; j < roCount; ++j) {
-								rcmd.setDynamicIndex(*parameterBlock, "model", threadIndex * stride + j);
-								rcmd.drawIndexed(cubeIndices.size());
-							}
-						});
-					},scmd, i, scene.renderObjects())
+					threadPool.enqueue(threadPoolEnqueuFunc,scmd, i)
 				);
 			}
 			
@@ -446,8 +454,8 @@ void main(int argc, char* argv[])
 			}
 
 			commandBuffer->record(*renderpass, *swapchain, [&](IRecordingCommandBuffer& rcmd) {
-				rcmd.clearColorBuffer(0.0f, 0.0f, 0.0f, 1.0f);
-				rcmd.clearDepthBuffer(1.0f);
+				//rcmd.clearColorBuffer(0.0f, 0.0f, 0.0f, 1.0f);
+				//rcmd.clearDepthBuffer(1.0f);
 				rcmd.execute(subCmdRefs);
 			});
 

@@ -9,7 +9,7 @@
 
 void GraphicsQueue::submitCommands(const std::vector<std::reference_wrapper<ICommandBuffer>>& commandBuffers)
 {
-	m_vkGraphicsQueue.waitIdle();
+	//m_vkGraphicsQueue.waitIdle();
 	std::vector<vk::Semaphore> semaphores = { *m_vkRenderFinishSemaphore};
 	std::vector<vk::CommandBuffer> vkCommandBuffers;
 	vkCommandBuffers.reserve(commandBuffers.size());
@@ -60,7 +60,7 @@ void GraphicsQueue::submitCommands(const std::vector<std::reference_wrapper<ICom
 void GraphicsQueue::present(ISwapchain& swapchain)
 {
 	auto& internalSwapChain = dynamic_cast<SwapChain&>(swapchain);
-	m_vkPresentQueue.waitIdle();
+	//m_vkPresentQueue.waitIdle();
 
 	std::set<ImageResource*> imageResources;
 	imageResources.emplace(&internalSwapChain.m_colorResources[internalSwapChain.m_currentFramebufferIndex]);
