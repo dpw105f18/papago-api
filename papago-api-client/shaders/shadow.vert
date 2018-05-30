@@ -16,8 +16,8 @@ layout(binding = 1) uniform UniformInstanceClass{
     mat4 model;
 } uio;
 
-layout(location = 0) out vec2 texture_coord;
-layout(location = 1) out vec4 shadow_coord;
+layout(location = 1) out vec2 texture_coord;
+layout(location = 2) out vec4 shadow_coord;
 
 void main(){
     gl_Position = ubo.view_projection * uio.model * vec4(pos, 1.0);

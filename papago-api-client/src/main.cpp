@@ -178,7 +178,7 @@ struct Mesh
 			4, 1, 0
 		});
 
-		return {std::move(vertex_buffer), std::move(index_buffer), 48};
+		return {std::move(vertex_buffer), std::move(index_buffer), 36};
 	}
 
 	std::unique_ptr<IBufferResource> vertex_buffer;
@@ -977,8 +977,188 @@ void phongExample()
 
 }
 
-
 //*****************************************************************************
+
+void shadowMapExample()
+{
+	auto hwnd = StartWindow(800, 600);
+	auto surface = ISurface::createWin32Surface(800, 600, hwnd);
+	auto devices = IDevice::enumerateDevices(*surface, { true }, { true, false });
+	auto& device = devices[0];
+
+	auto cube = Mesh::Cube(*device);
+
+	glm::vec3 lightPos = {0.0f, -4.0f, 2.0f};
+
+	auto viewMatCam = glm::lookAt(
+		glm::vec3{ 0.0f, 0.0f, 10.0f },
+		glm::vec3{ 0.0f, 0.0f, 0.0f },
+		glm::vec3{ 0.0f, 1.0f, 0.0f }
+	);
+
+	auto viewMatLight = glm::lookAt(
+		lightPos,
+		glm::vec3{0.0f, 0.0f, 0.0f},
+		glm::vec3{0.0f, 1.0f, 0.0f}
+	);
+
+	auto projMat = glm::perspective(
+		glm::radians(90.0f),
+		float(surface->getWidth()) / surface->getHeight(),
+		0.1f,
+		20.0f);
+
+	auto vpMatCam = projMat * viewMatCam;
+	auto vpMatLight = projMat * viewMatLight;
+
+	auto modelMatGround = glm::translate(glm::vec3{ 0.0f, 4.0f, 0.0f }) * glm::scale(glm::vec3{ 25.0f, 1.0f, 25.0f });
+	auto modelMatCube = glm::translate(glm::vec3{0.0f, 0.0f, 0.0f}) * glm::rotate(glm::radians(45.0f), glm::vec3{ 0.5f, 1.0f, 0.0f });
+
+	auto vpDynUniform = device->createDynamicUniformBuffer(sizeof(glm::mat4), 2);
+	vpDynUniform->upload<glm::mat4>({ vpMatCam, vpMatLight });
+
+	auto modelDynUniform = device->createDynamicUniformBuffer(sizeof(glm::mat4), 2);
+	modelDynUniform->upload<glm::mat4>({ modelMatGround, modelMatCube });
+
+	auto parser = Parser(PARSER_COMPILER_PATH);
+
+	auto colTarget = device->createTexture2D(surface->getWidth(), surface->getHeight(), Format::eR8G8B8A8Unorm);
+	auto colTargetDepth = device->createDepthTexture2D(surface->getWidth(), surface->getHeight(), Format::eD32Sfloat);
+	auto colSampler = device->createTextureSampler2D(Filter::eLinear, Filter::eLinear, TextureWrapMode::eRepeat, TextureWrapMode::eRepeat);
+
+	int texW, texH;
+	auto pixelData = readPixels("textures/white.png", texW, texH);
+	auto tex = device->createTexture2D(texW, texH, Format::eR8G8B8A8Unorm);
+	tex->upload(pixelData);
+
+	auto colorVert = parser.compileVertexShader(readFile("shaders/clipCoord.vert"), "main");
+	auto colorFrag = parser.compileFragmentShader(readFile("shaders/clipCoord.frag"), "main");
+	auto colorProgram = device->createShaderProgram(*colorVert, *colorFrag);
+	auto colorPass = device->createRenderPass(*colorProgram, colTarget->getWidth(), colTarget->getHeight(), colTarget->getFormat(), colTargetDepth->getFormat());
+
+	std::vector<ParameterBinding> colorParams;
+	colorParams.emplace_back("view_projection_matrix", vpDynUniform.get());
+	colorParams.emplace_back("model_matrix", modelDynUniform.get());
+	colorParams.emplace_back("sam", tex.get(), colSampler.get());
+
+	auto colorParamBlock = device->createParameterBlock(*colorPass, colorParams);
+
+	auto colorCmd = device->createCommandBuffer();
+
+	auto colorSubCmd = device->createSubCommandBuffer();
+	colorSubCmd->record(*colorPass, [&](IRecordingSubCommandBuffer& rcmd) {
+		rcmd.setParameterBlock(*colorParamBlock);
+		rcmd.setVertexBuffer(*cube.vertex_buffer);
+		rcmd.setIndexBuffer(*cube.index_buffer);
+		rcmd.setDynamicIndex(*colorParamBlock, "view_projection_matrix", 1);	//<-- use light view
+
+		//ground:
+		rcmd.setDynamicIndex(*colorParamBlock, "model_matrix", 0);
+		rcmd.drawIndexed(cube.index_count);
+
+		//cube:
+		rcmd.setDynamicIndex(*colorParamBlock, "model_matrix", 1);
+		rcmd.drawIndexed(cube.index_count);
+	});
+
+
+	auto swapchain = device->createSwapChain(Format::eB8G8R8A8Unorm, Format::eD32Sfloat, 3, IDevice::PresentMode::eMailbox);
+	auto shadowVert = parser.compileVertexShader(readFile("shaders/shadow.vert"), "main");
+	auto shadowFrag = parser.compileFragmentShader(readFile("shaders/shadow.frag"), "main");
+	auto shadowProgram = device->createShaderProgram(*shadowVert, *shadowFrag);
+	auto shadowPass = device->createRenderPass(*shadowProgram, swapchain->getWidth(), swapchain->getHeight(), swapchain->getFormat(), Format::eD32Sfloat);
+
+	std::vector<ParameterBinding> shadowParams;
+	shadowParams.emplace_back("view_projection", vpDynUniform.get());
+	shadowParams.emplace_back("shadow_view_projection", vpDynUniform.get());
+	shadowParams.emplace_back("model", modelDynUniform.get());
+	shadowParams.emplace_back("tex", tex.get(), colSampler.get());
+	shadowParams.emplace_back("shadow_map", colTargetDepth.get(), colSampler.get());
+
+	auto shadowParamBlock = device->createParameterBlock(*shadowPass, shadowParams);
+
+	auto shadowCmd = device->createCommandBuffer();
+
+	auto shadowSubCmd = device->createSubCommandBuffer();
+	shadowSubCmd->record(*shadowPass, [&](IRecordingSubCommandBuffer& rcmd) {
+		rcmd.setParameterBlock(*shadowParamBlock);
+		rcmd.setVertexBuffer(*cube.vertex_buffer);
+		rcmd.setIndexBuffer(*cube.index_buffer);
+		rcmd.setDynamicIndex(*shadowParamBlock, "view_projection", 0);	//<-- use camera view
+		rcmd.setDynamicIndex(*shadowParamBlock, "shadow_view_projection", 1);
+		
+		//ground:
+		rcmd.setDynamicIndex(*shadowParamBlock, "model", 0);
+		rcmd.drawIndexed(cube.index_count);
+
+		//cube:
+		rcmd.setDynamicIndex(*shadowParamBlock, "model", 1);
+		rcmd.drawIndexed(cube.index_count);
+	});
+
+	auto graphicsQueue = device->createGraphicsQueue();
+
+	//****************************************************************************************
+	//Main game loop:
+	using Clock = std::chrono::high_resolution_clock;
+	auto startTime = Clock::now();
+	auto lastUpdate = Clock::now();
+	auto lastFrame = Clock::now();
+	long fps = 0;
+	bool run = true;
+
+	while (run)
+	{
+		MSG msg;
+		if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
+		{
+			if (msg.message == WM_QUIT) {
+				run = false;
+			}
+			else if (msg.message == WM_KEYUP) {
+				//handle key events:
+			}
+
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);
+		}
+		else {
+
+			//FPS counter:
+			auto deltaTime = (Clock::now() - lastUpdate);
+			auto frameTime = (Clock::now() - lastFrame);
+			lastFrame = Clock::now();
+
+			using namespace std::chrono_literals;
+			if (deltaTime > 1s) {
+				lastUpdate = Clock::now();
+				std::stringstream ss;
+				ss << "FPS: " << fps
+					<< " --- Avg. Frame Time: " << 1000.0 / fps << "ms"
+					<< " --- Last Frame Time: " << std::chrono::duration_cast<std::chrono::duration<double, std::milli>>(frameTime).count() << "ms";
+				SetWindowName(hwnd, ss.str());
+				fps = 0;
+			}
+
+			colorCmd->record(*colorPass, *colTarget, *colTargetDepth, [&](IRecordingCommandBuffer& rcmd) {
+				rcmd.clearColorBuffer(1.0f, 0.0f, 1.0f, 1.0f);
+				rcmd.clearDepthBuffer(1.0f);
+				rcmd.execute({ *colorSubCmd });
+			});
+
+			shadowCmd->record(*shadowPass, *swapchain, [&](IRecordingCommandBuffer& rcmd) {
+				rcmd.clearColorBuffer(0.2f, 0.2f, 0.2f, 1.0f);
+				rcmd.clearDepthBuffer(1.0f);
+				rcmd.execute({ *shadowSubCmd });
+			});
+
+			graphicsQueue->submitCommands({ *colorCmd, *shadowCmd });
+			graphicsQueue->present(*swapchain);
+
+			++fps;
+		}
+	}
+}
 
 int main()
 {
@@ -987,7 +1167,8 @@ int main()
 		//multithreadedTest();
 		//triangleTest();
 		//userTest();
-		phongExample();
+		//phongExample();
+		shadowMapExample();
 	}
 	catch (std::exception e) {
 		std::cout << "ERROR: " << e.what() << std::endl;
