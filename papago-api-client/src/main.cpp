@@ -989,7 +989,6 @@ void shadowMapExample()
 
 	auto cube = Mesh::Cube(*device);
 
-	glm::vec3 lightPos = {0.0f, -4.0f, 2.0f};
 
 	auto viewMatCam = glm::lookAt(
 		glm::vec3{ 0.0f, 0.0f, 10.0f },
@@ -997,6 +996,7 @@ void shadowMapExample()
 		glm::vec3{ 0.0f, 1.0f, 0.0f }
 	);
 
+	glm::vec3 lightPos = {0.0f, -4.0f, 2.0f};
 	auto viewMatLight = glm::lookAt(
 		lightPos,
 		glm::vec3{0.0f, 0.0f, 0.0f},
@@ -1028,7 +1028,7 @@ void shadowMapExample()
 	auto colSampler = device->createTextureSampler2D(Filter::eLinear, Filter::eLinear, TextureWrapMode::eRepeat, TextureWrapMode::eRepeat);
 
 	int texW, texH;
-	auto pixelData = readPixels("textures/white.png", texW, texH);
+	auto pixelData = readPixels("textures/eldorado.jpg", texW, texH);
 	auto tex = device->createTexture2D(texW, texH, Format::eR8G8B8A8Unorm);
 	tex->upload(pixelData);
 
@@ -1139,6 +1139,14 @@ void shadowMapExample()
 				SetWindowName(hwnd, ss.str());
 				fps = 0;
 			}
+
+			lightPos = glm::vec3(glm::rotate(0.01f, glm::vec3{0.0f, 0.0f, 1.0f}) * glm::vec4(lightPos, 1.0f));
+			viewMatLight = glm::lookAt(
+				lightPos,
+				glm::vec3{ 0.0f, 0.0f, 0.0f },
+				glm::vec3{ 0.0f, 1.0f, 0.0f }
+			);
+			vpDynUniform->upload<glm::mat4>({ projMat * viewMatLight }, 1);
 
 			colorCmd->record(*colorPass, *colTarget, *colTargetDepth, [&](IRecordingCommandBuffer& rcmd) {
 				rcmd.clearColorBuffer(1.0f, 0.0f, 1.0f, 1.0f);
