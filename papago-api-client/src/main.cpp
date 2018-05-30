@@ -14,6 +14,7 @@
 
 #include "papago.hpp"
 
+#define GLM_FORCE_DEPTH_ZERO_TO_ON
 #define GLM_ENABLE_EXPERIMENTAL
 #include "external/glm/glm.hpp"
 #include "external/glm/gtx/transform.hpp"
@@ -1031,15 +1032,14 @@ void shadowMapExample()
 	auto tex = device->createTexture2D(texW, texH, Format::eR8G8B8A8Unorm);
 	tex->upload(pixelData);
 
-	auto colorVert = parser.compileVertexShader(readFile("shaders/mvpTexShader.vert"), "main");
-	auto colorFrag = parser.compileFragmentShader(readFile("shaders/mvpTexShader.frag"), "main");
+	auto colorVert = parser.compileVertexShader(readFile("shaders/clipCoord.vert"), "main");
+	auto colorFrag = parser.compileFragmentShader(readFile("shaders/clipCoord.frag"), "main");
 	auto colorProgram = device->createShaderProgram(*colorVert, *colorFrag);
 	auto colorPass = device->createRenderPass(*colorProgram, colTarget->getWidth(), colTarget->getHeight(), colTarget->getFormat(), colTargetDepth->getFormat());
 
 	std::vector<ParameterBinding> colorParams;
-	colorParams.emplace_back("view_projection_matrix", vpDynUniform.get());
-	colorParams.emplace_back("model_matrix", modelDynUniform.get());
-	colorParams.emplace_back("sam", tex.get(), colSampler.get());
+	colorParams.emplace_back("vp", vpDynUniform.get());
+	colorParams.emplace_back("m", modelDynUniform.get());
 
 	auto colorParamBlock = device->createParameterBlock(*colorPass, colorParams);
 
@@ -1050,14 +1050,14 @@ void shadowMapExample()
 		rcmd.setParameterBlock(*colorParamBlock);
 		rcmd.setVertexBuffer(*cube.vertex_buffer);
 		rcmd.setIndexBuffer(*cube.index_buffer);
-		rcmd.setDynamicIndex(*colorParamBlock, "view_projection_matrix", 1);	//<-- use light view
+		rcmd.setDynamicIndex(*colorParamBlock, "vp", 1);	//<-- use light view
 
 		//ground:
-		rcmd.setDynamicIndex(*colorParamBlock, "model_matrix", 0);
+		rcmd.setDynamicIndex(*colorParamBlock, "m", 0);
 		rcmd.drawIndexed(cube.index_count);
 
 		//cube:
-		rcmd.setDynamicIndex(*colorParamBlock, "model_matrix", 1);
+		rcmd.setDynamicIndex(*colorParamBlock, "m", 1);
 		rcmd.drawIndexed(cube.index_count);
 	});
 
@@ -1084,8 +1084,8 @@ void shadowMapExample()
 		rcmd.setParameterBlock(*shadowParamBlock);
 		rcmd.setVertexBuffer(*cube.vertex_buffer);
 		rcmd.setIndexBuffer(*cube.index_buffer);
-		rcmd.setDynamicIndex(*shadowParamBlock, "view_projection", 0);	//<-- use camera view
-		rcmd.setDynamicIndex(*shadowParamBlock, "shadow_view_projection", 1);
+		rcmd.setDynamicIndex(*shadowParamBlock, "view_projection", 0);	//<-- camera view
+		rcmd.setDynamicIndex(*shadowParamBlock, "shadow_view_projection", 1); //<-- light view
 		
 		//ground:
 		rcmd.setDynamicIndex(*shadowParamBlock, "model", 0);
