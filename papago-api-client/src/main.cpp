@@ -1031,8 +1031,8 @@ void shadowMapExample()
 	auto tex = device->createTexture2D(texW, texH, Format::eR8G8B8A8Unorm);
 	tex->upload(pixelData);
 
-	auto colorVert = parser.compileVertexShader(readFile("shaders/clipCoord.vert"), "main");
-	auto colorFrag = parser.compileFragmentShader(readFile("shaders/clipCoord.frag"), "main");
+	auto colorVert = parser.compileVertexShader(readFile("shaders/mvpTexShader.vert"), "main");
+	auto colorFrag = parser.compileFragmentShader(readFile("shaders/mvpTexShader.frag"), "main");
 	auto colorProgram = device->createShaderProgram(*colorVert, *colorFrag);
 	auto colorPass = device->createRenderPass(*colorProgram, colTarget->getWidth(), colTarget->getHeight(), colTarget->getFormat(), colTargetDepth->getFormat());
 
