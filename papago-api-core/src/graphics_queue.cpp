@@ -9,7 +9,7 @@
 
 void GraphicsQueue::submitCommands(const std::vector<std::reference_wrapper<ICommandBuffer>>& commandBuffers)
 {
-	m_vkGraphicsQueue.waitIdle();
+	//m_vkGraphicsQueue.waitIdle();
 	std::vector<vk::Semaphore> semaphores = { *m_vkRenderFinishSemaphore};
 	std::vector<vk::CommandBuffer> vkCommandBuffers;
 	vkCommandBuffers.reserve(commandBuffers.size());
@@ -60,7 +60,7 @@ void GraphicsQueue::submitCommands(const std::vector<std::reference_wrapper<ICom
 void GraphicsQueue::present(ISwapchain& swapchain)
 {
 	auto& internalSwapChain = dynamic_cast<SwapChain&>(swapchain);
-	m_vkPresentQueue.waitIdle();
+	//m_vkPresentQueue.waitIdle();
 
 	std::set<ImageResource*> imageResources;
 	imageResources.emplace(&internalSwapChain.m_colorResources[internalSwapChain.m_currentFramebufferIndex]);
@@ -109,10 +109,11 @@ void GraphicsQueue::present(ISwapchain& swapchain)
 
 	auto& oldFence = internalSwapChain.m_vkFences[nextFramebuffer];
 
-	
+	/*
 	if(*oldFence != vk::Fence() && m_device.m_vkDevice->getFenceStatus(*oldFence) != vk::Result::eSuccess) {
 		m_vkPresentQueue.waitIdle();
 	}
+	*/
 
 	oldFence = std::move(fence);
 	internalSwapChain.m_currentFramebufferIndex = nextFramebuffer;

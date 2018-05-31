@@ -36,7 +36,6 @@ ShaderProgram::ShaderProgram(const vk::UniqueDevice& device, VertexShader& verte
 
 std::set<uint32_t> ShaderProgram::getUniqueUniformBindings() const
 {
-
 	std::set<uint32_t> uniqueBindings;
 
 	auto& vBindings = m_vertexShader.getBindings();
