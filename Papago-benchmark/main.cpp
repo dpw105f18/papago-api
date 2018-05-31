@@ -388,10 +388,12 @@ void main(int argc, char* argv[])
 			using namespace std::chrono_literals;
 			if (deltaTime > 1s) {
 				lastUpdate = Clock::now();
+				auto frameTimeCount = std::chrono::duration_cast<std::chrono::duration<double, std::milli>>(frameTime).count();
+
 				std::stringstream ss;
 				ss << "FPS: " << fps
 					<< " --- Avg. Frame Time: " << deltaTimeMs / fps << "ms"
-					<< " --- Last Frame Time: " << std::chrono::duration_cast<std::chrono::duration<double, std::milli>>(frameTime).count() << "ms";
+					<< " --- Last Frame Time: " << frameTimeCount << "ms";
 				SetWindowName(hwnd, ss.str());
 				
 				if (TestConfiguration::GetInstance().recordFPS) {
@@ -402,7 +404,7 @@ void main(int argc, char* argv[])
 				fps = 0;
 
 				if (TestConfiguration::GetInstance().recordFrameTime) {
-					frametimeCsv << deltaTime.count() << "\n";
+					frametimeCsv << frameTimeCount << "\n";
 				}
 			}
 
