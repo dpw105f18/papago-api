@@ -43,12 +43,12 @@ std::set<uint32_t> ShaderProgram::getUniqueUniformBindings() const
 
 	for (auto& vb : vBindings) {
 		uniqueBindings.insert(vb.binding);
-
 	}
 
 	for (auto& fb : fBindings) {
 		uniqueBindings.insert(fb.binding);
 	}
+	
 
 	return uniqueBindings;
 }

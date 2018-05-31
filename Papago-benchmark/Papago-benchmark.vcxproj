@@ -156,6 +156,7 @@
     <ClInclude Include="IndexSkull.h" />
     <ClInclude Include="RenderObject.h" />
     <ClInclude Include="Scene.h" />
+    <ClInclude Include="Sphere.h" />
     <ClInclude Include="test_config.hpp" />
     <ClInclude Include="thread_pool.h" />
     <ClInclude Include="VertexSkull.h" />

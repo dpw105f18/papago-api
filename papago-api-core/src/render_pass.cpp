@@ -3,9 +3,7 @@
 #include "vertex_shader.hpp"
 #include "fragment_shader.hpp"
 #include "shader_program.hpp"
-#include "sampler.hpp"
 #include "buffer_resource.hpp"
-#include "image_resource.hpp"
 
 RenderPass::operator vk::RenderPass&()
 {
@@ -60,10 +58,11 @@ void RenderPass::setupDescriptorSetLayout(const vk::UniqueDevice &device, const 
 
 	auto fragmentBindings = fragmentShader.getBindings();
 	for (size_t i = 0; i < fragmentBindings.size(); ++i) {
-		//if the binding was used by VertexShader:
 		auto& fragmentBinding = fragmentBindings[i];
-		if (bindingMap.size() > 0 && bindingMap.find(fragmentBinding.binding) != bindingMap.end()) {
-			vkBindings[fragmentBinding.binding].stageFlags |= vk::ShaderStageFlagBits::eFragment;
+		//if the binding was used by VertexShader:
+		if (!bindingMap.empty() && bindingMap.find(fragmentBinding.binding) != bindingMap.end()) {
+			auto vkBindingIndex = bindingMap[fragmentBinding.binding];
+			vkBindings[vkBindingIndex].stageFlags |= vk::ShaderStageFlagBits::eFragment;
 		}
 		else {
 			vk::DescriptorType type = fragmentBinding.type;
@@ -284,6 +283,12 @@ void RenderPass::cacheNewPipeline(uint64_t bindingMask)
 		.setPDepthStencilState(depthCreateInfo);
 
 	m_vkGraphicsPipelines[bindingMask] = m_vkDevice->createGraphicsPipelineUnique(vk::PipelineCache(), pipelineCreateInfo);
+}
+
+void RenderPass::createNewPipelineIfNone(uint64_t mask)
+{
+	if(m_vkDescriptorSetLayouts.find(mask) == m_vkDescriptorSetLayouts.end())
+		cacheNewPipeline(mask);
 }
 
 long RenderPass::getBinding(const std::string& name) const

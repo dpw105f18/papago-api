@@ -1,10 +1,16 @@
 #pragma once
 #include <string>
-#include <memory>
 class IBufferResource;
 class IDynamicBufferResource;
 class IImageResource;
 class ISampler;
+
+enum class BindingType 
+{ 
+  eBufferResource, 
+  eDynamicBufferResource, 
+  eCombinedImageSampler 
+}; 
 
 class IParameterBlock {
 public:
@@ -12,23 +18,32 @@ public:
 };
 
 struct ParameterBinding {
-	~ParameterBinding() {
-
-	};
+	~ParameterBinding() { }
 
 	ParameterBinding(const std::string& name, IBufferResource* buf) 
-		: name(name)
-		, type(0)
+		: type(BindingType::eBufferResource)
+		, name(name)
 		, bufResource(buf)
-	{};
+	{ }
 
-	ParameterBinding(const std::string& name, IDynamicBufferResource* dBuf) : name(name), type(1), dBufResource(dBuf) {};
-	ParameterBinding(const std::string& name, IImageResource* imgRes, ISampler* sam) : name(name), type(2), imgResource(imgRes), sampler(sam) {};
-	char type;
-	const std::string name;
+	ParameterBinding(const std::string& name, IDynamicBufferResource* dBuf) 
+		: type(BindingType::eDynamicBufferResource)
+		, name(name)
+		, dBufResource(dBuf) 
+	{ }
 	
-	struct { IBufferResource* bufResource; };
-	struct { IDynamicBufferResource* dBufResource; };
-	struct { IImageResource* imgResource; ISampler* sampler; };
+	ParameterBinding(const std::string& name, IImageResource* imgRes, ISampler* sam) 
+		: type(BindingType::eCombinedImageSampler)
+		, name(name)
+		, imgResource(imgRes)
+		, sampler(sam) 
+	{ }
+	BindingType type;
+	const std::string name;
+	union{
+		IBufferResource* bufResource; 
+		IDynamicBufferResource* dBufResource; 
+		struct { IImageResource* imgResource; ISampler* sampler; };
+	};
 
 };

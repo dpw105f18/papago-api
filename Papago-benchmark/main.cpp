@@ -28,7 +28,7 @@ struct Vertex
 	glm::vec2 uv;
 };
 
-#define TEST_USE_SKULL
+//#define TEST_USE_SKULL
 #include "VertexSkull.h"
 #include "IndexSkull.h"
 
