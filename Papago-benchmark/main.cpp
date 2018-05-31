@@ -22,6 +22,15 @@
 #include "RenderObject.h"
 #include "Scene.h"
 
+struct Vertex
+{
+	glm::vec3 pos;
+	glm::vec2 uv;
+};
+
+#define TEST_USE_SKULL
+#include "VertexSkull.h"
+#include "IndexSkull.h"
 
 LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
@@ -142,12 +151,6 @@ void SaveToFile(const std::string& file, const std::string& data)
 	fs.close();
 }
 
-struct CubeVertex
-{
-	glm::vec3 pos;
-	glm::vec2 uv;
-};
-
 void main(int argc, char* argv[])
 {
 	std::stringstream arg;
@@ -163,7 +166,11 @@ void main(int argc, char* argv[])
 	auto windowHeight = 600;
 	auto hwnd = StartWindow(windowWidth, windowHeight);
 
-	std::vector<CubeVertex> cubeVertices{
+#ifdef TEST_USE_SKULL
+	std::vector<Vertex> vertices = skullVertices;
+	std::vector<uint16_t> indices = skullIndices;
+#else
+	std::vector<Vertex> vertices{
 		{ { -0.5f, -0.5f,  0.5f },{ 0.0f, 0.0f } },
 		{ { -0.5f,  0.5f,  0.5f },{ 0.0f, 1.0f } },
 		{ { 0.5f,   0.5f,  0.5f },{ 1.0f, 1.0f } },
@@ -174,7 +181,7 @@ void main(int argc, char* argv[])
 		{ { 0.5f,  -0.5f, -0.5f },{ 1.0f, 0.0f } }
 	};
 
-	std::vector<uint16_t> cubeIndices{
+	std::vector<uint16_t> indices{
 		// Front
 		0, 1, 2,
 		0, 2, 3,
@@ -194,7 +201,7 @@ void main(int argc, char* argv[])
 		4, 5, 1,
 		4, 1, 0
 	};
-
+#endif
 
 	//Load scene:
 	auto cubeCountPerDim = testConfig.cubeDimension;
@@ -224,12 +231,17 @@ void main(int argc, char* argv[])
 	auto& swapchain = device->createSwapChain(Format::eR8G8B8A8Unorm, Format::eD32Sfloat, 3, IDevice::PresentMode::eMailbox);
 	auto parser = Parser("C:/VulkanSDK/1.0.65.0/Bin/glslangValidator.exe");
 	
-	auto vertexBuffer = device->createVertexBuffer(cubeVertices);
-	auto indexBuffer = device->createIndexBuffer(cubeIndices);
+	auto vertexBuffer = device->createVertexBuffer(vertices);
+	auto indexBuffer = device->createIndexBuffer(indices);
 
 	//TODO: enable skulls
 	auto vertexShader = parser.compileVertexShader(readFile("shaders/shader.vert"), "main");
+
+#ifdef TEST_USE_SKULL
+	auto fragmentShader = parser.compileFragmentShader(readFile("shaders/skull.frag"), "main");
+#else 
 	auto fragmentShader = parser.compileFragmentShader(readFile("shaders/shader.frag"), "main");
+#endif
 	auto shaderProgram = device->createShaderProgram(*vertexShader, *fragmentShader);
 
 	auto& renderpass = device->createRenderPass(*shaderProgram, surface->getWidth(), surface->getHeight(), swapchain->getFormat(), Format::eD32Sfloat);
@@ -288,7 +300,7 @@ void main(int argc, char* argv[])
 
 			for (auto j = 0; j < roCount; ++j) {
 				rcmd.setDynamicIndex(*parameterBlock, "model", i * stride + j);
-				rcmd.drawIndexed(cubeIndices.size());
+				rcmd.drawIndexed(indices.size());
 			}
 		};
 	}

@@ -109,10 +109,11 @@ void GraphicsQueue::present(ISwapchain& swapchain)
 
 	auto& oldFence = internalSwapChain.m_vkFences[nextFramebuffer];
 
-	
+	/*
 	if(*oldFence != vk::Fence() && m_device.m_vkDevice->getFenceStatus(*oldFence) != vk::Result::eSuccess) {
 		m_vkPresentQueue.waitIdle();
 	}
+	*/
 
 	oldFence = std::move(fence);
 	internalSwapChain.m_currentFramebufferIndex = nextFramebuffer;

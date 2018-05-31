@@ -153,10 +153,12 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Camera.h" />
+    <ClInclude Include="IndexSkull.h" />
     <ClInclude Include="RenderObject.h" />
     <ClInclude Include="Scene.h" />
     <ClInclude Include="test_config.hpp" />
     <ClInclude Include="thread_pool.h" />
+    <ClInclude Include="VertexSkull.h" />
     <ClInclude Include="wmi_accessor.hpp" />
   </ItemGroup>
   <ItemGroup>
