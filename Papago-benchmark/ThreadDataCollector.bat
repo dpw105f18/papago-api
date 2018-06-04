@@ -1,32 +1,44 @@
-@echo off
-cd %~dp0
+@ECHO off
+CD %~dp0
 
-SET /P "seconds=Seconds: "
-SET /P "cubeDim=Cube Dim (NxNxN): "
-SET /P testCount=Max thread count: "
+ECHO deleting old csv files..
+DEL *.csv
+
+SET /P "dataCount=Data entries: "
+SET cubeDim=30
+SET testCount=5
+SET maxThreadCount=15
 SET /P "output=Output Folder (in data/): "
 
 SET exename=Papago-benchmark
-SET "drawArg=-cubeDim %cubeDim% -cubePad 1 -csv -frameTime -sec %seconds%"
+SET "drawArg=-cubeDim %cubeDim% -cubePad 1 -csv -frameTime -dataCount %dataCount%"
 
 DEL *.csv
 
-FOR /L %%i IN (1,1,%testCount%) DO CALL :run %%i
+FOR /L %%i IN (1,1,%testCount%) DO (
+	FOR /L %%j IN (1,1,%maxThreadCount%) DO CALL :run %%j %%i
+)
 ECHO Tests Complete!
 PAUSE
 EXIT
 
 :run
-START "Test #%1" /WAIT %exename%.exe %drawArg% -threadCount %1
-FOR /F "delims=_. tokens=2" %%i IN ('dir /B frameTime_*.csv') DO CALL :mover %%i %output% %1
-ECHO Test #%1 done!
+IF /I %1 GTR 1 (
+	ECHO Cooling down...
+	TIMEOUT /T 15
+)
+
+START "Test #%1 Threads" /WAIT %exename%.exe %drawArg% -threadCount %1
+SET "folder=data\%output%\run-%2\
+FOR /F "delims=_. tokens=2" %%i IN ('dir /B frameTime_*.csv') DO CALL :mover %%i %folder% %1
+SET "folder="
+ECHO Test %2.%1 done!
 
 GOTO :EOF
 
-
 :mover
-IF NOT DEFINED dir set "dir=data\%2\%1"
- mkdir %dir%\%3-threads
- move frameTime_*.csv %dir%\%3-threads\
- move conf_*.csv %dir%\%3-threads\
+ MKDIR %2\%3-threads\
+ MOVE frameTime_*.csv %2\%3-threads\
+ MOVE conf_*.csv %2\%3-threads\
+ COPY createDB.bat %2\%3-threads\
  GOTO :EOF

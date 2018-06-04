@@ -469,8 +469,8 @@ void main(int argc, char* argv[])
 			}
 
 			commandBuffer->record(*renderpass, *swapchain, [&](IRecordingCommandBuffer& rcmd) {
-				//rcmd.clearColorBuffer(0.0f, 0.0f, 0.0f, 1.0f);
-				//rcmd.clearDepthBuffer(1.0f);
+				rcmd.clearColorBuffer(0.0f, 0.0f, 0.0f, 1.0f);
+				rcmd.clearDepthBuffer(1.0f);
 				rcmd.execute(subCmdRefs);
 			});
 
