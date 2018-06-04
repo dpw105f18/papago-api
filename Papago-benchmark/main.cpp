@@ -339,7 +339,7 @@ void main(int argc, char* argv[])
 	bool run = true;
 
 	std::stringstream frametimeCsv;
-	frametimeCsv << "frametime(nanoseconds)\n";
+	frametimeCsv << "frametime (ms)\n";
 	
 	std::stringstream fpsCsv;
 	fpsCsv << "FPS\n";
@@ -355,11 +355,11 @@ void main(int argc, char* argv[])
 	DataCollection<WMIDataItem> wmiCollection;
 
 	auto runTime = Clock::now() - startTime;
+	auto currentDataCount = 0;
 
-	while (run && 
-		(testConfig.seconds == 0 ||
-		std::chrono::duration<double, std::milli>(runTime).count() < testConfig.seconds * 1000
-		))
+	while (run && (
+		(testConfig.seconds == 0 || std::chrono::duration<double, std::milli>(runTime).count() < testConfig.seconds * 1000) &&
+		testConfig.dataCount == 0 || currentDataCount < testConfig.dataCount))
 	{
 		MSG msg;
 		if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
@@ -405,6 +405,7 @@ void main(int argc, char* argv[])
 
 				if (TestConfiguration::GetInstance().recordFrameTime) {
 					frametimeCsv << frameTimeCount << "\n";
+					++currentDataCount;
 				}
 			}
 

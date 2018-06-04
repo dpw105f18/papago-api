@@ -18,6 +18,7 @@ struct TestConfiguration
 	int cubePadding = 1;
 	bool recordFPS = false;
 	bool recordFrameTime = false;
+	size_t dataCount = 0; //<-- stop after this amount of data entries. 0 = untill program is closed by user
 
 	//TODO: use better pattern than singleton?
 	static TestConfiguration& GetInstance()
@@ -41,6 +42,7 @@ struct TestConfiguration
 		ss << "Draw Thread Count" << separator << force_string(drawThreadCount) << "\n";
 		ss << "Cube Dimension" << separator << force_string(cubeDimension) << "\n";
 		ss << "Cube Padding" << separator << force_string(cubePadding) << "\n";
+		ss << "Data Count" << separator << force_string(dataCount) << "\n";
 
 		return ss.str();
 	}
@@ -103,6 +105,9 @@ struct TestConfiguration
 			}
 			else if (a == "-frameTime") {
 				testConfig.recordFrameTime = true;
+			}
+			else if (a == "-dataCount") {
+				testConfig.dataCount = stoi(args[i + 1]);
 			}
 		}
 	}
