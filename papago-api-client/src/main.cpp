@@ -1028,7 +1028,7 @@ void shadowMapExample()
 	auto colSampler = device->createTextureSampler2D(Filter::eLinear, Filter::eLinear, TextureWrapMode::eRepeat, TextureWrapMode::eRepeat);
 
 	int texW, texH;
-	auto pixelData = readPixels("textures/eldorado.jpg", texW, texH);
+	auto pixelData = readPixels("textures/white.png", texW, texH);
 	auto tex = device->createTexture2D(texW, texH, Format::eR8G8B8A8Unorm);
 	tex->upload(pixelData);
 
