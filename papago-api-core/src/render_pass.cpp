@@ -3,9 +3,7 @@
 #include "vertex_shader.hpp"
 #include "fragment_shader.hpp"
 #include "shader_program.hpp"
-#include "sampler.hpp"
 #include "buffer_resource.hpp"
-#include "image_resource.hpp"
 
 RenderPass::operator vk::RenderPass&()
 {
@@ -25,10 +23,13 @@ RenderPass::RenderPass(
 	, m_vkExtent(extent)
 {
 
-	cacheNewPipeline(0x00);
+	if (program.getUniqueUniformBindings().empty()) {
+		cacheNewPipeline(0);
+	}
+
 }
 
-void RenderPass::setupDescriptorSet(const vk::UniqueDevice &device, const VertexShader& vertexShader, const FragmentShader& fragmentShader, uint64_t bindingMask)
+void RenderPass::setupDescriptorSetLayout(const vk::UniqueDevice &device, const VertexShader& vertexShader, const FragmentShader& fragmentShader, uint64_t bindingMask)
 {
 	//Descriptor Set Layout
 	std::vector<vk::DescriptorSetLayoutBinding> vkBindings;
@@ -57,12 +58,13 @@ void RenderPass::setupDescriptorSet(const vk::UniqueDevice &device, const Vertex
 
 	auto fragmentBindings = fragmentShader.getBindings();
 	for (size_t i = 0; i < fragmentBindings.size(); ++i) {
+		auto& fragmentBinding = fragmentBindings[i];
 		//if the binding was used by VertexShader:
-		if (bindingMap.size() > 0 && bindingMap.find(i) == bindingMap.end()) {
-			vkBindings[i].stageFlags |= vk::ShaderStageFlagBits::eFragment;
+		if (!bindingMap.empty() && bindingMap.find(fragmentBinding.binding) != bindingMap.end()) {
+			auto vkBindingIndex = bindingMap[fragmentBinding.binding];
+			vkBindings[vkBindingIndex].stageFlags |= vk::ShaderStageFlagBits::eFragment;
 		}
 		else {
-			auto& fragmentBinding = fragmentBindings[i];
 			vk::DescriptorType type = fragmentBinding.type;
 			auto bindingValue = fragmentBinding.binding;
 			if (type == vk::DescriptorType::eUniformBuffer) {
@@ -72,10 +74,11 @@ void RenderPass::setupDescriptorSet(const vk::UniqueDevice &device, const Vertex
 			vk::DescriptorSetLayoutBinding binding = {};
 			binding.setBinding(bindingValue)
 				.setDescriptorCount(1) //TODO: can we assume 1 Descriptor per binding? -AM
-				.setDescriptorType(fragmentBinding.type)
+				.setDescriptorType(type)
 				.setStageFlags(vk::ShaderStageFlagBits::eFragment);
 
 			vkBindings.emplace_back(binding);
+			bindingMap.insert(std::pair<uint32_t, size_t>{fragmentBinding.binding, i});
 		}
 	}
 
@@ -85,34 +88,6 @@ void RenderPass::setupDescriptorSet(const vk::UniqueDevice &device, const Vertex
 			.setPBindings(vkBindings.data());
 
 		m_vkDescriptorSetLayouts[bindingMask] = std::move(device->createDescriptorSetLayoutUnique(layoutCreateInfo));
-
-
-		//Descriptor Pool:
-		// TODO: Use only one descriptor pool - Brandborg
-		auto poolSizes = std::vector<vk::DescriptorPoolSize>(vkBindings.size());
-
-		for (auto i = 0; i < vkBindings.size(); ++i) {
-			auto& vkBinding = vkBindings[i];
-			poolSizes[i].setDescriptorCount(1)
-				.setType(vkBinding.descriptorType);
-		}
-		
-		vk::DescriptorPoolCreateInfo poolCreateInfo = {};
-		poolCreateInfo.setPoolSizeCount(poolSizes.size())
-			.setPPoolSizes(poolSizes.data())
-			.setMaxSets(1)	//TODO: keep this default value? -AM.
-			.setFlags(vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet);
-
-		m_vkDescriptorPools[bindingMask] = std::move(device->createDescriptorPoolUnique(poolCreateInfo));
-
-
-		//Descriptor Set:
-		vk::DescriptorSetAllocateInfo allocateInfo = {};
-		allocateInfo.setDescriptorPool(*m_vkDescriptorPools[bindingMask])
-			.setDescriptorSetCount(1)
-			.setPSetLayouts(&m_vkDescriptorSetLayouts[bindingMask].get());
-
-		m_vkDescriptorSets[bindingMask] = std::move(device->allocateDescriptorSetsUnique(allocateInfo)[0]);	//TODO: do we always want exactly one descriptor set? -AM
 	}
 }
 
@@ -144,11 +119,48 @@ std::vector<vk::VertexInputAttributeDescription> RenderPass::getAttributeDescrip
 	return attributeDescriptions;
 }
 
+vk::UniquePipeline & RenderPass::getPipeline(uint64_t mask)
+{
+	std::map<uint64_t, vk::UniquePipeline>::iterator it = m_vkGraphicsPipelines.find(mask);
+	if (it == m_vkGraphicsPipelines.end()) {
+		std::stringstream ss;
+		ss << "Pipeline not found for mask " << mask << std::endl;
+		PAPAGO_ERROR(ss.str());
+	}
+	else {
+		return m_vkGraphicsPipelines[mask];
+	}
+}
+
+vk::UniquePipelineLayout & RenderPass::getPipelineLayout(uint64_t mask)
+{
+	if (m_vkPipelineLayouts.find(mask) == m_vkPipelineLayouts.end()) {
+		std::stringstream ss;
+		ss << "PipelineLayout not found for mask " << mask << std::endl;
+		PAPAGO_ERROR(ss.str());
+	}
+	else {
+		return m_vkPipelineLayouts[mask];
+	}
+}
+
+vk::UniqueDescriptorSetLayout & RenderPass::getDescriptorSetLayout(uint64_t mask)
+{
+	if (m_vkDescriptorSetLayouts.find(mask) == m_vkDescriptorSetLayouts.end()) {
+		std::stringstream ss;
+		ss << "DescriptorSetLayout not found for mask " << mask << std::endl;
+		PAPAGO_ERROR(ss.str());
+	}
+	else {
+		return m_vkDescriptorSetLayouts[mask];
+	}
+}
+
 void RenderPass::cacheNewPipeline(uint64_t bindingMask)
 {
 	auto bindings = m_shaderProgram.getUniqueUniformBindings();
 
-	setupDescriptorSet(m_vkDevice, m_shaderProgram.m_vertexShader, m_shaderProgram.m_fragmentShader, bindingMask);
+	setupDescriptorSetLayout(m_vkDevice, m_shaderProgram.m_vertexShader, m_shaderProgram.m_fragmentShader, bindingMask);
 
 	vk::PipelineShaderStageCreateInfo shaderStages[] = {
 		m_shaderProgram.m_vkVertexStageCreateInfo,
@@ -273,140 +285,13 @@ void RenderPass::cacheNewPipeline(uint64_t bindingMask)
 	m_vkGraphicsPipelines[bindingMask] = m_vkDevice->createGraphicsPipelineUnique(vk::PipelineCache(), pipelineCreateInfo);
 }
 
-void RenderPass::bindResource(const std::string & name, IBufferResource &buffer)
+void RenderPass::createNewPipelineIfNone(uint64_t mask)
 {
-	auto& innerBuffer = dynamic_cast<BufferResource&>(buffer);
-
-	auto binding = getBinding(name);
-
-	auto oldMask = m_descriptorSetKeyMask;
-	//update mask so this binding bit is set to 0:
-	m_descriptorSetKeyMask &= (~0x00 & (0x0 << binding));
-
-	//if we have not cached a descriptor set
-	if (m_vkDescriptorSets.find(m_descriptorSetKeyMask) == m_vkDescriptorSets.end())
-	{
-		cacheNewPipeline(m_descriptorSetKeyMask);
-	}
-
-	auto& descriptorSet = m_vkDescriptorSets[m_descriptorSetKeyMask];
-
-	vk::DescriptorBufferInfo info = innerBuffer.m_vkInfo;
-	info.setOffset(m_shaderProgram.getOffset(name));
-
-	std::vector<vk::CopyDescriptorSet> descriptorSetCopys;
-
-
-	auto writeDescriptorSet = vk::WriteDescriptorSet()
-		.setDstSet(*descriptorSet)
-		.setDstBinding(binding)
-		.setDescriptorType(vk::DescriptorType::eUniformBuffer)
-		.setDescriptorCount(1)
-		.setPBufferInfo(&info);
-
-	//only copy "old" binding information (for other bindings than this) if we have just created a new descriptor set:
-	if (oldMask != m_descriptorSetKeyMask) {
-		for (auto& bindingAligment : m_bindingAlignment)
-		{
-			auto otherBinding = bindingAligment.first;
-
-			if (otherBinding != binding) {
-				auto copyDescriptorSet = vk::CopyDescriptorSet()
-					.setDescriptorCount(1)
-					.setDstBinding(otherBinding)
-					.setDstSet(*descriptorSet)
-					.setSrcBinding(otherBinding)
-					.setSrcSet(*m_vkDescriptorSets[oldMask]);
-
-				descriptorSetCopys.push_back(copyDescriptorSet);
-			}
-		}
-	}
-
-
-	m_vkDevice->updateDescriptorSets({ writeDescriptorSet }, descriptorSetCopys);
-
-	m_bindingAlignment[binding] = 0;
+	if(m_vkDescriptorSetLayouts.find(mask) == m_vkDescriptorSetLayouts.end())
+		cacheNewPipeline(mask);
 }
 
-void RenderPass::bindResource(const std::string& name, IDynamicBufferResource& buffer)
-{
-	auto& dBuffer = dynamic_cast<DynamicBufferResource&>(buffer);
-	auto& innerBuffer = dynamic_cast<BufferResource&>(*dBuffer.m_buffer);
-
-	auto binding = getBinding(name);
-
-	auto oldMask = m_descriptorSetKeyMask;
-	m_descriptorSetKeyMask |= (0x01 << binding);
-
-	//if we have not cached a descriptor set
-	if (m_vkDescriptorSets.find(m_descriptorSetKeyMask) == m_vkDescriptorSets.end())
-	{
-		cacheNewPipeline(m_descriptorSetKeyMask);
-	}
-
-
-	auto& descriptorSet = m_vkDescriptorSets[m_descriptorSetKeyMask];
-
-	vk::DescriptorBufferInfo info = innerBuffer.m_vkInfo;
-	info.setRange(dBuffer.m_alignment);
-
-
-	auto writeDescriptorSet = vk::WriteDescriptorSet()
-		.setDstSet(*descriptorSet)
-		.setDstBinding(binding)
-		.setDescriptorType(vk::DescriptorType::eUniformBufferDynamic)
-		.setDescriptorCount(1)
-		.setPBufferInfo(&info);
-
-	std::vector<vk::CopyDescriptorSet> descriptorSetCopys;
-	//only copy "old" binding information (for other bindings than this) if we have just created a new descriptor set:
-	if (oldMask != m_descriptorSetKeyMask) {
-		for (auto& bindingAligment : m_bindingAlignment)
-		{
-			auto otherBinding = bindingAligment.first;
-
-			if (otherBinding != binding) {
-				auto copyDescriptorSet = vk::CopyDescriptorSet()
-					.setDescriptorCount(1)
-					.setDstBinding(otherBinding)
-					.setDstSet(*descriptorSet)
-					.setSrcBinding(otherBinding)
-					.setSrcSet(*m_vkDescriptorSets[oldMask]);
-
-				descriptorSetCopys.push_back(copyDescriptorSet);
-			}
-		}
-	}
-
-	m_vkDevice->updateDescriptorSets({ writeDescriptorSet }, descriptorSetCopys);
-	m_bindingAlignment[binding] = dBuffer.m_alignment;
-}
-
-void RenderPass::bindResource(const std::string & name, IImageResource &image, ISampler &sampler)
-{
-	auto& backendImage = dynamic_cast<ImageResource&>(image);
-	auto& backendSampler = static_cast<Sampler&>(sampler);
-	auto binding = getBinding(name);
-
-	vk::DescriptorImageInfo info = {};
-	info.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
-		.setImageView(*backendImage.m_vkImageView)
-		.setSampler(static_cast<vk::Sampler>(backendSampler));
-
-	auto& descriptorSet = m_vkDescriptorSets[m_descriptorSetKeyMask];
-	auto writeDescriptorSet = vk::WriteDescriptorSet()
-		.setDstSet(*descriptorSet)
-		.setDstBinding(binding)
-		.setDescriptorCount(1)
-		.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
-		.setPImageInfo(&info);
-
-	m_vkDevice->updateDescriptorSets({ writeDescriptorSet }, {});
-	m_bindingAlignment[binding] = 0;
-}
-
-long RenderPass::getBinding(const std::string& name)
+long RenderPass::getBinding(const std::string& name) const
 {
 	//TODO: use method from renderpass
 	long binding = -1;

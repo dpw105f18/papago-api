@@ -16,7 +16,7 @@ public:
 	void record(IRenderPass&, IImageResource&, std::function<void(IRecordingCommandBuffer&)>) override;
 	void record(IRenderPass &, IImageResource & color, IImageResource & depth, std::function<void(IRecordingCommandBuffer&)>) override;
 
-	IRecordingCommandBuffer& execute(std::vector<std::unique_ptr<ISubCommandBuffer>>&) override;
+	IRecordingCommandBuffer& execute(const std::vector<std::reference_wrapper<ISubCommandBuffer>>&) override;
 
 	void begin(RenderPass&, const vk::UniqueFramebuffer&, vk::Extent2D);	//TODO: <-- remove imageIndex. -AM
 	void end();

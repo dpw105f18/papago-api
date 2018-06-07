@@ -105,7 +105,7 @@ std::vector<char> Parser::compile(const std::string& source, const std::string& 
 		DWORD bytes_read;
 		ReadFile(stdout_read, &buffer, 2048, &bytes_read, nullptr);
 		std::cout << buffer << std::endl;
-		PAPAGO_ERROR("Validator could not validate input.");
+		PAPAGO_ERROR("Validator could not validate input. (stage: " + shaderType + ")");
 	}
 
 	CloseHandle(processInfo.hProcess);

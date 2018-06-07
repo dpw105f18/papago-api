@@ -7,8 +7,27 @@
 #include <chrono>
 #include <sstream>
 
-//test
-#include "test.h"
+//unique_ptr and multithread stuff:
+#include <memory>
+#include <future>
+
+//GLM - for glsl types in user code:
+#define GLM_ENABLE_EXPERIMENTAL
+#include "external/glm/glm.hpp"
+#include "external/glm/gtx/transform.hpp"
+
+//File read functions (readFile(...) and readPixels(...))
+#include "util.h"
+
+//multithreading
+#include "thread_pool.h"
+
+//API
+#include "external\papago\papago.hpp"
+
+
+#define PARSER_COMPILER_PATH "C:/VulkanSDK/1.0.65.0/Bin/glslangValidator.exe"
+
 
 static LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
@@ -94,6 +113,19 @@ static void SetWindowName(HWND hwnd, const std::string& text)
 	SetWindowText(hwnd, text.c_str());
 }
 
+
+struct CubeVertex
+{
+	glm::vec3 pos;
+	glm::vec2 uv;
+};
+
+struct Vertex
+{
+	glm::vec3 pos;
+};
+
+
 void test()
 {
 	//init
@@ -101,12 +133,161 @@ void test()
 	auto windowHeight = 600;
 	auto hwnd = StartWindow(windowWidth, windowHeight);
 
-	Test test;
-	
-	test.Init();
+	std::vector<CubeVertex> cubeVertices {
+		{ { -0.5f, -0.5f,  0.5f }, { 0.0f, 0.0f } },
+		{ { -0.5f,  0.5f,  0.5f }, { 0.0f, 1.0f } },
+		{ { 0.5f,   0.5f,  0.5f }, { 1.0f, 1.0f } },
+		{ { 0.5f,  -0.5f,  0.5f }, { 1.0f, 0.0f } },
+		{ { -0.5f, -0.5f, -0.5f }, { 0.0f, 0.0f } },
+		{ { -0.5f,  0.5f, -0.5f }, { 0.0f, 1.0f } },
+		{ { 0.5f,   0.5f, -0.5f }, { 1.0f, 1.0f } },
+		{ { 0.5f,  -0.5f, -0.5f }, { 1.0f, 0.0f } }
+	};
 
+	std::vector<uint16_t> cubeIndices{
+		// Front
+		0, 1, 2,
+		0, 2, 3,
+		// Top
+		3, 7, 4,
+		3, 4, 0,
+		// Right
+		3, 2, 6,
+		3, 6, 7,
+		// Back
+		7, 6, 5,
+		7, 5, 4,
+		// Bottom
+		1, 5, 6,
+		1, 6, 2,
+		// Left
+		4, 5, 1,
+		4, 1, 0
+	};
+
+
+	
+	//*************************************************************************************************
+	//Init code here:
+
+	auto surface = ISurface::createWin32Surface(
+		windowWidth, windowHeight,
+		hwnd);
+
+	IDevice::Features features = {};
+	IDevice::Extensions extensions = {};
+	extensions.swapchain = true;
+
+	auto devices = IDevice::enumerateDevices(
+		*surface,
+		features,
+		extensions);
+	auto& device = devices[0]; // Pick first device
+
+	std::vector<glm::vec3> triangleVerticies{
+		{0.0, 0.0, 0.0}, {0.5, 1.0, 0.0}, {1.0, 0.0, 0.0}
+	};
+
+	std::vector<uint16_t> triangleIndicies{
+		0, 1, 2
+	};
+
+	auto sampler2D = device->createTextureSampler2D(Filter::eNearest, Filter::eNearest, TextureWrapMode::eClampToEdge, TextureWrapMode::eClampToEdge);
+	
+	int width;
+	int height;
+	auto pixelData = readPixels("textures/BYcheckers.png", width, height);
+	auto tex = device->createTexture2D(width, height, Format::eR8G8B8A8Unorm);
+	tex->upload(pixelData);
+
+
+
+	auto vertexBuffer = device->createVertexBuffer(cubeVertices);
+	auto indexBuffer = device->createIndexBuffer(cubeIndices);
+
+
+
+	//unique_ptr<ISurface> surface = // create Surface
+
+
+
+	auto parser = Parser(PARSER_COMPILER_PATH);
+
+	auto vertexShader = parser.compileVertexShader(readFile("shaders/mvpTexShader.vert"),"main");
+	auto fragmentShader = parser.compileFragmentShader(readFile("shaders/mvpTexShader.frag"), "main");
+	
+	auto swapChain = device->createSwapChain(Format::eR8G8B8A8Unorm, 3, IDevice::PresentMode::eMailbox);
+
+	auto shaderProgram = device->createShaderProgram(*vertexShader, *fragmentShader);
+	auto renderPass = device->createRenderPass(*shaderProgram, swapChain->getWidth(), swapChain->getHeight(), swapChain->getFormat());
+
+	renderPass->bindResource("sam", *tex, *sampler2D);
+
+	auto vpBuffer = device->createUniformBuffer(sizeof(glm::mat4));
+	vpBuffer->upload<glm::mat4>({ glm::perspective(glm::radians(60.0f), 4.0f / 3.0f, 0.3f, 1000.0f) });
+	auto mBuffer = device->createUniformBuffer(sizeof(glm::mat4));
+
+	auto mBufferDyn = device->createDynamicUniformBuffer(sizeof(glm::mat4), 2);
+
+	
+
+	renderPass->bindResource("view_projection_matrix", *vpBuffer);
+	renderPass->bindResource("model_matrix", *mBufferDyn);
+
+	auto commandBuffer = device->createCommandBuffer();
+
+
+	auto subCommandBuffer = device->createSubCommandBuffer();
+	//subCommandBuffer->record(*renderPass, [&](IRecordingSubCommandBuffer& subRec) {
+	//	subRec.setVertexBuffer(*vertexBuffer);
+	//	subRec.setIndexBuffer(*indexBuffer);
+	//	subRec.setDynamicIndex("model_matrix", 0);
+	//	subRec.drawIndexed(cubeIndices.size());
+	//});
+
+	auto subCommandBufferLeft = device->createSubCommandBuffer();
+	//subCommandBufferLeft->record(*renderPass, [&](IRecordingSubCommandBuffer& subRec) {
+	//	subRec.setVertexBuffer(*vertexBuffer);
+	//	subRec.setIndexBuffer(*indexBuffer);
+	//	subRec.setDynamicIndex("model_matrix", 1);
+	//	subRec.drawIndexed(cubeIndices.size());
+	//});
+
+
+	auto graphicsQueue = device->createGraphicsQueue(*swapChain);
+
+
+	auto cubepos = glm::translate(glm::vec3(0.0f, 0.0f, -2.0f));
+	auto cubeRot = glm::rotate(glm::radians(10.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+
+	ThreadPool tp(2);
+
+	auto tpRight = tp.enqueue([&] (int i) {
+		subCommandBuffer->record(*renderPass, [&](IRecordingSubCommandBuffer& subRec) {
+			subRec.setVertexBuffer(*vertexBuffer);
+			subRec.setIndexBuffer(*indexBuffer);
+			subRec.setDynamicIndex("model_matrix", i);
+			subRec.drawIndexed(cubeIndices.size()); 
+		});
+	} , 0);
+
+	auto tpLeft = tp.enqueue([&](int i) {
+		subCommandBufferLeft->record(*renderPass, [&](IRecordingSubCommandBuffer& subRec) {
+			subRec.setVertexBuffer(*vertexBuffer);
+			subRec.setIndexBuffer(*indexBuffer);
+			subRec.setDynamicIndex("model_matrix", i);
+			subRec.drawIndexed(cubeIndices.size());
+		});
+	}, 1);
+
+	tpRight.wait();
+	tpLeft.wait();
+
+	//*************************************************************************************************
+	
 	//Main game loop:
 	using Clock = std::chrono::high_resolution_clock;
+	auto startTime = Clock::now();
 	auto lastUpdate = Clock::now();
 	auto lastFrame = Clock::now();
 	long fps = 0;
@@ -121,12 +302,11 @@ void test()
 				run = false;
 			}
 
-			//Handle input:
-
 			TranslateMessage(&msg);
 			DispatchMessage(&msg);
 		}
 		else {
+
 			//FPS counter:
 			auto deltaTime = (Clock::now() - lastUpdate);
 			auto frameTime = (Clock::now() - lastFrame);
@@ -143,8 +323,24 @@ void test()
 				fps = 0;
 			}
 
-			test.Loop();
+			//*************************************************************************************************
+			//Loop code here:
 
+
+			cubeRot *= glm::rotate(glm::radians(0.1f), glm::vec3(1.0f, 0.0f, 0.0f));
+			mBuffer->upload<glm::mat4>({cubepos * cubeRot });
+			
+			mBufferDyn->upload<glm::mat4>({ cubepos * glm::translate(glm::vec3(1.0f, 0.0f, 0.0f))  * cubeRot }, 0);
+			mBufferDyn->upload<glm::mat4>({ cubepos * glm::translate(glm::vec3(-1.0f, 0.0f, 0.0f))  * cubeRot }, 1);
+
+			commandBuffer->record(*renderPass, *swapChain, [&](IRecordingCommandBuffer& recCommand) {
+				recCommand.clearColorBuffer(0.0f, 0.0f, 0.0f, 1.0f);
+				recCommand.execute({ *subCommandBuffer, *subCommandBufferLeft });
+			});
+			graphicsQueue->submitCommands({ *commandBuffer });
+			graphicsQueue->present();
+
+			//*************************************************************************************************
 			++fps;
 		}
 	}

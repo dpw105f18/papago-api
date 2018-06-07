@@ -36,23 +36,19 @@ ShaderProgram::ShaderProgram(const vk::UniqueDevice& device, VertexShader& verte
 
 std::set<uint32_t> ShaderProgram::getUniqueUniformBindings() const
 {
-
 	std::set<uint32_t> uniqueBindings;
 
 	auto& vBindings = m_vertexShader.getBindings();
 	auto& fBindings = m_fragmentShader.getBindings();
 
 	for (auto& vb : vBindings) {
-		if (vb.type == vk::DescriptorType::eUniformBuffer) {
-			uniqueBindings.insert(vb.binding);
-		}
+		uniqueBindings.insert(vb.binding);
 	}
 
 	for (auto& fb : fBindings) {
-		if (fb.type == vk::DescriptorType::eUniformBuffer) {
-			uniqueBindings.insert(fb.binding);
-		}
+		uniqueBindings.insert(fb.binding);
 	}
+	
 
 	return uniqueBindings;
 }

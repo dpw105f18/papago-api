@@ -18,6 +18,8 @@ class IGraphicsQueue;
 class ICommandBuffer;
 class ISubCommandBuffer;
 class IRenderPass;
+class IParameterBlock;
+struct ParameterBinding;
 
 class IDevice {
 public:
@@ -59,8 +61,9 @@ public:
 	virtual std::unique_ptr<IRenderPass> createRenderPass(IShaderProgram&, uint32_t width, uint32_t height, Format colorFormat, Format depthStencilFormat) = 0;
 	virtual void waitIdle() = 0;
 	virtual std::unique_ptr<IDynamicBufferResource> createDynamicUniformBuffer(size_t object_size, int object_count) = 0;
+	virtual std::unique_ptr<IParameterBlock> createParameterBlock(IRenderPass& renderPass, std::vector<ParameterBinding>& bindings) = 0;
 
-	virtual std::unique_ptr<IGraphicsQueue> createGraphicsQueue(ISwapchain&) = 0;
+	virtual std::unique_ptr<IGraphicsQueue> createGraphicsQueue() = 0;
 
 	struct Features {
 		bool samplerAnisotropy;
@@ -71,7 +74,7 @@ public:
 		bool samplerMirrorClampToEdge;
 	};
 
-	PAPAGO_API static std::vector<std::unique_ptr<IDevice>> enumerateDevices(ISurface&, const Features&, const Extensions&);
+	PAPAGO_API static std::vector<std::unique_ptr<IDevice>> enumerateDevices(ISurface&, const Features&, const Extensions&, bool = false);
 
 protected:
 	virtual std::unique_ptr<IBufferResource> createVertexBufferInternal(std::vector<char>& data) = 0;

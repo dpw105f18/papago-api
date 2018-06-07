@@ -1,10 +1,9 @@
 #include "standard_header.hpp"
 #include "sub_command_buffer.hpp"
 #include "render_pass.hpp"
-#include "swap_chain.hpp"
-#include "image_resource.hpp"
 #include "ibuffer_resource.hpp"
 #include "recording_command_buffer.cpp" //<-- resolves linker issues. -AM
+#include "parameter_block.hpp"
 
 SubCommandBuffer::SubCommandBuffer(const vk::UniqueDevice& device, uint32_t queueFamilyIndex)
 	: CommandRecorder<IRecordingSubCommandBuffer>(device)
@@ -42,7 +41,9 @@ void SubCommandBuffer::begin()
 	m_vkCommandBuffer->reset(vk::CommandBufferResetFlagBits::eReleaseResources);	//TODO: have usage and reset (or not) accordingly. -AM
 	m_vkCommandBuffer->begin(beginInfo);
 
-	m_vkCommandBuffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *m_renderPassPtr->m_vkGraphicsPipelines[m_renderPassPtr->m_descriptorSetKeyMask]);
+	if (m_renderPassPtr->m_shaderProgram.getUniqueUniformBindings().empty()) {
+		m_vkCommandBuffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *m_renderPassPtr->getPipeline(0));
+	}
 }
 
 
@@ -111,4 +112,22 @@ IRecordingSubCommandBuffer & SubCommandBuffer::setIndexBuffer(IBufferResource &i
 		0,
 		indexType);
 	return *this;
-};
+}
+IRecordingSubCommandBuffer & SubCommandBuffer::setParameterBlock(IParameterBlock& parameterBlock)
+{
+	auto& internalParameterBlock = dynamic_cast<ParameterBlock&>(parameterBlock);
+	auto& pipeline = m_renderPassPtr->getPipeline(internalParameterBlock.m_mask);
+	auto& layout = m_renderPassPtr->getPipelineLayout(internalParameterBlock.m_mask);
+
+	m_vkCommandBuffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *pipeline);
+	m_vkCommandBuffer->bindDescriptorSets(
+		vk::PipelineBindPoint::eGraphics, 
+		*layout, 
+		0, 
+		{ *internalParameterBlock.m_vkDescriptorSet }, 
+		std::vector<uint32_t>(internalParameterBlock.m_dynamicBufferCount)
+	);
+	
+	return *this;
+}
+;

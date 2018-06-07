@@ -11,6 +11,7 @@ class ShaderProgram;
 class IBufferResource;
 class DynamicBufferResource;
 class CommandBuffer;
+class IParameterBlock;
 
 template<class T>
 class CommandRecorder
@@ -30,7 +31,7 @@ public:
 	virtual ~CommandRecorder() = default;
 
 	// Inherited via IRecordingCommandBuffer
-	T& setDynamicIndex(const std::string& uniformName, size_t) override;
+	T& setDynamicIndex(IParameterBlock& parameterBlock, const std::string& uniformName, size_t) override;
 
 	std::map<uint32_t, uint32_t> m_bindingDynamicOffset;
 	std::set<Resource*> m_resourcesInUse;

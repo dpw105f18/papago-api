@@ -14,7 +14,7 @@ CommandBuffer::operator vk::CommandBuffer&()
 	return *m_vkCommandBuffer;
 }
 
-IRecordingCommandBuffer & CommandBuffer::execute(std::vector<std::unique_ptr<ISubCommandBuffer>>& subCommands)
+IRecordingCommandBuffer & CommandBuffer::execute(const std::vector<std::reference_wrapper<ISubCommandBuffer>>& subCommands)
 {
 	//TODO: check subCommands to see if they are ready to be executed? -AM
 
@@ -22,7 +22,7 @@ IRecordingCommandBuffer & CommandBuffer::execute(std::vector<std::unique_ptr<ISu
 	secondaryCommandBuffers.reserve(subCommands.size());
 
 	for (auto& isub : subCommands) {
-		auto& internalSub = dynamic_cast<SubCommandBuffer&>(*isub);
+		auto& internalSub = dynamic_cast<SubCommandBuffer&>(isub.get());
 		secondaryCommandBuffers.push_back(static_cast<vk::CommandBuffer>(internalSub));
 	}
 	
@@ -138,24 +138,8 @@ void CommandBuffer::begin(RenderPass& renderPass, const vk::UniqueFramebuffer& r
 	m_vkCommandBuffer->begin(beginInfo);
 	m_vkCommandBuffer->beginRenderPass(m_vkRenderPassBeginInfo, vk::SubpassContents::eInline);
 
-	//TODO: can we assume a graphics bindpoint and pipeline? -AM
-	m_vkCommandBuffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *renderPass.m_vkGraphicsPipelines[renderPass.m_descriptorSetKeyMask]);
-
-	//set default bindings:
-	auto dynamicBufferMask = m_renderPassPtr->m_descriptorSetKeyMask;
-	auto offsetCount = 0;
-	uint64_t longOne = 0x01;
-	for (auto i = 0; i < 64; ++i) {
-		if (dynamicBufferMask & (longOne << i)) {
-			++offsetCount;
-		}
-	}
-	auto defaultDynamicOffsets = std::vector<uint32_t>(offsetCount, 0);
-
-
-	if (m_renderPassPtr->m_vkDescriptorSets[m_renderPassPtr->m_descriptorSetKeyMask])
-	{
-		m_vkCommandBuffer->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *m_renderPassPtr->m_vkPipelineLayouts[renderPass.m_descriptorSetKeyMask], 0, { *m_renderPassPtr->m_vkDescriptorSets[renderPass.m_descriptorSetKeyMask] }, defaultDynamicOffsets);
+	if (m_renderPassPtr->m_shaderProgram.getUniqueUniformBindings().empty()) {
+		m_vkCommandBuffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *m_renderPassPtr->getPipeline(0));
 	}
 }
 

@@ -12,21 +12,9 @@
 #include <chrono>
 #include <sstream>
 
-#include "ishader.hpp"
-#include "parser.hpp"
-#include "isampler.hpp"
-#include "isurface.hpp"
-#include "iswapchain.hpp"
-#include "iimage_resource.hpp"
-#include "ibuffer_resource.hpp"
-#include "icommand_buffer.hpp"
-#include "ishader_program.hpp"
-#include "icommand_buffer.hpp"
-#include "igraphics_queue.hpp"
-#include "irender_pass.hpp"
-#include "idevice.hpp"
-#include "api_enums.hpp"
+#include "papago.hpp"
 
+#define GLM_FORCE_DEPTH_ZERO_TO_ON
 #define GLM_ENABLE_EXPERIMENTAL
 #include "external/glm/glm.hpp"
 #include "external/glm/gtx/transform.hpp"
@@ -191,7 +179,7 @@ struct Mesh
 			4, 1, 0
 		});
 
-		return {std::move(vertex_buffer), std::move(index_buffer), 48};
+		return {std::move(vertex_buffer), std::move(index_buffer), 36};
 	}
 
 	std::unique_ptr<IBufferResource> vertex_buffer;
@@ -210,6 +198,7 @@ struct UniformData
 	glm::mat4 model_matrix = glm::mat4(1.0f);
 };
 
+/*
 void multithreadedTest() {
 	const size_t windowWidth = 800;
 	const size_t windowHeight = 600;
@@ -376,7 +365,7 @@ void multithreadedTest() {
 					/*
 					auto& rc = TestConfiguration::GetInstance().rotateCubes;
 					rc = !rc;
-					*/
+					
 				}
 			}
 			else if (msg.message == WM_KEYUP) {
@@ -442,6 +431,7 @@ void multithreadedTest() {
 	}
 	device->waitIdle();
 }
+*/
 
 void uploadTest()
 {
@@ -464,12 +454,729 @@ void uploadTest()
 
 	auto d = "bug";
 }
+#define PARSER_COMPILER_PATH "C:/VulkanSDK/1.0.65.0/Bin/glslangValidator.exe"
+
+static std::vector<char> readPixels(const std::string& localPath, int& outWidth, int& outHeight)
+{
+	int texChannels;
+	auto pixels = stbi_load(localPath.c_str(), &outWidth, &outHeight, &texChannels, STBI_rgb_alpha);
+	if (!pixels) {
+		throw std::runtime_error("Failed to load texture image!");
+	}
+
+	auto result = std::vector<char>();
+	result.resize(outWidth * outHeight * 4);
+	memcpy(result.data(), pixels, result.size());
+	stbi_image_free(pixels);
+
+	return result;
+}
+
+struct CubeVertex
+{
+	glm::vec3 pos;
+	glm::vec2 uv;
+};
+
+void userTest()
+{
+	//init
+	auto windowWidth = 800;
+	auto windowHeight = 600;
+	auto hwnd = StartWindow(windowWidth, windowHeight);
+	auto surface = ISurface::createWin32Surface(windowWidth, windowHeight, hwnd);
+
+	IDevice::Features features = { true };
+	IDevice::Extensions extensions = { true, false };
+
+	auto devices = IDevice::enumerateDevices(*surface, features, extensions, true);
+	auto& device = devices[0];
+
+	auto swapChain = device->createSwapChain(Format::eB8G8R8A8Unorm, Format::eD32Sfloat, 3, IDevice::PresentMode::eMailbox);
+
+	std::vector<CubeVertex> cubeVertices{
+		{ { -0.5f, -0.5f,  0.5f },{ 0.0f, 0.0f } },
+		{ { -0.5f,  0.5f,  0.5f },{ 0.0f, 1.0f } },
+		{ { 0.5f,   0.5f,  0.5f },{ 1.0f, 1.0f } },
+		{ { 0.5f,  -0.5f,  0.5f },{ 1.0f, 0.0f } },
+		{ { -0.5f, -0.5f, -0.5f },{ 0.0f, 0.0f } },
+		{ { -0.5f,  0.5f, -0.5f },{ 0.0f, 1.0f } },
+		{ { 0.5f,   0.5f, -0.5f },{ 1.0f, 1.0f } },
+		{ { 0.5f,  -0.5f, -0.5f },{ 1.0f, 0.0f } }
+	};
+
+	std::vector<uint16_t> cubeIndices{
+		// Front
+		0, 1, 2,
+		0, 2, 3,
+		// Top
+		3, 7, 4,
+		3, 4, 0,
+		// Right
+		3, 2, 6,
+		3, 6, 7,
+		// Back
+		7, 6, 5,
+		7, 5, 4,
+		// Bottom
+		1, 5, 6,
+		1, 6, 2,
+		// Left
+		4, 5, 1,
+		4, 1, 0
+	};
+
+
+
+	Parser p(PARSER_COMPILER_PATH);
+
+	auto vertexShader = p.compileVertexShader(readFile("shaders/mvpTexShader.vert"), "main");
+	auto fragmentShader = p.compileFragmentShader(readFile("shaders/mvpTexShader.frag"), "main");
+
+	int texW, texH;
+	auto pixels = readPixels("textures/BYcheckers.png", texW, texH);
+
+	auto texture = device->createTexture2D(texW, texH, Format::eR8G8B8A8Unorm);
+	texture->upload(pixels);
+
+	pixels = readPixels("textures/eldorado.jpg", texW, texH);
+	auto eldoTexture = device->createTexture2D(texW, texH, Format::eR8G8B8A8Unorm);
+	eldoTexture->upload(pixels);
+
+	auto sampler = device->createTextureSampler2D(Filter::eLinear, Filter::eLinear, TextureWrapMode::eRepeat, TextureWrapMode::eRepeat);
+
+	auto program = device->createShaderProgram(*vertexShader, *fragmentShader);
+
+	auto vertexBuffer = device->createVertexBuffer(cubeVertices);
+	auto indexBuffer = device->createIndexBuffer(cubeIndices);
+
+	auto renderPass = device->createRenderPass(*program, windowWidth, windowHeight, Format::eB8G8R8A8Unorm, Format::eD32Sfloat);
+
+	auto graphicsQueue = device->createGraphicsQueue();
+
+	std::vector<std::unique_ptr<ISubCommandBuffer>> subCommandBuffers(4);
+	std::vector<std::reference_wrapper<ISubCommandBuffer>> subCommandBufferReferences;
+
+	for (int i = 0; i < 4; ++i) {
+		subCommandBuffers[i] = device->createSubCommandBuffer();
+		subCommandBufferReferences.push_back(*subCommandBuffers[i]);
+	}
+
+	auto commandBuffer = device->createCommandBuffer();
+
+	auto viewUniformBuffer = device->createUniformBuffer(sizeof(glm::mat4));
+	auto instanceUniformBuffer = device->createDynamicUniformBuffer(sizeof(glm::mat4), 1000);
+
+	std::vector<ParameterBinding> bindings;
+	bindings.reserve(3);
+	bindings.emplace_back( "view_projection_matrix", viewUniformBuffer.get());
+	bindings.emplace_back( "model_matrix", instanceUniformBuffer.get());
+	bindings.emplace_back( "sam", eldoTexture.get(), sampler.get());
+	auto paramBlock = device->createParameterBlock(*renderPass, bindings);
+
+	bindings.clear();
+	bindings.emplace_back("view_projection_matrix", viewUniformBuffer.get());
+	bindings.emplace_back("model_matrix", instanceUniformBuffer.get());
+	bindings.emplace_back("sam", texture.get(), sampler.get());
+	auto paramBlock2 = device->createParameterBlock(*renderPass, bindings);
+
+
+	//*************************************************************************************************
+	//Init code here:
+
+	//*************************************************************************************************
+
+	//Main game loop:
+	using Clock = std::chrono::high_resolution_clock;
+	auto startTime = Clock::now();
+	auto lastUpdate = Clock::now();
+	auto lastFrame = Clock::now();
+	long fps = 0;
+	bool run = true;
+
+	glm::mat4 viewProj;
+	std::vector<glm::mat4> world(1000);
+
+	glm::vec3 translations[1000];
+	for (int i = 0; i < 1000; ++i) {
+		translations[i] = glm::vec3(float(rand() % 100 - 50), float(rand() % 100 - 50), -100.0f);
+	}
+
+
+
+	while (run)
+	{
+		MSG msg;
+		if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
+		{
+			if (msg.message == WM_QUIT) {
+				run = false;
+			}
+
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);
+		}
+		else {
+			viewProj = glm::perspective(glm::radians(45.0f), float(windowWidth) / windowHeight, 0.5f, 500.0f);
+
+			for (int i = 0; i < 1000; ++i) {
+				world[i] = glm::translate(translations[i]) *glm::rotate(float((Clock::now() - startTime).count()) * 0.000000002f + float(i), glm::vec3(0.5f, 0.5f, 0.0f));
+			}
+
+			viewUniformBuffer->upload<glm::mat4>({ viewProj });
+			instanceUniformBuffer->upload<glm::mat4>(world);
+
+			ThreadPool tp(4);
+			for (int t = 0; t < 4; ++t) {
+				tp.enqueue([&](int t) {
+					subCommandBuffers[t]->record(*renderPass, [&](IRecordingSubCommandBuffer& cmdBuf) {
+						auto& block = (t % 2 == 0) ? paramBlock : paramBlock2;
+						cmdBuf.setParameterBlock(*block);
+						cmdBuf.setVertexBuffer(*vertexBuffer);
+						cmdBuf.setIndexBuffer(*indexBuffer);
+
+						for (int i = t * 250; i < t * 250 + 250; ++i) {
+							cmdBuf.setDynamicIndex(*block, "model_matrix", i);
+							cmdBuf.drawIndexed(36);
+						}
+					});
+				}, t).wait();
+			}
+
+			commandBuffer->record(*renderPass, *swapChain, [&](IRecordingCommandBuffer& cmdBuf) {
+				cmdBuf.clearColorBuffer(100U, 0U, 100U, 100U);
+				cmdBuf.clearDepthBuffer(1.0f);
+
+				cmdBuf.execute(subCommandBufferReferences);
+			});
+
+			graphicsQueue->submitCommands({ *commandBuffer });
+			graphicsQueue->present(*swapChain);
+
+			//FPS counter:
+			auto deltaTime = (Clock::now() - lastUpdate);
+			auto frameTime = (Clock::now() - lastFrame);
+			lastFrame = Clock::now();
+
+			using namespace std::chrono_literals;
+			if (deltaTime > 1s) {
+				lastUpdate = Clock::now();
+				std::stringstream ss;
+				ss << "FPS: " << fps
+					<< " --- Avg. Frame Time: " << 1000.0 / fps << "ms"
+					<< " --- Last Frame Time: " << std::chrono::duration_cast<std::chrono::duration<double, std::milli>>(frameTime).count() << "ms";
+				SetWindowName(hwnd, ss.str());
+				fps = 0;
+			}
+
+			//*************************************************************************************************
+			//Loop code here:
+
+			//*************************************************************************************************
+			++fps;
+		}
+	}
+	device->waitIdle();
+}
+
+bool handleWindowMessages(bool& run)
+{
+	MSG msg;
+	bool pm;
+	if (pm = PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
+	{
+		if (msg.message == WM_QUIT) {
+			run = false;
+		}
+
+		TranslateMessage(&msg);
+		DispatchMessage(&msg);
+	}
+
+	return pm;
+}
+
+void triangleTest() {
+	auto windowWidth = 800;
+	auto windowHeight = 600;
+	auto hwnd = StartWindow(windowWidth, windowHeight);
+	IDevice::Features features;
+	features.samplerAnisotropy = true;
+	IDevice::Extensions extensions;
+	extensions.swapchain = true;
+	extensions.samplerMirrorClampToEdge = true;
+
+
+	auto surface = ISurface::createWin32Surface(windowWidth, windowHeight, hwnd);
+
+	auto parser = Parser(PARSER_COMPILER_PATH);
+	auto vertexShader = parser.compileVertexShader(readFile("shaders/colorVert.vert"), "main");
+	auto fragmentShader = parser.compileFragmentShader(readFile("shaders/colorFrag.frag"), "main");
+
+	auto device = std::move(IDevice::enumerateDevices(*surface, features, extensions)[0]);
+
+	auto shaderProgam = device->createShaderProgram(*vertexShader, *fragmentShader);
+	auto swapChain = device->createSwapChain(Format::eR8G8B8A8Unorm, 3, IDevice::PresentMode::eMailbox);
+	auto renderPass = device->createRenderPass(*shaderProgam, surface->getWidth(), surface->getHeight(), swapChain->getFormat());
+
+
+	std::vector<glm::vec3> vertices = { {0.0, -1.0, 0.5}, {-1.0, 0.0, 0.5}, {1.0, 0.0, 0.5} };
+	auto vertexBuffer = device->createVertexBuffer(vertices);
+
+	auto cmdBuf =  device->createCommandBuffer();
+	auto subCmdBuf = device->createSubCommandBuffer();
+	auto queue = device->createGraphicsQueue();
+
+	subCmdBuf->record(*renderPass, [&](IRecordingSubCommandBuffer& subRec) {
+		subRec.setVertexBuffer(*vertexBuffer);
+		subRec.draw(3);
+	});
+
+
+
+	//Main game loop:
+	using Clock = std::chrono::high_resolution_clock;
+	auto startTime = Clock::now();
+	auto lastUpdate = Clock::now();
+	auto lastFrame = Clock::now();
+	long fps = 0;
+	bool run = true;
+
+	std::vector<std::reference_wrapper<ISubCommandBuffer>> subCmds;
+	subCmds.emplace_back(*subCmdBuf);
+
+	while (run)
+	{
+		if(handleWindowMessages(run))
+		{
+			//messages has been handled
+		}
+		else {
+			auto d = "bug";
+			cmdBuf->record(*renderPass, *swapChain, [&](IRecordingCommandBuffer& recCmd) {
+				recCmd.clearColorBuffer(1.0f, 0.0f, 0.0f, 1.0f);
+				recCmd.execute(subCmds);
+			});
+
+			queue->submitCommands({ *cmdBuf });
+			queue->present(*swapChain);
+
+			//FPS counter:
+			auto deltaTime = (Clock::now() - lastUpdate);
+			auto frameTime = (Clock::now() - lastFrame);
+			lastFrame = Clock::now();
+
+			using namespace std::chrono_literals;
+			if (deltaTime > 1s) {
+				lastUpdate = Clock::now();
+				std::stringstream ss;
+				ss << "FPS: " << fps
+					<< " --- Avg. Frame Time: " << 1000.0 / fps << "ms"
+					<< " --- Last Frame Time: " << std::chrono::duration_cast<std::chrono::duration<double, std::milli>>(frameTime).count() << "ms";
+				SetWindowName(hwnd, ss.str());
+				fps = 0;
+			}
+
+			//*************************************************************************************************
+			//Loop code here:
+
+			//*************************************************************************************************
+			++fps;
+		}
+	}
+}
+
+//******************************* PHONG ***************************************
+
+struct LightData {
+	glm::vec3 pos;
+	glm::vec3 viewPos;
+	glm::vec3 color;
+	float shinyness;
+};
+
+#include "circle_mesh.hpp"
+
+void phongExample()
+{
+	auto circleMesh = circle_mesh::generateCircleMesh<6>();
+
+	auto hwnd = StartWindow(800, 600);
+	auto surface = ISurface::createWin32Surface(800, 600, hwnd);
+	bool swapchainExt = true;
+	auto devices = IDevice::enumerateDevices(*surface, { true }, { swapchainExt, false });
+	auto& device = devices[0];
+	auto swapchain = device->createSwapChain(Format::eB8G8R8A8Unorm, Format::eD32Sfloat, 3, IDevice::PresentMode::eMailbox);
+	auto graphicsQueue = device->createGraphicsQueue();
+
+	auto parser = Parser(PARSER_COMPILER_PATH);
+	auto vertexShader = parser.compileVertexShader(readFile("shaders/phong.vert"), "main");
+	auto fragmentShader = parser.compileFragmentShader(readFile("shaders/phong.frag"), "main");
+	auto shaderProgram = device->createShaderProgram(*vertexShader, *fragmentShader);
+
+	auto renderpass = device->createRenderPass(*shaderProgram, 800, 600, Format::eB8G8R8A8Unorm, Format::eD32Sfloat);
+
+	auto vertexBuffer = device->createVertexBuffer(circleMesh.vertices);
+	auto indexBuffer = device->createIndexBuffer(circleMesh.indices);
+
+	int texW, texH;
+	auto texturePixels = readPixels("textures/BYcheckers.png", texW, texH);
+	auto texture = device->createTexture2D(texW, texH, Format::eR8G8B8A8Unorm);
+	texture->upload(texturePixels);
+
+	auto sampler = device->createTextureSampler2D(Filter::eLinear, Filter::eLinear, TextureWrapMode::eMirroredRepeat, TextureWrapMode::eMirroredRepeat);
+
+	glm::mat4 translateMat = glm::translate(glm::vec3{ 0.0f, 0.0f, -3.0f });
+	glm::mat4 rotateMat = glm::mat4(1.0f);
+
+	glm::vec3 camPos = { 0.0f, 0.0f, 2.0f };
+	glm::mat4 viewMat = glm::mat4(1.0f) * glm::lookAt(
+		camPos,
+		glm::vec3{ 0.0f, 0.0f, 0.0f },
+		glm::vec3{ 0.0f, 1.0f, 0.0f }
+	);
+
+	glm::mat4 projectionMat = glm::mat4(1.0f) * glm::perspective(glm::radians(45.0f), 800.0f / 600, 1.0f, 500.0f);
+
+	auto model = device->createUniformBuffer(sizeof(glm::mat4));
+	model->upload<glm::mat4>({ translateMat * rotateMat });
+
+	auto viewProj = device->createUniformBuffer(sizeof(glm::mat4));
+	viewProj->upload<glm::mat4>({ projectionMat * viewMat * translateMat });
+
+	glm::vec3 lightPosData = camPos - glm::vec3(0.0f, 1.0f, -7.0f);
+	lightPosData = glm::vec3(0.1f, -0.4f, -9.0f); //<-- debug
+
+	LightData lightData = {};
+	lightData.pos = lightPosData;
+	lightData.viewPos = camPos;
+	lightData.color = { 0.2f, 0.3f, 0.7f };
+	lightData.shinyness = 32.0f;
+
+	auto lightPos = device->createUniformBuffer(sizeof(glm::vec3));
+	lightPos->upload<glm::vec3>({ lightData.pos });
+
+	auto viewPos = device->createUniformBuffer(sizeof(glm::vec3));
+	viewPos->upload<glm::vec3>({ lightData.viewPos });
+
+	auto lightColor = device->createUniformBuffer(sizeof(glm::vec3));
+	lightColor->upload<glm::vec3>({ lightData.color });
+
+	auto lightShinyness = device->createUniformBuffer(sizeof(float));
+	lightShinyness->upload<float>({ lightData.shinyness });
+
+
+	std::vector<ParameterBinding> bindings;
+	bindings.emplace_back("model", model.get());
+	bindings.emplace_back("viewProj", viewProj.get());
+	bindings.emplace_back("tex", texture.get(), sampler.get());
+	bindings.emplace_back("lightPos", lightPos.get());
+	bindings.emplace_back("viewPos", viewPos.get());
+	bindings.emplace_back("lightColor", lightColor.get());
+	bindings.emplace_back("lightShinyness", lightShinyness.get());
+
+	auto parameterBlock = device->createParameterBlock(*renderpass, bindings);
+
+	auto cmdBuf = device->createCommandBuffer();
+	auto subCmd = device->createSubCommandBuffer();
+
+	subCmd->record(*renderpass, [&](IRecordingSubCommandBuffer& rcmd) {
+		rcmd.setVertexBuffer(*vertexBuffer);
+		rcmd.setIndexBuffer(*indexBuffer);
+		rcmd.setParameterBlock(*parameterBlock);
+		rcmd.drawIndexed(circleMesh.indices.size());
+	});
+
+	//Main game loop:
+	using Clock = std::chrono::high_resolution_clock;
+	auto startTime = Clock::now();
+	auto lastUpdate = Clock::now();
+	auto lastFrame = Clock::now();
+	long fps = 0;
+	bool run = true;
+
+	while (run)
+	{
+		MSG msg;
+		if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
+		{
+			if (msg.message == WM_QUIT) {
+				run = false;
+			}
+			else if (msg.message == WM_KEYUP) {
+
+				//'p' key
+				if (msg.wParam == 80) {
+					auto currentLightPos = lightPos->download<glm::vec3>()[0];
+					std::cout << "light: (" << currentLightPos.x << ", " << currentLightPos.y << ", " << currentLightPos.z << ")" << std::endl;
+				}
+				//'r' key
+				else if (msg.wParam == 'R') {
+
+					rotateMat *= glm::rotate(glm::radians(30.00f), glm::vec3(0.3f, 1.0f, 0.0f));
+
+				}
+				else if (msg.wParam == 'I') {
+					lightData.shinyness += 2;
+					std::cout << "Shinyness: " << lightData.shinyness << std::endl;
+				}
+				else if (msg.wParam == 'J') {
+					lightData.shinyness -= 2;
+					std::cout << "Shinyness: " << lightData.shinyness << std::endl;
+				}
+				else {
+					std::cout << "key code: " << std::to_string(msg.wParam) << std::endl;
+				}
+			}
+
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);
+		}
+		else {
+
+			//FPS counter:
+			auto deltaTime = (Clock::now() - lastUpdate);
+			auto frameTime = (Clock::now() - lastFrame);
+			lastFrame = Clock::now();
+
+
+			model->upload<glm::mat4>({ translateMat * rotateMat });
+
+
+			auto rotateAmount = 0.000000001f * (Clock::now() - startTime).count();
+			glm::vec3 newLightPos = glm::vec3(glm::rotate(rotateAmount, glm::vec3{ 0.0f, 1.0f, 0.0f }) * glm::vec4(lightPosData, 1.0f));
+			lightPos->upload<glm::vec3>({ newLightPos });
+
+			lightShinyness->upload<float>({ lightData.shinyness });
+
+
+			cmdBuf->record(*renderpass, *swapchain, [&](IRecordingCommandBuffer& recCmd) {
+				recCmd.clearColorBuffer(1.0f, 0.0f, 1.0f, 1.0f);
+				recCmd.clearDepthBuffer(1.0f);
+				recCmd.execute({ *subCmd });
+			});
+
+			graphicsQueue->submitCommands({ *cmdBuf });
+			graphicsQueue->present(*swapchain);
+
+
+
+			using namespace std::chrono_literals;
+			if (deltaTime > 1s) {
+				lastUpdate = Clock::now();
+				std::stringstream ss;
+				ss << "FPS: " << fps
+					<< " --- Avg. Frame Time: " << 1000.0 / fps << "ms"
+					<< " --- Last Frame Time: " << std::chrono::duration_cast<std::chrono::duration<double, std::milli>>(frameTime).count() << "ms";
+				SetWindowName(hwnd, ss.str());
+				fps = 0;
+			}
+
+			++fps;
+		}
+	}
+
+}
+
+//*****************************************************************************
+
+void shadowMapExample()
+{
+	auto hwnd = StartWindow(800, 600);
+	auto surface = ISurface::createWin32Surface(800, 600, hwnd);
+	auto devices = IDevice::enumerateDevices(*surface, { true }, { true, false });
+	auto& device = devices[0];
+
+	auto cube = Mesh::Cube(*device);
+
+
+	auto viewMatCam = glm::lookAt(
+		glm::vec3{ 0.0f, 0.0f, 10.0f },
+		glm::vec3{ 0.0f, 0.0f, 0.0f },
+		glm::vec3{ 0.0f, 1.0f, 0.0f }
+	);
+
+	glm::vec3 lightPos = {0.0f, -4.0f, 2.0f};
+	auto viewMatLight = glm::lookAt(
+		lightPos,
+		glm::vec3{0.0f, 0.0f, 0.0f},
+		glm::vec3{0.0f, 1.0f, 0.0f}
+	);
+
+	auto projMat = glm::perspective(
+		glm::radians(90.0f),
+		float(surface->getWidth()) / surface->getHeight(),
+		0.1f,
+		20.0f);
+
+	auto vpMatCam = projMat * viewMatCam;
+	auto vpMatLight = projMat * viewMatLight;
+
+	auto modelMatGround = glm::translate(glm::vec3{ 0.0f, 4.0f, 0.0f }) * glm::scale(glm::vec3{ 25.0f, 1.0f, 25.0f });
+	auto modelMatCube = glm::translate(glm::vec3{0.0f, 0.0f, 0.0f}) * glm::rotate(glm::radians(45.0f), glm::vec3{ 0.5f, 1.0f, 0.0f });
+
+	auto vpDynUniform = device->createDynamicUniformBuffer(sizeof(glm::mat4), 2);
+	vpDynUniform->upload<glm::mat4>({ vpMatCam, vpMatLight });
+
+	auto modelDynUniform = device->createDynamicUniformBuffer(sizeof(glm::mat4), 2);
+	modelDynUniform->upload<glm::mat4>({ modelMatGround, modelMatCube });
+
+	auto parser = Parser(PARSER_COMPILER_PATH);
+
+	auto colTarget = device->createTexture2D(surface->getWidth(), surface->getHeight(), Format::eR8G8B8A8Unorm);
+	auto colTargetDepth = device->createDepthTexture2D(surface->getWidth(), surface->getHeight(), Format::eD32Sfloat);
+	auto colSampler = device->createTextureSampler2D(Filter::eLinear, Filter::eLinear, TextureWrapMode::eRepeat, TextureWrapMode::eRepeat);
+
+	int texW, texH;
+	auto pixelData = readPixels("textures/white.png", texW, texH);
+	auto tex = device->createTexture2D(texW, texH, Format::eR8G8B8A8Unorm);
+	tex->upload(pixelData);
+
+	auto colorVert = parser.compileVertexShader(readFile("shaders/clipCoord.vert"), "main");
+	auto colorFrag = parser.compileFragmentShader(readFile("shaders/clipCoord.frag"), "main");
+	auto colorProgram = device->createShaderProgram(*colorVert, *colorFrag);
+	auto colorPass = device->createRenderPass(*colorProgram, colTarget->getWidth(), colTarget->getHeight(), colTarget->getFormat(), colTargetDepth->getFormat());
+
+	std::vector<ParameterBinding> colorParams;
+	colorParams.emplace_back("vp", vpDynUniform.get());
+	colorParams.emplace_back("m", modelDynUniform.get());
+
+	auto colorParamBlock = device->createParameterBlock(*colorPass, colorParams);
+
+	auto colorCmd = device->createCommandBuffer();
+
+	auto colorSubCmd = device->createSubCommandBuffer();
+	colorSubCmd->record(*colorPass, [&](IRecordingSubCommandBuffer& rcmd) {
+		rcmd.setParameterBlock(*colorParamBlock);
+		rcmd.setVertexBuffer(*cube.vertex_buffer);
+		rcmd.setIndexBuffer(*cube.index_buffer);
+		rcmd.setDynamicIndex(*colorParamBlock, "vp", 1);	//<-- use light view
+
+		//ground:
+		rcmd.setDynamicIndex(*colorParamBlock, "m", 0);
+		rcmd.drawIndexed(cube.index_count);
+
+		//cube:
+		rcmd.setDynamicIndex(*colorParamBlock, "m", 1);
+		rcmd.drawIndexed(cube.index_count);
+	});
+
+
+	auto swapchain = device->createSwapChain(Format::eB8G8R8A8Unorm, Format::eD32Sfloat, 3, IDevice::PresentMode::eMailbox);
+	auto shadowVert = parser.compileVertexShader(readFile("shaders/shadow.vert"), "main");
+	auto shadowFrag = parser.compileFragmentShader(readFile("shaders/shadow.frag"), "main");
+	auto shadowProgram = device->createShaderProgram(*shadowVert, *shadowFrag);
+	auto shadowPass = device->createRenderPass(*shadowProgram, swapchain->getWidth(), swapchain->getHeight(), swapchain->getFormat(), Format::eD32Sfloat);
+
+	std::vector<ParameterBinding> shadowParams;
+	shadowParams.emplace_back("view_projection", vpDynUniform.get());
+	shadowParams.emplace_back("shadow_view_projection", vpDynUniform.get());
+	shadowParams.emplace_back("model", modelDynUniform.get());
+	shadowParams.emplace_back("tex", tex.get(), colSampler.get());
+	shadowParams.emplace_back("shadow_map", colTargetDepth.get(), colSampler.get());
+
+	auto shadowParamBlock = device->createParameterBlock(*shadowPass, shadowParams);
+
+	auto shadowCmd = device->createCommandBuffer();
+
+	auto shadowSubCmd = device->createSubCommandBuffer();
+	shadowSubCmd->record(*shadowPass, [&](IRecordingSubCommandBuffer& rcmd) {
+		rcmd.setParameterBlock(*shadowParamBlock);
+		rcmd.setVertexBuffer(*cube.vertex_buffer);
+		rcmd.setIndexBuffer(*cube.index_buffer);
+		rcmd.setDynamicIndex(*shadowParamBlock, "view_projection", 0);	//<-- camera view
+		rcmd.setDynamicIndex(*shadowParamBlock, "shadow_view_projection", 1); //<-- light view
+		
+		//ground:
+		rcmd.setDynamicIndex(*shadowParamBlock, "model", 0);
+		rcmd.drawIndexed(cube.index_count);
+
+		//cube:
+		rcmd.setDynamicIndex(*shadowParamBlock, "model", 1);
+		rcmd.drawIndexed(cube.index_count);
+	});
+
+	auto graphicsQueue = device->createGraphicsQueue();
+
+	//****************************************************************************************
+	//Main game loop:
+	using Clock = std::chrono::high_resolution_clock;
+	auto startTime = Clock::now();
+	auto lastUpdate = Clock::now();
+	auto lastFrame = Clock::now();
+	long fps = 0;
+	bool run = true;
+
+	while (run)
+	{
+		MSG msg;
+		if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
+		{
+			if (msg.message == WM_QUIT) {
+				run = false;
+			}
+			else if (msg.message == WM_KEYUP) {
+				//handle key events:
+			}
+
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);
+		}
+		else {
+
+			//FPS counter:
+			auto deltaTime = (Clock::now() - lastUpdate);
+			auto frameTime = (Clock::now() - lastFrame);
+			lastFrame = Clock::now();
+
+			using namespace std::chrono_literals;
+			if (deltaTime > 1s) {
+				lastUpdate = Clock::now();
+				std::stringstream ss;
+				ss << "FPS: " << fps
+					<< " --- Avg. Frame Time: " << 1000.0 / fps << "ms"
+					<< " --- Last Frame Time: " << std::chrono::duration_cast<std::chrono::duration<double, std::milli>>(frameTime).count() << "ms";
+				SetWindowName(hwnd, ss.str());
+				fps = 0;
+			}
+
+			lightPos = glm::vec3(glm::rotate(0.01f, glm::vec3{0.0f, 0.0f, 1.0f}) * glm::vec4(lightPos, 1.0f));
+			viewMatLight = glm::lookAt(
+				lightPos,
+				glm::vec3{ 0.0f, 0.0f, 0.0f },
+				glm::vec3{ 0.0f, 1.0f, 0.0f }
+			);
+			vpDynUniform->upload<glm::mat4>({ projMat * viewMatLight }, 1);
+
+			colorCmd->record(*colorPass, *colTarget, *colTargetDepth, [&](IRecordingCommandBuffer& rcmd) {
+				rcmd.clearColorBuffer(1.0f, 0.0f, 1.0f, 1.0f);
+				rcmd.clearDepthBuffer(1.0f);
+				rcmd.execute({ *colorSubCmd });
+			});
+
+			shadowCmd->record(*shadowPass, *swapchain, [&](IRecordingCommandBuffer& rcmd) {
+				rcmd.clearColorBuffer(0.2f, 0.2f, 0.2f, 1.0f);
+				rcmd.clearDepthBuffer(1.0f);
+				rcmd.execute({ *shadowSubCmd });
+			});
+
+			graphicsQueue->submitCommands({ *colorCmd, *shadowCmd });
+			graphicsQueue->present(*swapchain);
+
+			++fps;
+		}
+	}
+}
 
 int main()
 {
 	try {
 		//uploadTest();
-		multithreadedTest();
+		//multithreadedTest();
+		//triangleTest();
+		//userTest();
+		//phongExample();
+		shadowMapExample();
 	}
 	catch (std::exception e) {
 		std::cout << "ERROR: " << e.what() << std::endl;
@@ -477,102 +1184,4 @@ int main()
 	std::cout << "Press enter to continue...";
 	std::cin.ignore();
 	return 0;
-	/*
-	{
-		auto hwnd = StartWindow(800, 600);
-		auto surface = ISurface::createWin32Surface(800, 600, hwnd);
-		IDevice::Features features;
-		features.samplerAnisotropy = true;
-		IDevice::Extensions extensions;
-		extensions.swapchain = true;
-		extensions.samplerMirrorClampToEdge = true;
-		auto devices = IDevice::enumerateDevices(*surface, features, extensions);
-		auto& device = devices[0];
-
-		auto stupidVertexBuffer = device->createVertexBuffer(std::vector<Vertex>{
-			{ { -0.5, -0.5, 0.5 }, { 0.0, 0.0 } },
-			{ { -0.5,  0.5, 0.5 }, { 0.0, 1.0 } },
-			{ {  0.5,  0.5, 0.5 }, { 1.0, 1.0 } },
-			{ {  0.5, -0.5, 0.5 }, { 1.0, 0.0 } }
-		});
-		auto vertexBuffer = device->createVertexBuffer(std::vector<vec3>{
-			{-0.5, -0.5, 0.5 },
-			{-0.5,  0.5, 0.5 },
-			{ 0.5,  0.5, 0.5 },
-			{ 0.5, -0.5, 0.5 }
-		});
-		auto indexBuffer = device->createIndexBuffer(std::vector<uint16_t>{
-			0, 1, 2,
-			0, 2, 3
-		});
-
-		auto parser = Parser("C:/VulkanSDK/1.0.65.0/Bin32/glslangValidator.exe");
-		auto swapchain = device->createSwapChain(Format::eR8G8B8A8Unorm, 3, IDevice::PresentMode::eMailbox);
-		auto graphicsQueue = device->createGraphicsQueue(*swapchain);
-		auto passOneTarget = device->createTexture2D(800, 600, Format::eR8G8B8A8Unorm);
-		auto uniformBuffer = device->createUniformBuffer(sizeof(vec3));
-		auto sampler = device->createTextureSampler2D(Filter::eLinear, Filter::eLinear, TextureWrapMode::eMirroredRepeat, TextureWrapMode::eMirrorClampToEdge);
-		
-		// PASS 1
-		auto colVert = parser.compileVertexShader(readFile("shader/colorVert.vert"), "main");
-		auto colFrag = parser.compileFragmentShader(readFile("shader/colorFrag.frag"), "main");
-		auto colProgram = device->createShaderProgram(*colVert, *colFrag);
-		auto colPass = device->createRenderPass(*colProgram, 800, 600, Format::eR8G8B8A8Unorm, false);
-		
-		// PASS 2
-		auto stupidVert = parser.compileVertexShader(readFile("shader/stupidVert.vert"), "main");
-		auto stupidFrag = parser.compileFragmentShader(readFile("shader/stupidFrag.frag"), "main");
-		auto stupidProgram = device->createShaderProgram(*stupidVert, *stupidFrag);
-		auto stupidPass = device->createRenderPass(*stupidProgram, swapchain->getWidth(), swapchain->getHeight(), swapchain->getFormat(),  true);
-
-		while (true)
-		{
-			MSG msg;
-			if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
-			{
-				if (msg.message == WM_QUIT) {
-					break;
-				}
-				TranslateMessage(&msg);
-				DispatchMessage(&msg);
-			}
-			else {
-				auto cmd = device->createCommandBuffer(Usage::eReset);
-				cmd->record(*colPass, *passOneTarget, [&](IRecordingCommandBuffer& commandBuffer) {
-					commandBuffer
-						.setInput(*vertexBuffer)
-						.setIndexBuffer(*indexBuffer)
-						.drawIndexed(6);
-				});
-				auto stupidCmd = device->createCommandBuffer(Usage::eReuse);
-
-				if (!uniformBuffer->inUse()) {
-					vec3 randomColor = {
-						(float) std::rand() / RAND_MAX,
-						(float) std::rand() / RAND_MAX,
-						(float) std::rand() / RAND_MAX };
-					uniformBuffer->upload(std::vector<vec3>{ randomColor });
-				}
-
-				stupidCmd->record(*stupidPass, *swapchain, graphicsQueue->getNextFrameIndex(), [&](IRecordingCommandBuffer& commandBuffer) {
-					commandBuffer.setUniform("val", *uniformBuffer);
-					commandBuffer.setUniform("sam", *passOneTarget, *sampler);
-					commandBuffer.setInput(*stupidVertexBuffer);
-					commandBuffer.setIndexBuffer(*indexBuffer);
-					commandBuffer.drawIndexed(6);
-				});
-
-				graphicsQueue->submitCommands(std::vector<std::reference_wrapper<ICommandBuffer>> {
-					*cmd,
-					*stupidCmd
-				});
-
-				graphicsQueue->present();
-			}
-		}
-		device->waitIdle();
 	}
-	std::cout << "Press enter to continue...";
-	std::cin.ignore();
-	*/
-}
