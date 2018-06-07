@@ -15,6 +15,6 @@ layout(binding = 1) uniform InstanceUniformBuffer {
 layout(location = 0) out vec2 out_uv; 
 
 void main() {
-	gl_Position = uniforms.view_projection_matrix * instance.model_matrix * vec4(pos, 1);
+	gl_Position = uniforms.view_projection_matrix * instance.model_matrix * vec4(pos, 1.0f);
 	out_uv = uv;
 }
