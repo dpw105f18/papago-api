@@ -17,6 +17,7 @@ public:
 	
 	void present(ISwapchain& swapchain) override;
 	void submitCommands(const std::vector<std::reference_wrapper<ICommandBuffer>>&) override;
+	void submitPresent(const std::vector<std::reference_wrapper<ICommandBuffer>>&, ISwapchain &) override;
 private:
 	void createSemaphores(const vk::UniqueDevice&);
 
@@ -30,4 +31,5 @@ private:
 	std::vector<vk::UniqueFence> m_vkFences;
 
 	std::set<Resource*> m_submittedResources;
+
 };

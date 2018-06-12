@@ -31,6 +31,8 @@ struct Vertex
 //#define TEST_USE_SKULL
 #include "VertexSkull.h"
 #include "IndexSkull.h"
+#include "VertexCube.hpp"
+#include "IndexCube.hpp"
 
 LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
@@ -170,37 +172,8 @@ void main(int argc, char* argv[])
 	std::vector<Vertex> vertices = skullVertices;
 	std::vector<uint16_t> indices = skullIndices;
 #else
-	std::vector<Vertex> vertices{
-		{ { -0.5f, -0.5f,  0.5f },{ 0.0f, 0.0f } },
-		{ { -0.5f,  0.5f,  0.5f },{ 0.0f, 1.0f } },
-		{ { 0.5f,   0.5f,  0.5f },{ 1.0f, 1.0f } },
-		{ { 0.5f,  -0.5f,  0.5f },{ 1.0f, 0.0f } },
-		{ { -0.5f, -0.5f, -0.5f },{ 0.0f, 0.0f } },
-		{ { -0.5f,  0.5f, -0.5f },{ 0.0f, 1.0f } },
-		{ { 0.5f,   0.5f, -0.5f },{ 1.0f, 1.0f } },
-		{ { 0.5f,  -0.5f, -0.5f },{ 1.0f, 0.0f } }
-	};
-
-	std::vector<uint16_t> indices{
-		// Front
-		0, 1, 2,
-		0, 2, 3,
-		// Top
-		3, 7, 4,
-		3, 4, 0,
-		// Right
-		3, 2, 6,
-		3, 6, 7,
-		// Back
-		7, 6, 5,
-		7, 5, 4,
-		// Bottom
-		1, 5, 6,
-		1, 6, 2,
-		// Left
-		4, 5, 1,
-		4, 1, 0
-	};
+	std::vector<Vertex> vertices = cubeVertices;
+	std::vector<uint16_t> indices = cubeIndices;
 #endif
 
 	//Load scene:
@@ -455,28 +428,30 @@ void main(int argc, char* argv[])
 
 			//record commands
 			std::vector<std::future<void>> futures;
-			
+
 			for (auto i = 0; i < testConfig.drawThreadCount; ++i) {
 				auto scmd = subCmdRefs[i];
 				futures.emplace_back(
-					threadPool.enqueue(threadPoolEnqueuFunc,scmd, i)
+					threadPool.enqueue(threadPoolEnqueuFunc, scmd, i)
 				);
 			}
-			
+
 			//draw frame:
 			for (auto& f : futures) {
 				f.wait();
 			}
 
 			commandBuffer->record(*renderpass, *swapchain, [&](IRecordingCommandBuffer& rcmd) {
-				rcmd.clearColorBuffer(0.0f, 0.0f, 0.0f, 1.0f);
-				rcmd.clearDepthBuffer(1.0f);
+				//rcmd.clearColorBuffer(0.0f, 0.0f, 0.0f, 1.0f);
+				//rcmd.clearDepthBuffer(1.0f);
 				rcmd.execute(subCmdRefs);
 			});
 
+		
+			//graphicsQueue->submitCommands({ *commandBuffer });
+			//graphicsQueue->present(*swapchain);
 			
-			graphicsQueue->submitCommands({ *commandBuffer });
-			graphicsQueue->present(*swapchain);
+			graphicsQueue->submitPresent({ *commandBuffer }, *swapchain);
 
 			++fps;
 		}

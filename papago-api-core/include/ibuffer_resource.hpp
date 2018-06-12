@@ -77,10 +77,11 @@ inline void IDynamicBufferResource::upload(const std::vector<T>& data)
 {
 	auto alignment = getAlignment();
 	std::vector<char> result(data.size() * alignment);
-	auto size = sizeof(T);
-	for (auto index = 0, offset = 0; index < data.size(); ++index, offset += alignment)
+	auto size = data.size();
+	auto tSize = sizeof(T);
+	for (auto index = 0, offset = 0; index < size; ++index, offset += alignment)
 	{
-		memcpy(&result[offset], &data[index], sizeof(T));
+		memcpy(&result[offset], &data[index], tSize);
 	}
 	internalUpload(result, 0);
 }

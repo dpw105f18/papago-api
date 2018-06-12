@@ -134,6 +134,104 @@ void GraphicsQueue::createSemaphores(const vk::UniqueDevice &device)
 	m_vkRenderFinishSemaphore = device->createSemaphoreUnique(vk::SemaphoreCreateInfo());
 }
 
+void GraphicsQueue::submitPresent(const std::vector<std::reference_wrapper<ICommandBuffer>>& commandBuffers, ISwapchain &swapchain)
+{
+	//m_vkGraphicsQueue.waitIdle();
+	std::vector<vk::Semaphore> semaphores = { *m_vkRenderFinishSemaphore };
+	std::vector<vk::CommandBuffer> vkCommandBuffers;
+	vkCommandBuffers.reserve(commandBuffers.size());
+
+	for (auto& commandBuffer : commandBuffers) {
+		vkCommandBuffers.emplace_back(static_cast<vk::CommandBuffer>(static_cast<CommandBuffer&>(commandBuffer.get())));
+	}
+
+	
+
+	vkCommandBuffers.emplace_back(*m_device.m_internalCommandBuffer);
+
+	vk::SubmitInfo submitInfo = {};
+	submitInfo.setCommandBufferCount(vkCommandBuffers.size())
+		.setPCommandBuffers(vkCommandBuffers.data())
+		.setSignalSemaphoreCount(semaphores.size())
+		.setPSignalSemaphores(semaphores.data());
+													
+	for (auto& cmd : commandBuffers) {
+		CommandBuffer& commandBuffer = (CommandBuffer&)cmd.get();
+		std::merge(																	// Merge ..
+			ITERATE(m_submittedResources),											// .. this ..
+			ITERATE(commandBuffer.m_resourcesInUse),								// .. and this ..
+			std::inserter(m_submittedResources, m_submittedResources.begin()));		// .. into that
+		commandBuffer.m_resourcesInUse.clear();
+	}
+
+	auto& internalSwapChain = dynamic_cast<SwapChain&>(swapchain);
+	//m_vkPresentQueue.waitIdle();
+
+	std::set<ImageResource*> imageResources;
+	imageResources.emplace(&internalSwapChain.m_colorResources[internalSwapChain.m_currentFramebufferIndex]);
+
+	// Find image resources from the submitted resources 
+	for (auto& resource : m_submittedResources) {
+		if (typeid(*resource) == typeid(ImageResource)) {
+			auto imageResource = reinterpret_cast<ImageResource*>(resource);
+			imageResources.emplace(imageResource);
+		}
+	}
+
+	auto commandBeginInfo = vk::CommandBufferBeginInfo().setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);
+	m_device.m_internalCommandBuffer->begin(commandBeginInfo);
+
+	for (auto& imgRes : imageResources) {
+		imgRes->transition<vk::ImageLayout::eGeneral, vk::ImageLayout::ePresentSrcKHR>(m_device.m_internalCommandBuffer);
+	}
+
+	m_device.m_internalCommandBuffer->end();
+
+	m_vkGraphicsQueue.submit(submitInfo, vk::Fence());
+
+	m_device.m_internalCommandBuffer->reset(vk::CommandBufferResetFlagBits::eReleaseResources);
+
+	//**************************************** PRESENT *********************************************
+
+	std::vector<vk::SwapchainKHR> swapchains = { static_cast<vk::SwapchainKHR>(internalSwapChain) };
+
+	vk::PresentInfoKHR presentInfo = {};
+	presentInfo.setWaitSemaphoreCount(semaphores.size())
+		.setPWaitSemaphores(semaphores.data())
+		.setSwapchainCount(1)
+		.setPSwapchains(swapchains.data())
+		.setPImageIndices(&internalSwapChain.m_currentFramebufferIndex);
+
+	auto res = m_vkPresentQueue.presentKHR(presentInfo);
+
+	//TODO: find a better way to know when ImageResources can safely be transitioned back to eGeneral layout, Fences??
+	m_vkPresentQueue.waitIdle();
+
+	transitionImageResources<vk::ImageLayout::ePresentSrcKHR, vk::ImageLayout::eGeneral>(
+		m_device.m_internalCommandBuffer,
+		m_device.m_vkInternalQueue,
+		imageResources
+		);
+
+	m_submittedResources.clear();
+	//TODO: find some way to not create new fences every present.
+
+
+	vk::UniqueFence fence = m_device.m_vkDevice->createFenceUnique({});
+	auto nextFramebuffer = m_device.m_vkDevice->acquireNextImageKHR(static_cast<vk::SwapchainKHR>(internalSwapChain), 0, {}, *fence).value;
+
+	auto& oldFence = internalSwapChain.m_vkFences[nextFramebuffer];
+
+	/*
+	if(*oldFence != vk::Fence() && m_device.m_vkDevice->getFenceStatus(*oldFence) != vk::Result::eSuccess) {
+	m_vkPresentQueue.waitIdle();
+	}
+	*/
+
+	oldFence = std::move(fence);
+	internalSwapChain.m_currentFramebufferIndex = nextFramebuffer;
+}
+
 template<vk::ImageLayout from, vk::ImageLayout to>
 inline void GraphicsQueue::transitionImageResources(const CommandBuffer& commandBuffer, const vk::Queue& queue, std::set<ImageResource*> resources) {
 	auto commandBeginInfo = vk::CommandBufferBeginInfo().setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);
