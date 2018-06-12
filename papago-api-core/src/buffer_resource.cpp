@@ -90,3 +90,8 @@ size_t DynamicBufferResource::getAlignment()
 {
 	return m_alignment;
 }
+
+void DynamicBufferResource::uploadPadded(const std::vector<char>& data)
+{
+	internalUpload(data);
+}

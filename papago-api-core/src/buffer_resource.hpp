@@ -4,8 +4,6 @@
 #include "ibuffer_resource.hpp"
 #include "device.hpp"
 
-
-
 class BufferResource : public Resource, public IBufferResource
 {
 public:
@@ -59,10 +57,11 @@ public:
 
 	IBufferResource& innerBuffer() { return *m_buffer; }
 
-	// Inherited via IDynamicBuffer
+	// Inherited via IDynamicBufferResource
 	std::vector<char> internalDownload() override;
 	void internalUpload(const std::vector<char>&, size_t offset=0) override;
 	size_t getAlignment() override;
+	void uploadPadded(const std::vector<char>&) override;
 };
 
 //TODO: move to buffer_resource.cpp?

@@ -330,6 +330,25 @@ void main(int argc, char* argv[])
 	auto runTime = Clock::now() - startTime;
 	auto currentDataCount = 0;
 
+	auto padding = 256;
+	//We know that a glm::mat4 fits inside the padding of 256 bytes, so...
+	auto dynamicBufferData = std::vector<char>(scene.renderObjects().size() * padding, 0); //<-- ... no need to mention glm::mat4 here
+
+																						   //record commands
+	std::vector<std::future<void>> futures;
+
+	for (auto i = 0; i < testConfig.drawThreadCount; ++i) {
+		auto scmd = subCmdRefs[i];
+		futures.emplace_back(
+			threadPool.enqueue(threadPoolEnqueuFunc, scmd, i)
+		);
+	}
+
+	//draw frame:
+	for (auto& f : futures) {
+		f.wait();
+	}
+
 	while (run && (
 		(testConfig.seconds == 0 || std::chrono::duration<double, std::milli>(runTime).count() < testConfig.seconds * 1000) &&
 		testConfig.dataCount == 0 || currentDataCount < testConfig.dataCount))
@@ -401,14 +420,13 @@ void main(int argc, char* argv[])
 			}
 
 		
-			std::vector<glm::mat4> dynamicBufferData;
-			dynamicBufferData.reserve(scene.renderObjects().size());
+			
 			//dynamic uniform buffer:
 			for (auto index = 0; index < scene.renderObjects().size(); index++)
 			{
 				auto& render_object = scene.renderObjects()[index];
-				auto newModel = glm::mat4(1.0f);
-				newModel = translate(glm::mat4(1.0f), { render_object.x(), render_object.y(), render_object.z() });
+				auto newModel = reinterpret_cast<glm::mat4*>(dynamicBufferData.data() + index * padding);
+				*newModel = translate(glm::mat4(1.0f), { render_object.x(), render_object.y(), render_object.z() });
 
 				//hack around the const to update m_RotationAngle. //TODO: remove rotation feature or const from m_Scene.renderObjects()
 				auto noconst = const_cast<RenderObject*>(&render_object);
@@ -418,32 +436,19 @@ void main(int argc, char* argv[])
 					auto rotateX = 0.0001f*(index + 1) * std::pow(-1, index);
 					auto rotateY = 0.0002f*(index + 1) * std::pow(-1, index);
 					auto rotateZ = 0.0003f*(index + 1) * std::pow(-1, index);
-					newModel = glm::rotate<float>(newModel, render_object.m_RotationAngle * 3.14159268 / 180, glm::tvec3<float>{ rotateX, rotateY, rotateZ });
+					*newModel = glm::rotate<float>(*newModel, render_object.m_RotationAngle * 3.14159268 / 180, glm::vec3{ rotateX, rotateY, rotateZ });
 				}
-
-				dynamicBufferData.push_back(newModel);
+				//dynamicBufferData.push_back(newModel);
 			}
 
-			model->upload(dynamicBufferData);
+			//model->upload(dynamicBufferData);
+			model->uploadPadded(dynamicBufferData);
 
-			//record commands
-			std::vector<std::future<void>> futures;
-
-			for (auto i = 0; i < testConfig.drawThreadCount; ++i) {
-				auto scmd = subCmdRefs[i];
-				futures.emplace_back(
-					threadPool.enqueue(threadPoolEnqueuFunc, scmd, i)
-				);
-			}
-
-			//draw frame:
-			for (auto& f : futures) {
-				f.wait();
-			}
+			
 
 			commandBuffer->record(*renderpass, *swapchain, [&](IRecordingCommandBuffer& rcmd) {
-				//rcmd.clearColorBuffer(0.0f, 0.0f, 0.0f, 1.0f);
-				//rcmd.clearDepthBuffer(1.0f);
+				rcmd.clearColorBuffer(0.0f, 0.0f, 0.0f, 1.0f);
+				rcmd.clearDepthBuffer(1.0f);
 				rcmd.execute(subCmdRefs);
 			});
 

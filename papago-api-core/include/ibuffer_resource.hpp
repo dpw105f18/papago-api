@@ -19,6 +19,8 @@ public:
 	template<typename T>
 	T download(size_t index);
 
+	virtual void uploadPadded(const std::vector<char>&) = 0;
+
 private:
 	virtual std::vector<char> internalDownload() = 0;
 	virtual void internalUpload(const std::vector<char>&, size_t offset) = 0;
