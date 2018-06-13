@@ -189,8 +189,6 @@ void GraphicsQueue::submitPresent(const std::vector<std::reference_wrapper<IComm
 
 	m_vkGraphicsQueue.submit(submitInfo, vk::Fence());
 
-	m_device.m_internalCommandBuffer->reset(vk::CommandBufferResetFlagBits::eReleaseResources);
-
 	//**************************************** PRESENT *********************************************
 
 	std::vector<vk::SwapchainKHR> swapchains = { static_cast<vk::SwapchainKHR>(internalSwapChain) };
@@ -207,6 +205,8 @@ void GraphicsQueue::submitPresent(const std::vector<std::reference_wrapper<IComm
 	//TODO: find a better way to know when ImageResources can safely be transitioned back to eGeneral layout, Fences??
 	m_vkPresentQueue.waitIdle();
 
+	m_device.m_internalCommandBuffer->reset(vk::CommandBufferResetFlagBits::eReleaseResources);
+
 	transitionImageResources<vk::ImageLayout::ePresentSrcKHR, vk::ImageLayout::eGeneral>(
 		m_device.m_internalCommandBuffer,
 		m_device.m_vkInternalQueue,
@@ -222,12 +222,11 @@ void GraphicsQueue::submitPresent(const std::vector<std::reference_wrapper<IComm
 
 	auto& oldFence = internalSwapChain.m_vkFences[nextFramebuffer];
 
-	/*
+	
 	if(*oldFence != vk::Fence() && m_device.m_vkDevice->getFenceStatus(*oldFence) != vk::Result::eSuccess) {
-	m_vkPresentQueue.waitIdle();
+		m_device.m_vkDevice->waitForFences({ *oldFence }, true, 0);
 	}
-	*/
-
+	
 	oldFence = std::move(fence);
 	internalSwapChain.m_currentFramebufferIndex = nextFramebuffer;
 }

@@ -34,23 +34,23 @@ ShaderProgram::ShaderProgram(const vk::UniqueDevice& device, VertexShader& verte
 
 }
 
-std::set<uint32_t> ShaderProgram::getUniqueUniformBindings() const
+const std::set<uint32_t>& ShaderProgram::getUniqueUniformBindings()
 {
-	std::set<uint32_t> uniqueBindings;
+	if (m_uniqueBindings.empty()) {
 
-	auto& vBindings = m_vertexShader.getBindings();
-	auto& fBindings = m_fragmentShader.getBindings();
+		auto& vBindings = m_vertexShader.getBindings();
+		auto& fBindings = m_fragmentShader.getBindings();
 
-	for (auto& vb : vBindings) {
-		uniqueBindings.insert(vb.binding);
+		for (auto& vb : vBindings) {
+			m_uniqueBindings.insert(vb.binding);
+		}
+
+		for (auto& fb : fBindings) {
+			m_uniqueBindings.insert(fb.binding);
+		}
 	}
 
-	for (auto& fb : fBindings) {
-		uniqueBindings.insert(fb.binding);
-	}
-	
-
-	return uniqueBindings;
+	return m_uniqueBindings;
 }
 
 uint32_t ShaderProgram::getOffset(const std::string & name) const

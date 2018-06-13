@@ -20,7 +20,7 @@ class RenderPass : public IRenderPass
 {
 public:
 	explicit operator vk::RenderPass&();
-	RenderPass(const vk::UniqueDevice&, vk::UniqueRenderPass&, const ShaderProgram&, const vk::Extent2D&, DepthStencilFlags);
+	RenderPass(const vk::UniqueDevice&, vk::UniqueRenderPass&, ShaderProgram&, const vk::Extent2D&, DepthStencilFlags);
 
 
 	vk::UniqueRenderPass m_vkRenderPass;
@@ -29,7 +29,7 @@ public:
 	std::map<uint64_t, vk::UniquePipeline> m_vkGraphicsPipelines;
 	std::map<uint64_t, vk::UniquePipelineLayout> m_vkPipelineLayouts;
 	std::map<uint64_t, vk::UniqueDescriptorSetLayout> m_vkDescriptorSetLayouts;
-	const ShaderProgram& m_shaderProgram;
+	ShaderProgram& m_shaderProgram;
 	const vk::UniqueDevice& m_vkDevice;
 	vk::Extent2D m_vkExtent;
 	DepthStencilFlags m_depthStencilFlags;

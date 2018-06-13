@@ -26,26 +26,26 @@
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
-    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
-    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v141</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
-    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
-    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v141</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
@@ -101,7 +101,8 @@
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>$(VulkanSDKDir)\include;$(ProjectDir)include</AdditionalIncludeDirectories>
       <PrecompiledHeader>Create</PrecompiledHeader>
-      <PrecompiledHeaderFile>standard_header.hpp</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile>
+      </PrecompiledHeaderFile>
       <PreprocessToFile>false</PreprocessToFile>
       <PreprocessSuppressLineNumbers>false</PreprocessSuppressLineNumbers>
       <IgnoreStandardIncludePath>false</IgnoreStandardIncludePath>
@@ -117,7 +118,8 @@
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>$(VulkanSDKDir)\include;$(ProjectDir)include</AdditionalIncludeDirectories>
       <PrecompiledHeader>Create</PrecompiledHeader>
-      <PrecompiledHeaderFile>standard_header.hpp</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile>
+      </PrecompiledHeaderFile>
       <PreprocessorDefinitions>PAPAGO_USE_VALIDATION_LAYERS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessToFile>false</PreprocessToFile>
       <PreprocessSuppressLineNumbers>false</PreprocessSuppressLineNumbers>
@@ -140,7 +142,8 @@
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>$(VulkanSDKDir)\include;$(ProjectDir)include</AdditionalIncludeDirectories>
       <PrecompiledHeader>Create</PrecompiledHeader>
-      <PrecompiledHeaderFile>standard_header.hpp</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile>
+      </PrecompiledHeaderFile>
       <PreprocessToFile>false</PreprocessToFile>
       <PreprocessSuppressLineNumbers>false</PreprocessSuppressLineNumbers>
       <IgnoreStandardIncludePath>false</IgnoreStandardIncludePath>
@@ -159,7 +162,8 @@
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>$(VulkanSDKDir)\include;$(ProjectDir)include</AdditionalIncludeDirectories>
       <PrecompiledHeader>Create</PrecompiledHeader>
-      <PrecompiledHeaderFile>standard_header.hpp</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile>
+      </PrecompiledHeaderFile>
       <PreprocessToFile>false</PreprocessToFile>
       <PreprocessSuppressLineNumbers>false</PreprocessSuppressLineNumbers>
       <IgnoreStandardIncludePath>false</IgnoreStandardIncludePath>
@@ -191,6 +195,15 @@
     <ClInclude Include="include\api_enums.hpp" />
     <ClInclude Include="include\papago.hpp" />
     <ClInclude Include="include\Logger.hpp" />
+    <ClInclude Include="src\benchmark\Camera.h" />
+    <ClInclude Include="src\benchmark\IndexCube.hpp" />
+    <ClInclude Include="src\benchmark\IndexSkull.h" />
+    <ClInclude Include="src\benchmark\RenderObject.h" />
+    <ClInclude Include="src\benchmark\Scene.h" />
+    <ClInclude Include="src\benchmark\test_config.hpp" />
+    <ClInclude Include="src\benchmark\thread_pool.h" />
+    <ClInclude Include="src\benchmark\VertexCube.hpp" />
+    <ClInclude Include="src\benchmark\VertexSkull.h" />
     <ClInclude Include="src\buffer_resource.hpp" />
     <ClInclude Include="src\command_buffer.hpp" />
     <ClInclude Include="src\device.hpp" />
@@ -213,12 +226,15 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\api_enums.cpp" />
+    <ClCompile Include="src\benchmark\Scene.cpp" />
+    <ClCompile Include="src\benchmark\test_config.cpp" />
     <ClCompile Include="src\buffer_resource.cpp" />
     <ClCompile Include="src\command_buffer.cpp" />
     <ClCompile Include="src\device.cpp" />
     <ClCompile Include="src\fragment_shader.cpp" />
     <ClCompile Include="src\graphics_queue.cpp" />
     <ClCompile Include="src\image_resource.cpp" />
+    <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\parameter_block.cpp" />
     <ClCompile Include="src\parser.cpp" />
     <ClCompile Include="src\recording_command_buffer.cpp" />
@@ -236,6 +252,8 @@
     <None Include="fileMover.bat" />
     <None Include="shader\colorFrag.frag" />
     <None Include="shader\colorVert.vert" />
+    <None Include="shader\mvpTexShader.frag" />
+    <None Include="shader\mvpTexShader.vert" />
     <None Include="shader\shader.frag" />
     <None Include="shader\shader.vert" />
     <None Include="shader\stupidFrag.frag" />
@@ -244,6 +262,11 @@
     <None Include="shader\textureVert.vert" />
     <None Include="shader\uniformFrag.frag" />
     <None Include="shader\uniformVert.vert" />
+    <None Include="src\benchmark\shaders\mvpTexShader.frag" />
+    <None Include="src\benchmark\shaders\mvpTexShader.vert" />
+    <None Include="src\benchmark\shaders\shader.frag" />
+    <None Include="src\benchmark\shaders\shader.vert" />
+    <None Include="src\benchmark\shaders\skull.frag" />
     <None Include="src\image_resource.impl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

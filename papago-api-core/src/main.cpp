@@ -1,21 +1,5 @@
 #include "standard_header.hpp"
-#include "device.hpp"
-#include "swap_chain.hpp"
-#include "surface.hpp"
-#include "sampler.hpp"
-#include "vertex_shader.hpp"
-#include "fragment_shader.hpp"
-#include "render_pass.hpp"
-#include "graphics_queue.hpp"
-#include "command_buffer.hpp"
-#include "parser.hpp"
 #include <WinUser.h>
-
-#define STB_IMAGE_IMPLEMENTATION
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-#define STBI_MSC_SECURE_CRT
-#include <stb_image.h>
-#include <stb_image_write.h>
 
 LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
@@ -96,176 +80,395 @@ HWND StartWindow(size_t width, size_t height)
 	return nullptr;
 }
 
-struct UniformBufferObject{};
-
-struct vec2
+void SetWindowName(HWND hwnd, const std::string& text)
 {
-	float x, y;
-};
+	SetWindowTextA(hwnd, text.c_str());
+}
+#include "papago.hpp"
+#include "surface.hpp"
+#include "device.hpp"
+#include "swap_chain.hpp"
+#include "graphics_queue.hpp"
+#include "buffer_resource.hpp"
 
-struct vec3
-{
-	float x, y, z;
-};
+#include "benchmark\test_config.hpp"
+#include "benchmark\thread_pool.h"
 
+#define STB_IMAGE_IMPLEMENTATION
+#include "benchmark\stb_image.h"
+#define GLM_ENABLE_EXPERIMENTAL
+#include "benchmark\glm\glm.hpp"
+#include "benchmark\glm\gtx\transform.hpp"
 struct Vertex
 {
-	vec3 m_position;
-	vec2 m_uv;
+	glm::vec3 pos;
+	glm::vec2 uv;
 };
+#include "benchmark\IndexCube.hpp"
+#include "benchmark\IndexSkull.h"
+#include "benchmark\VertexCube.hpp"
+#include "benchmark\VertexSkull.h"
+#include "benchmark\Camera.h"
+#include "benchmark\Scene.h"
+#include "parser.hpp"
+#include <fstream>
 
 
-ImageResource createTexture(Device& device) {
-	int texWidth, texHeight, texChannels;
-	auto pixels = stbi_load("textures/eldorado.jpg", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
-	if (!pixels) {
-		throw new std::runtime_error("Failed to load texture image!");
-	}
 
-	auto input = std::vector<char>();
-	input.resize(texWidth * texHeight * 4);
-	memcpy(input.data(), pixels, input.size());
-	stbi_image_free(pixels);
-
-	auto imageResource = device.createTexture2D(texWidth, texHeight, Format::eR8G8B8A8Unorm);
-	imageResource.upload(input);
-
-	return imageResource;
+std::string readFile(const std::string& file_path) {
+	std::ifstream stream(file_path, std::ios::ate);
+	auto size = stream.tellg();
+	stream.seekg(0);
+	std::string result = std::string(size, '\0');
+	stream.read(&result[0], size);
+	return result;
 }
 
-int main()
+//Returns pixel data in a std::vector<char>. Pixels are loaded in a RGBA format.
+//the height and width of the image is provided through the parameters outWidth and outHeight.
+static std::vector<char> readPixels(const std::string& localPath, int& outWidth, int& outHeight)
 {
-	auto hwnd = StartWindow(800, 600);
-	auto surface = Surface(800, 600, hwnd);
-	Features features = {};
+	int texChannels;
+	auto pixels = stbi_load(localPath.c_str(), &outWidth, &outHeight, &texChannels, STBI_rgb_alpha);
+	if (!pixels) {
+		throw std::runtime_error("Failed to load texture image!");
+	}
+
+	auto result = std::vector<char>();
+	result.resize(outWidth * outHeight * 4);
+	memcpy(result.data(), pixels, result.size());
+	stbi_image_free(pixels);
+
+	return result;
+}
+
+void SaveToFile(const std::string& file, const std::string& data)
+{
+	std::ofstream fs;
+	fs.open(file, std::ofstream::app);
+	fs << data;
+	fs.close();
+}
+
+
+
+int main(int argc, char* argv[])
+{
+
+	//***********************************************************
+
+	std::stringstream arg;
+
+	for (auto i = 0; i < argc; ++i) {
+		arg << argv[i] << " ";
+	}
+	TestConfiguration::SetTestConfiguration(arg.str().c_str());
+	auto testConfig = TestConfiguration::GetInstance();
+	ThreadPool threadPool{ testConfig.drawThreadCount };
+
+	auto windowWidth = 800;
+	auto windowHeight = 600;
+	auto hwnd = StartWindow(windowWidth, windowHeight);
+
+#ifdef TEST_USE_SKULL
+	std::vector<Vertex> vertices = skullVertices;
+	std::vector<uint16_t> indices = skullIndices;
+#else
+	std::vector<Vertex> vertices = cubeVertices;
+	std::vector<uint16_t> indices = cubeIndices;
+#endif
+
+	//Load scene:
+	auto cubeCountPerDim = testConfig.cubeDimension;
+	auto paddingFactor = testConfig.cubePadding;
+
+	Camera camera = Camera::Default();
+	auto heightFOV = camera.FieldOfView() / (float(windowWidth) / float(windowHeight));
+	auto base = (cubeCountPerDim + (cubeCountPerDim - 1) * paddingFactor) / 2.0f;
+	auto camDistance = base / std::tan(heightFOV / 2);
+	float z = camDistance + base + camera.Near();
+
+	camera.SetPosition({ 0.0f, 0.0f, z, 1.0f });
+	auto magicFactor = 2;
+	camera.SetFar(magicFactor * (z + base + camera.Near()));
+	auto scene = Scene(camera, cubeCountPerDim, paddingFactor);
+
+	//init PapaGo:
+	auto surface = Surface(windowWidth, windowHeight, hwnd);
+	vk::PhysicalDeviceFeatures features;
 	features.samplerAnisotropy = true;
-	auto devices = Device::enumerateDevices(surface, features, { VK_KHR_SWAPCHAIN_EXTENSION_NAME, VK_KHR_SAMPLER_MIRROR_CLAMP_TO_EDGE_EXTENSION_NAME });
+	std::vector<const char*> extensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+	auto devices = Device::enumerateDevices(surface, features, extensions);
 	auto& device = devices[0];
+	auto iswapchain = device.createSwapChain(Format::eR8G8B8A8Unorm, Format::eD32Sfloat, 3, IDevice::PresentMode::eMailbox);
+	auto& swapchain = dynamic_cast<SwapChain&>(*iswapchain);
+	auto parser = Parser("C:/VulkanSDK/1.0.65.0/Bin/glslangValidator.exe");
 
-	auto stupidVertices = std::vector<Vertex>{
-		{ { -0.5, -0.5, 0.5 },{ 0.0, 0.0 } },
-		{ { -0.5,  0.5, 0.5 },{ 0.0, 1.0 } },
-		{ { 0.5,  0.5, 0.5 },{ 1.0, 1.0 } },
-		{ { 0.5, -0.5, 0.5 },{ 1.0, 0.0 } }
-	};
-	auto stupidVertexBuffer = device.createVertexBuffer(stupidVertices);
-
-	auto vertices = std::vector<vec3>{
-		{-0.5, -0.5, 0.5},
-		{-0.5,  0.5, 0.5},
-		{ 0.5,  0.5, 0.5},
-		{ 0.5, -0.5, 0.5}
-	};
 	auto vertexBuffer = device.createVertexBuffer(vertices);
-
-	auto indices = std::vector<uint16_t>{
-		0, 1, 2,
-		0, 2, 3
-	};
 	auto indexBuffer = device.createIndexBuffer(indices);
-	auto parser = Parser("C:/VulkanSDK/1.0.65.0/Bin32/glslangValidator.exe");
 
-	// PASS 1
-	auto colVert = parser.compileVertexShader("shader/colorVert.vert", "main");
-	auto colFrag = parser.compileFragmentShader("shader/colorFrag.frag", "main");
+	//TODO: enable skulls
+	auto vertexShader = parser.compileVertexShader(readFile("src/benchmark/shaders/shader.vert"), "main");
 
-	auto colProgram = device.createShaderProgram(colVert, colFrag);
+#ifdef TEST_USE_SKULL
+	auto fragmentShader = parser.compileFragmentShader(readFile("src/benchmark/shaders/skull.frag"), "main");
+#else 
+	auto fragmentShader = parser.compileFragmentShader(readFile("src/benchmark/shaders/shader.frag"), "main");
+#endif
+	auto shaderProgram = device.createShaderProgram(*vertexShader, *fragmentShader);
 
-	auto passOneTarget = device.createTexture2D(800, 600, Format::eR8G8B8A8Unorm);
+	auto renderpass = device.createRenderPass(*shaderProgram, surface.getWidth(), surface.getHeight(), swapchain.getFormat(), Format::eD32Sfloat);
 
-	auto colPass = device.createRenderPass(colProgram, passOneTarget.getWidth(), passOneTarget.getHeight(), passOneTarget.getFormat(), false);
+	auto icommandBuffer = device.createCommandBuffer();
+	auto& commandBuffer = dynamic_cast<CommandBuffer&>(*icommandBuffer);
 
-	
-	// PASS 2
-	auto swapChain = device.createSwapChain(Format::eR8G8B8A8Unorm, 3, SwapChainPresentMode::eMailbox);
+	std::vector<std::unique_ptr<ISubCommandBuffer>> subCmds;
+	subCmds.reserve(testConfig.drawThreadCount);
+	for (auto i = 0; i < testConfig.drawThreadCount; ++i) {
+		subCmds.emplace_back(device.createSubCommandBuffer());
+	}
 
-	auto graphicsQueue = device.createGraphicsQueue(swapChain);
-	
-	auto stupidVert = parser.compileVertexShader("shader/stupidVert.vert", "main");
-	auto stupidFrag = parser.compileFragmentShader("shader/stupidFrag.frag", "main");
+	auto subCmdRefs = std::vector<std::reference_wrapper<ISubCommandBuffer>>();
+	for (auto& scmd : subCmds) {
+		subCmdRefs.emplace_back(*scmd);
+	}
 
-	auto stupidProgram = device.createShaderProgram(stupidVert, stupidFrag);
-	auto stupidPass = device.createRenderPass(stupidProgram, swapChain.getWidth(), swapChain.getHeight(), swapChain.getFormat(), true);
+	int texW, texH;
+	auto texPixels = readPixels("src/benchmark/textures/texture.png", texW, texH);
+	auto texture = device.createTexture2D(texW, texH, Format::eR8G8B8A8Unorm);
+	texture->upload(texPixels);
+
+	auto sampler = device.createTextureSampler2D(Filter::eLinear, Filter::eLinear, TextureWrapMode::eRepeat, TextureWrapMode::eRepeat);
+
+	auto projection = device.createUniformBuffer(sizeof(glm::mat4));
+	auto view = device.createUniformBuffer(sizeof(glm::mat4));
+	auto imodel = device.createDynamicUniformBuffer(sizeof(glm::mat4), scene.renderObjects().size());
+	auto& model = dynamic_cast<DynamicBufferResource&>(*imodel);
+
+	std::vector<ParameterBinding> bindings
+	{
+		{ "projection", projection.get() },
+		{ "view", view.get() },
+		{ "model", &model },
+		{ "texSampler", texture.get(), sampler.get() }
+	};
+
+	auto parameterBlock = device.createParameterBlock(*renderpass, bindings);
+
+	auto igraphicsQueue = device.createGraphicsQueue();
+	auto& graphicsQueue = dynamic_cast<GraphicsQueue&>(*igraphicsQueue);
+
+	auto subCmdRecs = std::vector<std::function<void(IRecordingSubCommandBuffer& rcmd)>>(testConfig.drawThreadCount);
+	for (auto i = 0; i < testConfig.drawThreadCount; ++i) {
+		subCmdRecs[i] = [&, i](IRecordingSubCommandBuffer& rcmd) {
+			rcmd.setVertexBuffer(*vertexBuffer);
+			rcmd.setIndexBuffer(*indexBuffer);
+			rcmd.setParameterBlock(*parameterBlock);
+
+			auto threadCount = testConfig.drawThreadCount;
+			auto roCount = scene.renderObjects().size() / threadCount;
+			auto stride = roCount;
+
+			//last thread handles the remainder after integer division
+			if (i == threadCount - 1) {
+				roCount += scene.renderObjects().size() % threadCount;
+			}
+
+			for (auto j = 0; j < roCount; ++j) {
+				rcmd.setDynamicIndex(*parameterBlock, "model", i * stride + j);
+				rcmd.drawIndexed(indices.size());
+			}
+		};
+	}
+
+	auto threadPoolEnqueuFunc = [&](std::reference_wrapper<ISubCommandBuffer> cmd, int threadIndex) {
+		cmd.get().record(*renderpass, subCmdRecs[threadIndex]);
+	};
 
 
+	//update uniform buffers:
+	glm::mat4 newView = glm::lookAt(
+		glm::vec3(camera.Position()),
+		glm::vec3(camera.Target()),
+		glm::vec3(camera.Up())
+	);
 
-	auto uniform_buffer = device.createUniformBuffer<sizeof(float[3])>();
-	auto sampler2D = device.createTextureSampler2D(Filter::eLinear, Filter::eLinear, TextureWrapMode::eMirroredRepeat, TextureWrapMode::eMirrorClampToEdge);
+	view->upload<glm::mat4>({ newView });
 
-	while (true)
+	glm::mat4 newProjection = glm::perspective(
+		camera.FieldOfView(),
+		float(windowWidth) / windowHeight,
+		camera.Near(),
+		camera.Far()
+	);
+
+	projection->upload<glm::mat4>({ newProjection });
+
+	//*********************************************************
+	//Main game loop:
+	using Clock = std::chrono::high_resolution_clock;
+	auto startTime = Clock::now();
+	auto lastUpdate = Clock::now();
+	auto lastFrame = Clock::now();
+	long fps = 0;
+	long oldFps = 0;
+	bool run = true;
+
+	std::stringstream frametimeCsv;
+	frametimeCsv << "frametime (ms)\n";
+
+	std::stringstream fpsCsv;
+	fpsCsv << "FPS\n";
+
+	auto runTime = Clock::now() - startTime;
+	auto currentDataCount = 0;
+
+	auto padding = 256;
+	//We know that a glm::mat4 fits inside the padding of 256 bytes, so...
+	auto dynamicBufferData = std::vector<char>(scene.renderObjects().size() * padding, 0); //<-- ... no need to mention glm::mat4 here
+
+																						   //record commands
+	std::vector<std::future<void>> futures;
+
+
+	while (run && (
+		(testConfig.seconds == 0 || std::chrono::duration<double, std::milli>(runTime).count() < testConfig.seconds * 1000) &&
+		testConfig.dataCount == 0 || currentDataCount < testConfig.dataCount))
 	{
 		MSG msg;
 		if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
 		{
 			if (msg.message == WM_QUIT) {
-				break;
+				run = false;
 			}
+			else if (msg.message == WM_KEYDOWN) {
+				//if key pressed is "r":
+				if (msg.wParam == 82) {
+					auto& rc = TestConfiguration::GetInstance().rotateCubes;
+					rc = !rc;
+				}
+			}
+
 			TranslateMessage(&msg);
 			DispatchMessage(&msg);
 		}
 		else {
-			auto cmd = device.createCommandBuffer(Usage::eReset);
-			cmd.begin(colPass, passOneTarget);
+			auto deltaTime = (Clock::now() - lastUpdate);
+			auto frameTime = (Clock::now() - lastFrame);
+			lastFrame = Clock::now();
 
-			cmd.setInput(vertexBuffer);
-			cmd.setIndexBuffer(indexBuffer);
-			cmd.drawIndexed(indices.size());
+			auto deltaTimeMs = std::chrono::duration_cast<std::chrono::duration<double, std::milli>>(deltaTime).count();
 
-			cmd.end();
+			using namespace std::chrono_literals;
+			if (deltaTime > 1s) {
+				lastUpdate = Clock::now();
+				auto frameTimeCount = std::chrono::duration_cast<std::chrono::duration<double, std::milli>>(frameTime).count();
 
-			auto stupidCmd = device.createCommandBuffer(Usage::eReuse);
-			stupidCmd.begin(stupidPass, swapChain, graphicsQueue.getNextFrameIndex());
+				std::stringstream ss;
+				ss << "FPS: " << fps
+					<< " --- Avg. Frame Time: " << deltaTimeMs / fps << "ms"
+					<< " --- Last Frame Time: " << frameTimeCount << "ms";
+				SetWindowName(hwnd, ss.str());
 
-			auto uniform_input_float = std::vector<float>({ std::rand() * 1.0f / RAND_MAX, std::rand() * 1.0f / RAND_MAX, std::rand() * 1.0f / RAND_MAX });
-			auto uniform_input_char = std::vector<char>(sizeof(float) * uniform_input_float.size());
+				if (TestConfiguration::GetInstance().recordFPS) {
+					fpsCsv << oldFps << "\n";
+				}
 
-			// TODO: move into upload as template???
-			memcpy(uniform_input_char.data(), uniform_input_float.data(), uniform_input_char.size());
+				oldFps = fps;
+				fps = 0;
 
-			if (!uniform_buffer.inUse()) {
-				uniform_buffer.upload(uniform_input_char);
+				if (TestConfiguration::GetInstance().recordFrameTime) {
+					frametimeCsv << frameTimeCount << "\n";
+					++currentDataCount;
+				}
 			}
 
-			stupidCmd.setUniform("val", uniform_buffer);
-			stupidCmd.setUniform("sam", passOneTarget, sampler2D);
+			//dynamic uniform buffer:
+			for (auto index = 0; index < scene.renderObjects().size(); index++)
+			{
+				auto& render_object = scene.renderObjects()[index];
+				auto newModel = reinterpret_cast<glm::mat4*>(dynamicBufferData.data() + index * padding);
+				*newModel = translate(glm::mat4(1.0f), { render_object.x(), render_object.y(), render_object.z() });
 
-			stupidCmd.setInput(stupidVertexBuffer);
-			stupidCmd.setIndexBuffer(indexBuffer);
-			stupidCmd.drawIndexed(indices.size());
-			stupidCmd.end();
+				//hack around the const to update m_RotationAngle. //TODO: remove rotation feature or const from m_Scene.renderObjects()
+				auto noconst = const_cast<RenderObject*>(&render_object);
+				noconst->m_RotationAngle = (render_object.m_RotationAngle + 1) % 360;
+
+				if (TestConfiguration::GetInstance().rotateCubes) {
+					auto rotateX = 0.0001f*(index + 1) * std::pow(-1, index);
+					auto rotateY = 0.0002f*(index + 1) * std::pow(-1, index);
+					auto rotateZ = 0.0003f*(index + 1) * std::pow(-1, index);
+					*newModel = glm::rotate<float>(*newModel, render_object.m_RotationAngle * 3.14159268 / 180, glm::vec3{ rotateX, rotateY, rotateZ });
+				}
+				//dynamicBufferData.push_back(newModel);
+			}
+
+			//model->upload(dynamicBufferData);
+			model.uploadPadded(dynamicBufferData);
+
+			//record sub cmd
+			for (auto i = 0; i < testConfig.drawThreadCount; ++i) {
+				auto scmd = subCmdRefs[i];
+				futures.emplace_back(
+					threadPool.enqueue(threadPoolEnqueuFunc, scmd, i)
+				);
+			}
+
+			//draw frame:
+			for (auto& f : futures) {
+				f.wait();
+			}
+			futures.clear();
+
+			//record prim cmd
+			commandBuffer.record(*renderpass, swapchain, [&](IRecordingCommandBuffer& rcmd) {
+				rcmd.clearColorBuffer(0.0f, 0.0f, 0.0f, 1.0f);
+				rcmd.clearDepthBuffer(1.0f);
+				rcmd.execute(subCmdRefs);
+			});
 
 
-			std::vector<CommandBuffer> cmds;
-			cmds.push_back(std::move(cmd));
-			cmds.push_back(std::move(stupidCmd));
-			graphicsQueue.submitCommands(cmds);
+			//graphicsQueue->submitCommands({ *commandBuffer });
+			//graphicsQueue->present(*swapchain);
 
-			graphicsQueue.present();
-		
+			graphicsQueue.submitPresent({ commandBuffer }, swapchain);
+
+			++fps;
 		}
-	}//END while
 
-	//write last frame as a PNG file:
-	auto img = passOneTarget.download();
-	stbi_write_png(
-		"passOneTarget.png", 
-		passOneTarget.getWidth(), 
-		passOneTarget.getHeight(), 
-		4,		//4 = RGBA format (see stb_image_write.h comment at top) 
-		img.data(), 
-		passOneTarget.getWidth() * 4	//stride in bytes
-	);
-	
-	auto& lastFrame = graphicsQueue.getLastRenderedImage();
-	auto img2 = lastFrame.download();
-	stbi_write_png(
-		"lastFrame.png",
-		lastFrame.getWidth(),
-		lastFrame.getHeight(),
-		4,		//4 = RGBA format (see stb_image_write.h comment at top) 
-		img2.data(),
-		lastFrame.getWidth() * 4	//stride in bytes
-	);
-	
-	std::cin.ignore();
+		runTime = Clock::now() - startTime;
+	}
+
+	device.waitIdle();
+
+	//save files
+	auto now = time(NULL);
+	tm* localNow = new tm();
+	localtime_s(localNow, &now);
+
+	auto yearStr = std::to_string((1900 + localNow->tm_year));
+	auto monthStr = localNow->tm_mon < 9 ? "0" + std::to_string(localNow->tm_mon + 1) : std::to_string(localNow->tm_mon + 1);
+	auto dayStr = localNow->tm_mday < 10 ? "0" + std::to_string(localNow->tm_mday) : std::to_string(localNow->tm_mday);
+	auto hourStr = localNow->tm_hour < 10 ? "0" + std::to_string(localNow->tm_hour) : std::to_string(localNow->tm_hour);
+	auto minStr = localNow->tm_min < 10 ? "0" + std::to_string(localNow->tm_min) : std::to_string(localNow->tm_min);
+	auto secStr = localNow->tm_sec < 10 ? "0" + std::to_string(localNow->tm_sec) : std::to_string(localNow->tm_sec);
+
+	auto fname = yearStr + monthStr + dayStr + hourStr + minStr + secStr;
+
+	if (testConfig.exportCsv) {
+		auto csvStr = testConfig.MakeString(";");
+		SaveToFile("conf_" + fname + ".csv", csvStr);
+	}
+
+	if (testConfig.recordFPS) {
+		SaveToFile("fps_" + fname + ".csv", fpsCsv.str());
+	}
+
+	if (testConfig.recordFrameTime) {
+		SaveToFile("frameTime_" + fname + ".csv", frametimeCsv.str());
+	}
+
+	delete localNow;
+	std::cout << "Press ENTER to continue..." << std::endl;
+	//std::cin.ignore();
 }

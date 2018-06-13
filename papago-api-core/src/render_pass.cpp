@@ -13,7 +13,7 @@ RenderPass::operator vk::RenderPass&()
 RenderPass::RenderPass(
 	const vk::UniqueDevice& device,
 	vk::UniqueRenderPass& vkRenderPass,
-	const ShaderProgram& program,
+	ShaderProgram& program,
 	const vk::Extent2D& extent,
 	DepthStencilFlags depthStencilFlags)
 	: m_shaderProgram(program)

@@ -14,11 +14,12 @@ public:
 	vk::UniqueShaderModule m_vkFragmentModule;
 	vk::PipelineShaderStageCreateInfo m_vkVertexStageCreateInfo;
 	vk::PipelineShaderStageCreateInfo m_vkFragmentStageCreateInfo;
-	std::set<uint32_t> getUniqueUniformBindings() const;
+	const std::set<uint32_t>& getUniqueUniformBindings();
 	uint32_t getOffset(const std::string& name) const;
 
 	VertexShader& m_vertexShader;
 	FragmentShader& m_fragmentShader;
 
 private:
+	std::set<uint32_t> m_uniqueBindings;
 };

@@ -120,6 +120,33 @@
     <ClInclude Include="src\parameter_block.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\benchmark\thread_pool.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\benchmark\test_config.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\benchmark\IndexCube.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\benchmark\IndexSkull.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\benchmark\VertexCube.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\benchmark\VertexSkull.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\benchmark\Camera.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\benchmark\Scene.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\benchmark\RenderObject.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\device.cpp">
@@ -179,6 +206,15 @@
     <ClCompile Include="src\parameter_block.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\benchmark\test_config.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\benchmark\Scene.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="shader\shader.frag">
@@ -215,5 +251,12 @@
       <Filter>Resource Files</Filter>
     </None>
     <None Include="src\image_resource.impl" />
+    <None Include="shader\mvpTexShader.frag" />
+    <None Include="shader\mvpTexShader.vert" />
+    <None Include="src\benchmark\shaders\skull.frag" />
+    <None Include="src\benchmark\shaders\shader.vert" />
+    <None Include="src\benchmark\shaders\shader.frag" />
+    <None Include="src\benchmark\shaders\mvpTexShader.vert" />
+    <None Include="src\benchmark\shaders\mvpTexShader.frag" />
   </ItemGroup>
 </Project>
