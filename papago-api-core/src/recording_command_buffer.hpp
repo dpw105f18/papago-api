@@ -18,7 +18,12 @@ class CommandRecorder
 	: public T
 {
 public:
-	CommandRecorder(const vk::UniqueDevice& device) : m_vkDevice(device) {};
+	CommandRecorder(const vk::UniqueDevice& device) : m_vkDevice(device) 
+	{
+		m_dynamicBindings.reserve(64);	//<-- limit set by dynamic mask type.
+	};
+	
+	
 	CommandRecorder(CommandRecorder&& other)
 		: m_vkDevice(other.m_vkDevice)
 		, m_bindingDynamicOffset(std::move(other.m_bindingDynamicOffset))
@@ -26,7 +31,9 @@ public:
 		, m_resourcesInUse(std::move(other.m_resourcesInUse))
 		, m_vkCommandBuffer(std::move(other.m_vkCommandBuffer))
 		, m_vkCommandPool(std::move(other.m_vkCommandPool))
-	{};
+		, m_dynamicBindings(std::move(other.m_dynamicBindings))
+	{
+	};
 
 	virtual ~CommandRecorder() = default;
 
@@ -43,6 +50,8 @@ protected:
 	vk::UniqueCommandBuffer m_vkCommandBuffer;
 	vk::RenderPassBeginInfo m_vkRenderPassBeginInfo;
 	vk::Extent2D m_vkCurrentRenderTargetExtent;
+	std::vector<uint32_t> m_dynamicBindings;
+	std::vector<uint32_t> m_dynamicOffsets;
 
 
 

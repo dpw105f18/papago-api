@@ -44,6 +44,10 @@ void SubCommandBuffer::begin()
 	if (m_renderPassPtr->m_shaderProgram.getUniqueUniformBindings().empty()) {
 		m_vkCommandBuffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *m_renderPassPtr->getPipeline(0));
 	}
+
+	//moved to here from setDynamicIndex (in an attempt to optimize):
+	m_dynamicBindings.reserve(64);
+	m_dynamicOffsets.reserve(64);
 }
 
 

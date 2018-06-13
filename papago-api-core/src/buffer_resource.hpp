@@ -72,4 +72,5 @@ inline DynamicBufferResource::DynamicBufferResource(
 	: m_buffer(std::move(buffer))
 	, m_alignment(alignment)
 	, m_objectCount(objectCount)
-{ }
+{ };
+

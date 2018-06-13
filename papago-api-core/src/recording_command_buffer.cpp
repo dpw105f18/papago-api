@@ -10,31 +10,34 @@
 template<class T>
 T & CommandRecorder<T>::setDynamicIndex(IParameterBlock& parameterBlock, const std::string & uniformName, size_t index)
 {
+	m_dynamicBindings.clear();
+	m_dynamicOffsets.clear();
 	auto& internalParameterBlock = dynamic_cast<ParameterBlock&>(parameterBlock);
 	auto dynamicBufferMask = internalParameterBlock.m_mask;
-	auto bindingCount = m_renderPassPtr->m_shaderProgram.getUniqueUniformBindings().size();
+	auto bindingTotal = m_renderPassPtr->m_shaderProgram.getUniqueUniformBindings().size();
 
 	uint64_t longOne = 0x01;
-	std::vector<uint32_t> dynamicBindings;
-	for (auto i = 0; i < 64; ++i) {
+	auto dynamicCount = 0;
+	auto bindingCount = 0;
+	for (auto i = 0; i < 64 && bindingCount < bindingTotal; ++i) {
 		if (dynamicBufferMask & (longOne << i)) {
-			dynamicBindings.push_back(i);
+			m_dynamicBindings.push_back(i);
+			++dynamicCount;
 		}
+		++bindingCount;
 	}
-
-	auto dynamicOffsets = std::vector<uint32_t>();
 
 	auto binding = m_renderPassPtr->getBinding(uniformName);
 	//TODO: check [name] is actually in the map before trying to access the alignment. -AM
 	m_bindingDynamicOffset[binding] = internalParameterBlock.m_namedAlignments[uniformName] * index;
 
-	std::sort(dynamicBindings.begin(), dynamicBindings.end());
+	std::sort(m_dynamicBindings.begin(), m_dynamicBindings.end());
 
-	for (auto b : dynamicBindings) {
-		dynamicOffsets.push_back(m_bindingDynamicOffset[b]);
+	for (auto b : m_dynamicBindings) {
+		m_dynamicOffsets.push_back(m_bindingDynamicOffset[b]);
 	}
 
-	m_vkCommandBuffer->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *m_renderPassPtr->m_vkPipelineLayouts[internalParameterBlock.m_mask], 0, { *internalParameterBlock.m_vkDescriptorSet }, dynamicOffsets);
+	m_vkCommandBuffer->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *m_renderPassPtr->m_vkPipelineLayouts[internalParameterBlock.m_mask], 0, { *internalParameterBlock.m_vkDescriptorSet }, m_dynamicOffsets);
 	return *this;
 }
 ;

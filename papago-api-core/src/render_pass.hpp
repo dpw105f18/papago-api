@@ -35,7 +35,7 @@ public:
 	DepthStencilFlags m_depthStencilFlags;
 
 	void setupDescriptorSetLayout(const vk::UniqueDevice&, const VertexShader& vertexShader, const FragmentShader& fragmentShader, uint64_t bindingMask);
-	long getBinding(const std::string& name) const;
+	long getBinding(const std::string& name);
 	vk::VertexInputBindingDescription getBindingDescription();
 	std::vector<vk::VertexInputAttributeDescription> getAttributeDescriptions();
 
@@ -46,4 +46,5 @@ public:
 	void cacheNewPipeline(uint64_t bindingMask);
 	void createNewPipelineIfNone(uint64_t mask);
 private:
+	std::map<std::string, uint32_t> m_namedBindings;
 };

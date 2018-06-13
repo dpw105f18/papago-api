@@ -22,6 +22,19 @@ RenderPass::RenderPass(
 	, m_depthStencilFlags(depthStencilFlags)
 	, m_vkExtent(extent)
 {
+	auto& vertBindings = m_shaderProgram.m_vertexShader.m_bindings;
+	for (auto& vb : vertBindings) {
+		auto name = vb.first;
+		auto binding = vb.second.binding;
+		m_namedBindings[name] = binding;
+	}
+	
+	auto& fragBindings = m_shaderProgram.m_fragmentShader.m_bindings;
+	for (auto& vb : fragBindings) {
+		auto name = vb.first;
+		auto binding = vb.second.binding;
+		m_namedBindings[name] = binding;
+	}
 
 	if (program.getUniqueUniformBindings().empty()) {
 		cacheNewPipeline(0);
@@ -291,20 +304,13 @@ void RenderPass::createNewPipelineIfNone(uint64_t mask)
 		cacheNewPipeline(mask);
 }
 
-long RenderPass::getBinding(const std::string& name) const
+long RenderPass::getBinding(const std::string& name)
 {
-	//TODO: use method from renderpass
-	long binding = -1;
-
-	if (m_shaderProgram.m_vertexShader.bindingExists(name)) {
-		binding = m_shaderProgram.m_vertexShader.m_bindings[name].binding;
-	}
-	else if (m_shaderProgram.m_fragmentShader.bindingExists(name)) {
-		binding = m_shaderProgram.m_fragmentShader.m_bindings[name].binding;
+	if (m_namedBindings.find(name) != m_namedBindings.end()) {
+		return m_namedBindings[name];
 	}
 	else {
 		PAPAGO_ERROR("Invalid uniform name!");
 	}
-
-	return binding;
+	return -1;
 };
